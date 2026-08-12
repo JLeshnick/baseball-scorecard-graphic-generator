@@ -396,8 +396,8 @@ export default function ScorecardGraphic({
           </div>
         </div>
 
-        {/* Scorecard grid */}
-        <div style={{ overflowX: 'auto' }}>
+        {/* Scorecard grid — no overflow clipping so export captures full width */}
+        <div>
           <table style={{
             width: '100%', borderCollapse: 'collapse',
             minWidth: `${PLAYER_COL_W + innings.length * INNING_COL_W}px`,
@@ -587,46 +587,7 @@ export default function ScorecardGraphic({
           </div>
         )}
 
-        {/* Substitutions list */}
-        {teamData.subsList && teamData.subsList.length > 0 && (
-          <div style={{
-            borderTop: `1px solid ${t.borderLight}`,
-            padding: '4px 10px',
-            display: 'flex', flexWrap: 'wrap', gap: '8px',
-            backgroundColor: t.tableRowAlt,
-          }}>
-            <span style={{
-              fontSize: '7px', fontWeight: 800, letterSpacing: '0.1em',
-              color: t.textMuted, textTransform: 'uppercase',
-              fontFamily: "'Inter', sans-serif",
-              alignSelf: 'center',
-              marginRight: '4px',
-            }}>
-              SUBS:
-            </span>
-            {teamData.subsList.map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: '13px', height: '13px', borderRadius: '50%',
-                  backgroundColor: accentColor, color: accentText,
-                  fontSize: '6.5px', fontWeight: 800,
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}>
-                  {s.letter}
-                </span>
-                <span style={{
-                  fontSize: '9px', fontWeight: 600,
-                  color: t.textSecondary,
-                  fontFamily: "'Oswald', sans-serif",
-                  letterSpacing: '0.03em',
-                }}>
-                  {s.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+
       </div>
     );
   };

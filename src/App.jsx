@@ -116,7 +116,7 @@ export default function App() {
       setScorecardData(data);
       setCustomHeadline(data.gameInfo.dateDisplay);
       setCustomSubtitle(`${data.gameInfo.venue} · ${data.gameInfo.headline}`);
-      setCustomFooter(`MLB SCORECARD GRAPHIC ART PRINT • ${data.gameInfo.dateDisplay} • ${data.gameInfo.venue.toUpperCase()}`);
+      setCustomFooter(`${data.gameInfo.dateDisplay} • ${data.gameInfo.venue.toUpperCase()}`);
     } catch (err) {
       console.error(err);
       setError('Could not load MLB game data.');
@@ -129,12 +129,18 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(graphicRef.current, { quality: 0.98, pixelRatio: 3 });
+      const el = graphicRef.current;
+      const dataUrl = await toPng(el, {
+        quality: 0.98,
+        pixelRatio: 3,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        style: { overflow: 'visible' },
+      });
       const link = document.createElement('a');
       link.download = `MLB_Scorecard_${scorecardData?.gameInfo?.awayTeam?.abbreviation}_VS_${scorecardData?.gameInfo?.homeTeam?.abbreviation}.png`;
       link.href = dataUrl;
       link.click();
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.75 } });
     } catch (err) {
       console.error('Export PNG failed', err);
       alert('Error exporting PNG image.');
@@ -147,14 +153,20 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(graphicRef.current, { quality: 0.95, pixelRatio: 2 });
+      const el = graphicRef.current;
+      const dataUrl = await toPng(el, {
+        quality: 0.95,
+        pixelRatio: 2,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        style: { overflow: 'visible' },
+      });
       const pdf = new jsPDF('portrait', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`MLB_Scorecard_${selectedGamePk}.pdf`);
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.75 } });
     } catch (err) {
       console.error('Export PDF failed', err);
       alert('Error exporting PDF document.');
@@ -237,7 +249,7 @@ export default function App() {
               MLB Scorecard Studio
             </div>
             <div style={{ fontSize: '10px', color: c.textMuted, letterSpacing: '0.02em' }}>
-              Framable graphic art generator
+              Scorecard Graphic Art Generator
             </div>
           </div>
         </div>
