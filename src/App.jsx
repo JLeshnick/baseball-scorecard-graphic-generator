@@ -36,9 +36,9 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
 
-  // Graphic Options (Default theme: 'team')
+  // Graphic Theme Preset Options ('team-light' default!)
   const [activeTab, setActiveTab] = useState('style'); // 'style', 'text'
-  const [theme, setTheme] = useState('team'); // 'team' default!
+  const [theme, setTheme] = useState('team-light');
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
   const [customFooter, setCustomFooter] = useState('');
@@ -52,14 +52,14 @@ export default function App() {
     fetchGamesForDate(selectedDate);
   }, [selectedDate]);
 
-  // Load scorecard data on selected game change
+  // Load scorecard data when selected game changes
   useEffect(() => {
     if (selectedGamePk) {
       loadGameData(selectedGamePk);
     }
   }, [selectedGamePk]);
 
-  // Sync dark/light theme
+  // Sync dark/light app theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
@@ -159,7 +159,7 @@ export default function App() {
       <header className={`border-b py-3 px-4 md:px-8 transition-colors ${
         appTheme === 'dark' ? 'border-[#27272a] bg-[#18181b]' : 'border-[#e4e4e7] bg-[#f4f4f5]'
       }`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-[1500px] mx-auto flex items-center justify-between">
           
           <div>
             <h1 className={`text-base font-bold tracking-tight leading-none ${
@@ -210,7 +210,7 @@ export default function App() {
               Print
             </button>
 
-            {/* Dark / Light Theme Toggle */}
+            {/* Dark / Light App Theme Toggle */}
             <button
               onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}
               className={`w-8 h-8 rounded border flex items-center justify-center transition ml-1 ${
@@ -229,10 +229,10 @@ export default function App() {
 
 
       {/* MAIN CONTAINER */}
-      <main className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <main className="max-w-[1500px] w-full mx-auto p-4 md:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* LEFT CONTROLS */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* LEFT CONTROLS (3 COLS) */}
+        <div className="lg:col-span-3 space-y-4">
           
           {/* GAME SELECTOR CARD */}
           <div className={`border rounded-lg p-4 space-y-3 transition-colors ${
@@ -317,7 +317,7 @@ export default function App() {
                     : appTheme === 'dark' ? 'border-transparent text-[#a1a1aa]' : 'border-transparent text-[#71717a]'
                 }`}
               >
-                Theme Preset
+                Poster Theme
               </button>
               <button
                 onClick={() => setActiveTab('text')}
@@ -336,24 +336,23 @@ export default function App() {
                 <label className={`block text-[11px] font-medium ${
                   appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
                 }`}>
-                  Color Theme Preset:
+                  Poster Art Theme:
                 </label>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="space-y-1.5">
                   {[
-                    { id: 'team', label: 'Team Official (Default)' },
-                    { id: 'classic', label: 'Ballpark Classic' },
-                    { id: 'vintage', label: 'Vintage Sepia' },
-                    { id: 'dark', label: 'Midnight Slate' },
-                    { id: 'monochrome', label: 'Monochrome' }
+                    { id: 'team-light', label: 'Team Colors (Light Poster)' },
+                    { id: 'team-dark', label: 'Team Colors (Dark Poster)' },
+                    { id: 'vintage', label: 'Ballpark Vintage Sepia' },
+                    { id: 'monochrome', label: 'Monochrome Litho' }
                   ].map(t => (
                     <button
                       key={t.id}
                       onClick={() => setTheme(t.id)}
-                      className={`p-2 rounded border text-xs font-medium text-left transition ${
+                      className={`w-full p-2.5 rounded border text-xs font-medium text-left transition ${
                         theme === t.id
                           ? appTheme === 'dark'
                             ? 'bg-[#27272a] border-[#52525b] text-[#fafafa]'
-                            : 'bg-[#ffffff] border-[#a1a1aa] text-[#09090b] shadow-2xs'
+                            : 'bg-[#ffffff] border-[#a1a1aa] text-[#09090b] shadow-2xs font-bold'
                           : appTheme === 'dark'
                             ? 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:text-[#fafafa]'
                             : 'bg-[#ffffff] border-[#e4e4e7] text-[#71717a] hover:text-[#09090b]'
@@ -429,8 +428,8 @@ export default function App() {
         </div>
 
 
-        {/* RIGHT PREVIEW CANVAS WRAPPER */}
-        <div className={`lg:col-span-8 border rounded-lg p-4 md:p-6 w-full overflow-x-auto flex items-start justify-center min-h-[650px] transition-colors ${
+        {/* RIGHT PREVIEW CANVAS CONTAINER (9 COLS - SPACIOUS) */}
+        <div className={`lg:col-span-9 border rounded-lg p-4 md:p-6 w-full overflow-x-auto flex items-start justify-center min-h-[680px] transition-colors ${
           appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
         }`}>
           {loading ? (

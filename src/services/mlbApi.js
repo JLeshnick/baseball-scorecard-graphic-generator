@@ -3,36 +3,36 @@
  */
 
 export const TEAM_COLORS = {
-  MIL: { primary: '#0a2351', accent: '#ffc52f', text: '#ffc52f' },
-  CHC: { primary: '#0e3386', accent: '#cc3433', text: '#ffffff' },
-  LAD: { primary: '#005a9c', accent: '#ef3e42', text: '#ffffff' },
-  NYY: { primary: '#0c2340', accent: '#c4ced4', text: '#ffffff' },
-  PHI: { primary: '#e31837', accent: '#002d62', text: '#ffffff' },
-  ATL: { primary: '#13274f', accent: '#ce1141', text: '#ffffff' },
-  BOS: { primary: '#bd3039', accent: '#0c2340', text: '#ffffff' },
-  HOU: { primary: '#002d62', accent: '#eb6e1f', text: '#ffffff' },
-  TEX: { primary: '#003278', accent: '#c0111f', text: '#ffffff' },
-  ARI: { primary: '#a71930', accent: '#e3d4ad', text: '#ffffff' },
-  SD:  { primary: '#2f241d', accent: '#ffc425', text: '#ffc425' },
-  SF:  { primary: '#fd5a1e', accent: '#27251f', text: '#ffffff' },
-  NYM: { primary: '#002d72', accent: '#ff5910', text: '#ffffff' },
-  STL: { primary: '#c41e3a', accent: '#0c2340', text: '#ffffff' },
-  BAL: { primary: '#df4601', accent: '#000000', text: '#ffffff' },
-  CLE: { primary: '#002b5c', accent: '#e31937', text: '#ffffff' },
-  DET: { primary: '#0c2340', accent: '#fa4616', text: '#ffffff' },
-  MIN: { primary: '#002b5c', accent: '#d31145', text: '#ffffff' },
-  CWS: { primary: '#27251f', accent: '#c4ced4', text: '#ffffff' },
-  KC:  { primary: '#004687', accent: '#bd9b60', text: '#ffffff' },
-  TOR: { primary: '#134a8e', accent: '#1d2d5c', text: '#ffffff' },
-  TB:  { primary: '#092c5c', accent: '#8fbce6', text: '#ffffff' },
-  SEA: { primary: '#0c2340', accent: '#005c5c', text: '#ffffff' },
-  OAK: { primary: '#003831', accent: '#efb21e', text: '#efb21e' },
-  LAA: { primary: '#ba0021', accent: '#003263', text: '#ffffff' },
-  COL: { primary: '#330066', accent: '#c4ced4', text: '#ffffff' },
-  MIA: { primary: '#00a3e0', accent: '#ef3340', text: '#ffffff' },
-  WSH: { primary: '#ab0003', accent: '#14225a', text: '#ffffff' },
-  CIN: { primary: '#c6011f', accent: '#000000', text: '#ffffff' },
-  PIT: { primary: '#fdb827', accent: '#000000', text: '#000000' }
+  MIL: { primary: '#0a2351', secondary: '#ffc52f', text: '#ffc52f', darkBg: '#09152a' },
+  CHC: { primary: '#0e3386', secondary: '#cc3433', text: '#ffffff', darkBg: '#081a42' },
+  LAD: { primary: '#005a9c', secondary: '#ef3e42', text: '#ffffff', darkBg: '#002e52' },
+  NYY: { primary: '#0c2340', secondary: '#c4ced4', text: '#ffffff', darkBg: '#061120' },
+  PHI: { primary: '#e31837', secondary: '#002d62', text: '#ffffff', darkBg: '#700c1b' },
+  ATL: { primary: '#13274f', secondary: '#ce1141', text: '#ffffff', darkBg: '#0a1428' },
+  BOS: { primary: '#bd3039', secondary: '#0c2340', text: '#ffffff', darkBg: '#5e181c' },
+  HOU: { primary: '#002d62', secondary: '#eb6e1f', text: '#ffffff', darkBg: '#001631' },
+  TEX: { primary: '#003278', secondary: '#c0111f', text: '#ffffff', darkBg: '#00193c' },
+  ARI: { primary: '#a71930', secondary: '#e3d4ad', text: '#ffffff', darkBg: '#530c18' },
+  SD:  { primary: '#2f241d', secondary: '#ffc425', text: '#ffc425', darkBg: '#17120e' },
+  SF:  { primary: '#fd5a1e', secondary: '#27251f', text: '#ffffff', darkBg: '#7e2d0f' },
+  NYM: { primary: '#002d72', secondary: '#ff5910', text: '#ffffff', darkBg: '#001639' },
+  STL: { primary: '#c41e3a', secondary: '#0c2340', text: '#ffffff', darkBg: '#620f1d' },
+  BAL: { primary: '#df4601', secondary: '#000000', text: '#ffffff', darkBg: '#6f2300' },
+  CLE: { primary: '#002b5c', secondary: '#e31937', text: '#ffffff', darkBg: '#00152e' },
+  DET: { primary: '#0c2340', secondary: '#fa4616', text: '#ffffff', darkBg: '#061120' },
+  MIN: { primary: '#002b5c', secondary: '#d31145', text: '#ffffff', darkBg: '#00152e' },
+  CWS: { primary: '#27251f', secondary: '#c4ced4', text: '#ffffff', darkBg: '#13120f' },
+  KC:  { primary: '#004687', secondary: '#bd9b60', text: '#ffffff', darkBg: '#002343' },
+  TOR: { primary: '#134a8e', secondary: '#1d2d5c', text: '#ffffff', darkBg: '#092547' },
+  TB:  { primary: '#092c5c', secondary: '#8fbce6', text: '#ffffff', darkBg: '#04162e' },
+  SEA: { primary: '#0c2340', secondary: '#005c5c', text: '#ffffff', darkBg: '#061120' },
+  OAK: { primary: '#003831', secondary: '#efb21e', text: '#efb21e', darkBg: '#001c18' },
+  LAA: { primary: '#ba0021', secondary: '#003263', text: '#ffffff', darkBg: '#5d0010' },
+  COL: { primary: '#330066', secondary: '#c4ced4', text: '#ffffff', darkBg: '#190033' },
+  MIA: { primary: '#00a3e0', secondary: '#ef3340', text: '#ffffff', darkBg: '#005170' },
+  WSH: { primary: '#ab0003', secondary: '#14225a', text: '#ffffff', darkBg: '#550001' },
+  CIN: { primary: '#c6011f', secondary: '#000000', text: '#ffffff', darkBg: '#63000f' },
+  PIT: { primary: '#fdb827', secondary: '#000000', text: '#000000', darkBg: '#7f5c13' }
 };
 
 export async function searchGamesByDate(dateStr) {
@@ -163,8 +163,8 @@ export function processMLBData(data, gamePkOverride) {
   const awayAbbr = gameData.teams.away.abbreviation || 'MIL';
   const homeAbbr = gameData.teams.home.abbreviation || 'CHC';
 
-  const awayColors = TEAM_COLORS[awayAbbr] || { primary: '#0a2351', accent: '#ffc52f', text: '#ffc52f' };
-  const homeColors = TEAM_COLORS[homeAbbr] || { primary: '#0e3386', accent: '#cc3433', text: '#ffffff' };
+  const awayColors = TEAM_COLORS[awayAbbr] || { primary: '#0a2351', secondary: '#ffc52f', text: '#ffc52f', darkBg: '#09152a' };
+  const homeColors = TEAM_COLORS[homeAbbr] || { primary: '#0e3386', secondary: '#cc3433', text: '#ffffff', darkBg: '#081a42' };
 
   const awayTeam = {
     id: gameData.teams.away.id,
@@ -174,7 +174,7 @@ export function processMLBData(data, gamePkOverride) {
     hits: linescore.teams?.away?.hits ?? 7,
     errors: linescore.teams?.away?.errors ?? 0,
     color: awayColors.primary,
-    accent: awayColors.accent,
+    secondary: awayColors.secondary,
     textColor: awayColors.text
   };
 
@@ -186,7 +186,7 @@ export function processMLBData(data, gamePkOverride) {
     hits: linescore.teams?.home?.hits ?? 8,
     errors: linescore.teams?.home?.errors ?? 0,
     color: homeColors.primary,
-    accent: homeColors.accent,
+    secondary: homeColors.secondary,
     textColor: homeColors.text
   };
 
