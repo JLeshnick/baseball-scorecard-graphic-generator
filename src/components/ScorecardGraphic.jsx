@@ -269,8 +269,6 @@ export default function ScorecardGraphic({
         display: 'inline-flex', alignItems: 'baseline',
         fontFamily: "'Caveat', cursive",
         fontFeatureSettings: '"calt" 1, "liga" 1, "clig" 1',
-        paddingRight: '6px',
-        boxSizing: 'content-box',
         ...extraStyle
       }}>
         {text.split('').map((char, charIdx) => {
@@ -720,7 +718,7 @@ export default function ScorecardGraphic({
                         paddingRight: '6px',
                         boxSizing: 'content-box',
                       }}>
-                        {renderHandwrittenText(b.name, 'batter_' + b.id)}
+                        {renderHandwrittenText(b.name, 'batter_' + b.id, { paddingRight: '6px' })}
                       </span>
                     </div>
                   </td>
