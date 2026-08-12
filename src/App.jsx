@@ -14,7 +14,6 @@ import {
   RefreshCw,
   Sun,
   Moon,
-  Activity,
   Type,
   Sliders
 } from 'lucide-react';
@@ -25,14 +24,17 @@ import confetti from 'canvas-confetti';
 const getYesterdayDateString = () => {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export default function App() {
   const [appTheme, setAppTheme] = useState('dark'); // 'dark' or 'light'
   const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
   const [availableGames, setAvailableGames] = useState([]);
-  const [selectedGamePk, setSelectedGamePk] = useState('813049'); // Fallback default
+  const [selectedGamePk, setSelectedGamePk] = useState('');
   const [scorecardData, setScorecardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -40,8 +42,8 @@ export default function App() {
 
   // Graphic Options
   const [activeTab, setActiveTab] = useState('style'); // 'style', 'text'
-  const [theme, setTheme] = useState('classic'); // 'classic', 'team', 'vintage', 'dark', 'monochrome'
-  const [showPhotos, setShowPhotos] = useState(false); // Default: FALSE
+  const [theme, setTheme] = useState('classic');
+  const [showPhotos, setShowPhotos] = useState(false);
   const [customPhotos, setCustomPhotos] = useState([]);
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
@@ -49,8 +51,9 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
 
   const graphicRef = useRef(null);
+  const dateInputRef = useRef(null);
 
-  // Fetch games when date changes automatically (No "Find" button!)
+  // Fetch games when date changes automatically
   useEffect(() => {
     fetchGamesForDate(selectedDate);
   }, [selectedDate]);
@@ -62,7 +65,7 @@ export default function App() {
     }
   }, [selectedGamePk]);
 
-  // Sync appTheme to document element data-theme attribute
+  // Sync appTheme attribute
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
@@ -76,12 +79,14 @@ export default function App() {
       if (games.length > 0) {
         setSelectedGamePk(games[0].gamePk);
       } else {
-        setError(`No MLB games found for ${dateStr}. Please select another date.`);
-        setScorecardData(null);
+        // If yesterday has no games (e.g. offseason/all-star break), fallback to classic 2025 NLDS game
+        setError(`No games found for ${dateStr}. Try another date or postseason date.`);
+        setSelectedGamePk('813049');
       }
     } catch (err) {
       console.error(err);
-      setError('Error searching MLB games for this date.');
+      setError('Error searching games for this date.');
+      setSelectedGamePk('813049');
     } finally {
       setSearching(false);
     }
@@ -159,33 +164,32 @@ export default function App() {
     window.print();
   };
 
+  const triggerCalendarPicker = () => {
+    if (dateInputRef.current && dateInputRef.current.showPicker) {
+      dateInputRef.current.showPicker();
+    }
+  };
+
   return (
     <div className={`min-h-screen font-sans antialiased flex flex-col transition-colors ${
       appTheme === 'dark' ? 'bg-[#09090b] text-[#d4d4d8]' : 'bg-[#ffffff] text-[#27272a]'
     }`}>
       
-      {/* HEADER */}
+      {/* HEADER BAR (NO TITLE ICON) */}
       <header className={`border-b py-3 px-4 md:px-8 transition-colors ${
         appTheme === 'dark' ? 'border-[#27272a] bg-[#18181b]' : 'border-[#e4e4e7] bg-[#f4f4f5]'
       }`}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           
-          <div className="flex items-center gap-2.5">
-            <div className={`w-7 h-7 rounded flex items-center justify-center font-bold text-xs ${
-              appTheme === 'dark' ? 'bg-[#fafafa] text-[#09090b]' : 'bg-[#09090b] text-[#fafafa]'
+          <div>
+            <h1 className={`text-base font-bold tracking-tight leading-none ${
+              appTheme === 'dark' ? 'text-[#fafafa]' : 'text-[#09090b]'
             }`}>
-              <Activity className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className={`text-base font-bold tracking-tight leading-none ${
-                appTheme === 'dark' ? 'text-[#fafafa]' : 'text-[#09090b]'
-              }`}>
-                MLB Scorecard Studio
-              </h1>
-              <p className={`text-[11px] ${appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'}`}>
-                Framable graphic art generator for any MLB game
-              </p>
-            </div>
+              MLB Scorecard Studio
+            </h1>
+            <p className={`text-[11px] mt-0.5 ${appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'}`}>
+              Framable graphic art generator for any MLB game
+            </p>
           </div>
 
           {/* Action Toolbar & App Theme Toggle */}
@@ -245,7 +249,7 @@ export default function App() {
 
 
       {/* MAIN CONTAINER */}
-      <main className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT CONTROLS */}
         <div className="lg:col-span-4 space-y-4">
@@ -254,11 +258,10 @@ export default function App() {
           <div className={`border rounded-lg p-4 space-y-3 transition-colors ${
             appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
           }`}>
-            <h2 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+            <h2 className={`text-xs font-bold uppercase tracking-wider ${
               appTheme === 'dark' ? 'text-[#fafafa]' : 'text-[#09090b]'
             }`}>
-              <Calendar className="w-3.5 h-3.5 opacity-70" />
-              Select Date & MLB Game
+              Select Date & Game
             </h2>
 
             <div>
@@ -267,16 +270,30 @@ export default function App() {
               }`}>
                 Game Date:
               </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className={`w-full border rounded px-3 py-1.5 text-xs outline-none font-mono transition-colors ${
-                  appTheme === 'dark'
-                    ? 'bg-[#09090b] border-[#27272a] focus:border-[#52525b] text-[#fafafa]'
-                    : 'bg-[#ffffff] border-[#e4e4e7] focus:border-[#a1a1aa] text-[#09090b]'
-                }`}
-              />
+              
+              {/* DATE PICKER WITH POPUP CALENDAR TRIGGER */}
+              <div className="relative flex items-center">
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  value={selectedDate}
+                  onClick={triggerCalendarPicker}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className={`w-full border rounded px-3 py-1.5 text-xs outline-none font-mono cursor-pointer transition-colors ${
+                    appTheme === 'dark'
+                      ? 'bg-[#09090b] border-[#27272a] focus:border-[#52525b] text-[#fafafa]'
+                      : 'bg-[#ffffff] border-[#e4e4e7] focus:border-[#a1a1aa] text-[#09090b]'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={triggerCalendarPicker}
+                  className="absolute right-2.5 text-[#a1a1aa] hover:text-[#fafafa]"
+                  title="Open Calendar"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div>
@@ -462,19 +479,19 @@ export default function App() {
         </div>
 
 
-        {/* RIGHT PREVIEW CANVAS */}
-        <div className={`border rounded-lg p-4 md:p-6 flex flex-col items-center justify-center overflow-x-auto min-h-[600px] transition-colors ${
+        {/* RIGHT PREVIEW CANVAS WRAPPER */}
+        <div className={`lg:col-span-8 border rounded-lg p-4 md:p-6 w-full overflow-x-auto flex items-start justify-center min-h-[650px] transition-colors ${
           appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
         }`}>
           {loading ? (
-            <div className={`flex flex-col items-center justify-center py-20 gap-2 ${
+            <div className={`flex flex-col items-center justify-center py-24 gap-2 ${
               appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
             }`}>
               <RefreshCw className="w-5 h-5 animate-spin" />
               <p className="text-xs font-medium">Fetching MLB Play-by-Play Data...</p>
             </div>
           ) : error ? (
-            <div className="text-center py-20 text-rose-500 text-xs font-medium">
+            <div className="text-center py-24 text-rose-500 text-xs font-medium max-w-sm">
               {error}
             </div>
           ) : (

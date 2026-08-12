@@ -143,18 +143,17 @@ export default function ScorecardGraphic({
   return (
     <div
       ref={graphicRef}
-      className={`relative w-full max-w-[1020px] mx-auto p-6 md:p-8 shadow-xl rounded-[2px] transition-all ${ts.paperBg} ${ts.textColor}`}
+      className={`relative w-full min-w-[680px] max-w-[960px] mx-auto p-6 md:p-8 shadow-xl rounded-[2px] transition-all ${ts.paperBg} ${ts.textColor}`}
       style={{
-        boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 0 0 12px #e5e3da',
-        aspectRatio: showPhotos ? '3/4' : '4/5'
+        boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.2), 0 0 0 12px #e5e3da'
       }}
     >
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-scorecard-paper" />
 
-      <div className="relative z-10 flex flex-col h-full justify-between">
+      <div className="relative z-10 flex flex-col h-full justify-between space-y-4">
         
         {/* HEADER SECTION */}
-        <div className="border-b-2 border-zinc-900 pb-3 mb-4">
+        <div className="border-b-2 border-zinc-900 pb-3">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
             
             <div className="flex-1">
