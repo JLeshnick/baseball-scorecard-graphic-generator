@@ -73,6 +73,38 @@ export async function fetchGameScorecardData(gamePk) {
   }
 }
 
+function getErrorPosition(play) {
+  const desc = (play.result?.description || '').toLowerCase();
+  
+  if (desc.includes('pitcher') || desc.includes('by p ') || desc.includes('by p.')) return '1';
+  if (desc.includes('catcher') || desc.includes('by c ') || desc.includes('by c.')) return '2';
+  if (desc.includes('first baseman') || desc.includes('by 1b')) return '3';
+  if (desc.includes('second baseman') || desc.includes('by 2b')) return '4';
+  if (desc.includes('third baseman') || desc.includes('by 3b')) return '5';
+  if (desc.includes('shortstop') || desc.includes('by ss')) return '6';
+  if (desc.includes('left fielder') || desc.includes('by lf')) return '7';
+  if (desc.includes('center fielder') || desc.includes('by cf')) return '8';
+  if (desc.includes('right fielder') || desc.includes('by rf')) return '9';
+
+  if (play.playEvents) {
+    for (const evt of play.playEvents) {
+      if (evt.details?.isError && evt.player) {
+        const code = evt.position?.code;
+        if (code) return code;
+      }
+    }
+  }
+
+  const posCode = play.matchup?.fielder?.primaryPosition?.code;
+  if (posCode) return posCode;
+
+  const posAbbr = play.matchup?.fielder?.primaryPosition?.abbreviation;
+  const ABBR_MAP = { P: '1', C: '2', '1B': '3', '2B': '4', '3B': '5', SS: '6', LF: '7', CF: '8', RF: '9' };
+  if (posAbbr && ABBR_MAP[posAbbr]) return ABBR_MAP[posAbbr];
+
+  return '';
+}
+
 function parsePlayNotation(play) {
   const event = play.result?.eventType || '';
   const desc = play.result?.description || '';
@@ -110,8 +142,8 @@ function parsePlayNotation(play) {
   if (event === 'sac_bunt') {
     return { code: 'SAC', type: 'out' };
   }
-  if (event === 'field_error') {
-    const pos = play.matchup?.fielder?.primaryPosition?.abbreviation || '';
+  if (event === 'field_error' || event === 'error' || desc.toLowerCase().includes('error')) {
+    const pos = getErrorPosition(play);
     return { code: pos ? `E${pos}` : 'E', type: 'error' };
   }
 
