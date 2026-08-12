@@ -905,7 +905,7 @@ export default function App() {
           justifyContent: 'center',
           padding: '32px 24px',
         }}>
-          {loading ? (
+          {loading && !scorecardData ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', gap: '12px', paddingTop: '100px',
@@ -916,7 +916,7 @@ export default function App() {
                 Fetching MLB Play-by-Play Data…
               </p>
             </div>
-          ) : error ? (
+          ) : error && !scorecardData ? (
             <div style={{
               textAlign: 'center', paddingTop: '100px',
               color: '#f87171', fontSize: '12px', fontWeight: 500,
@@ -925,19 +925,41 @@ export default function App() {
               {error}
             </div>
           ) : (
-            <ScorecardGraphic
-              data={scorecardData}
-              theme={theme}
-              fontStyle={fontStyle}
-              showEraserMarks={showEraserMarks}
-              eraserSeed={eraserSeed}
-              customHeadline={customHeadline}
-              customSubtitle={customSubtitle}
-              customFooter={customFooter}
-              customNotes={customNotes}
-              graphicRef={graphicRef}
-              orientation={orientation}
-            />
+            <div style={{
+              position: 'relative', width: '100%',
+              display: 'flex', justifyContent: 'center',
+              transition: 'opacity 0.25s ease',
+              opacity: loading ? 0.65 : 1,
+            }}>
+              {loading && (
+                <div style={{
+                  position: 'fixed', top: '72px', right: '32px', zIndex: 100,
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '7px 14px', borderRadius: '20px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                  border: `1px solid ${c.border}`,
+                  fontSize: '11.5px', fontWeight: 600, color: c.textHead,
+                }}>
+                  <RefreshCw style={{ width: '13px', height: '13px', animation: 'spin 1s linear infinite' }} />
+                  Updating Scorecard…
+                </div>
+              )}
+              <ScorecardGraphic
+                data={scorecardData}
+                theme={theme}
+                fontStyle={fontStyle}
+                showEraserMarks={showEraserMarks}
+                eraserSeed={eraserSeed}
+                customHeadline={customHeadline}
+                customSubtitle={customSubtitle}
+                customFooter={customFooter}
+                customNotes={customNotes}
+                graphicRef={graphicRef}
+                orientation={orientation}
+              />
+            </div>
           )}
         </main>
 

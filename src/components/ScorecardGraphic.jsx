@@ -1080,14 +1080,11 @@ export default function ScorecardGraphic({
             </div>
           )}
 
-          {/* Custom Game Notes & Highlights Block */}
+          {/* Custom Game Notes & Highlights Block — seamless part of scorecard paper */}
           {customNotes && (
             <div style={{
               marginTop: '12px',
-              padding: '10px 14px',
-              borderRadius: '6px',
-              backgroundColor: t.tableHeaderBg,
-              border: `1px solid ${t.borderStrong}`,
+              padding: '6px 4px',
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
@@ -1099,6 +1096,7 @@ export default function ScorecardGraphic({
                 textTransform: 'uppercase',
                 color: t.textMuted,
                 fontFamily: t.fontSans,
+                opacity: 0.8,
               }}>
                 GAME NOTES & HIGHLIGHTS
               </div>
