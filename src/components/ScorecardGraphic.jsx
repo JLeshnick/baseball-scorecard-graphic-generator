@@ -12,7 +12,8 @@ export default function ScorecardGraphic({
   customHeadline = '',
   customSubtitle = '',
   customFooter = '',
-  graphicRef = null
+  graphicRef = null,
+  orientation = 'portrait'
 }) {
   if (!data) return null;
 
@@ -584,17 +585,20 @@ export default function ScorecardGraphic({
   const awayWon = away.score > home.score;
   const homeWon = home.score > away.score;
 
+  const isLandscape = orientation === 'landscape';
+
   return (
     <div
       ref={graphicRef}
       style={{
         position: 'relative',
         width: '100%',
-        maxWidth: '920px',
+        maxWidth: isLandscape ? '1240px' : '920px',
         margin: '0 auto',
         backgroundColor: t.bg,
         padding: '10px',
         boxShadow: '0 30px 60px -15px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08)',
+        transition: 'max-width 0.3s ease',
       }}
     >
       {/* Outer frame border */}
@@ -793,18 +797,41 @@ export default function ScorecardGraphic({
           </div>
 
           {/* SCORECARDS */}
-          <div style={{ padding: '10px 0 0', position: 'relative', zIndex: 1 }}>
-            {renderTeamScorecard(awayData, false)}
-            
-            {/* Divider between teams */}
+          {isLandscape ? (
             <div style={{
-              height: '3px',
-              backgroundImage: `linear-gradient(to right, ${t.awayColor}, ${t.borderStrong}, ${t.homeColor})`,
-              margin: '6px 0',
-            }} />
-            
-            {renderTeamScorecard(homeData, true)}
-          </div>
+              display: 'flex', gap: '10px', alignItems: 'flex-start',
+              padding: '10px 0 0', position: 'relative', zIndex: 1,
+            }}>
+              <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+                {renderTeamScorecard(awayData, false)}
+              </div>
+
+              {/* Vertical divider between teams */}
+              <div style={{
+                width: '3px', alignSelf: 'stretch',
+                backgroundImage: `linear-gradient(to bottom, ${t.awayColor}, ${t.borderStrong}, ${t.homeColor})`,
+                margin: '0 1px',
+                borderRadius: '2px',
+              }} />
+
+              <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+                {renderTeamScorecard(homeData, true)}
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '10px 0 0', position: 'relative', zIndex: 1 }}>
+              {renderTeamScorecard(awayData, false)}
+
+              {/* Divider between teams */}
+              <div style={{
+                height: '3px',
+                backgroundImage: `linear-gradient(to right, ${t.awayColor}, ${t.borderStrong}, ${t.homeColor})`,
+                margin: '6px 0',
+              }} />
+
+              {renderTeamScorecard(homeData, true)}
+            </div>
+          )}
 
           {/* Bottom accent line */}
           <div style={{ display: 'flex', height: '5px', marginTop: '10px' }}>

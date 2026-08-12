@@ -65,6 +65,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
   const [theme, setTheme] = useState('team-light');
+  const [orientation, setOrientation] = useState('portrait'); // 'portrait' or 'landscape'
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
   const [customFooter, setCustomFooter] = useState('');
@@ -138,6 +139,8 @@ export default function App() {
    */
   const captureGraphic = async (pixelRatio) => {
     const el = graphicRef.current;
+    const isLandscape = orientation === 'landscape';
+    const targetWidth = isLandscape ? '1240px' : '920px';
 
     // Build an isolated off-screen wrapper free from any app layout context
     const wrapper = document.createElement('div');
@@ -145,7 +148,7 @@ export default function App() {
       'position:fixed',
       'top:-99999px',
       'left:-99999px',
-      'width:920px',
+      `width:${targetWidth}`,
       'height:auto',
       'overflow:visible',
       'z-index:-1',
@@ -154,14 +157,14 @@ export default function App() {
 
     // Deep-clone the graphic and reset any width/margin constraints
     const clone = el.cloneNode(true);
-    clone.style.width = '920px';
-    clone.style.maxWidth = '920px';
+    clone.style.width = targetWidth;
+    clone.style.maxWidth = targetWidth;
     clone.style.margin = '0';
 
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
 
-    // Two rAFs so the browser fully lays out the clone at 920 px
+    // Two rAFs so the browser fully lays out the clone at target width
     await new Promise(r => requestAnimationFrame(r));
     await new Promise(r => requestAnimationFrame(r));
 
@@ -195,11 +198,12 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
+      const isLandscape = orientation === 'landscape';
       const dataUrl = await captureGraphic(2);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
-      const pdf = new jsPDF('portrait', 'mm', 'a4');
+      const pdf = new jsPDF(isLandscape ? 'landscape' : 'portrait', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -608,6 +612,61 @@ export default function App() {
                     </div>
                   </button>
                 ))}
+
+                {/* ── ORIENTATION TOGGLE ────────────────────────────────────── */}
+                <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: `1px solid ${c.border}` }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '8px',
+                  }}>
+                    Poster Layout Orientation
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      onClick={() => setOrientation('portrait')}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
+                        border: `1.5px solid ${orientation === 'portrait' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: orientation === 'portrait'
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        color: orientation === 'portrait' ? c.textHead : c.textMuted,
+                        fontWeight: 600, fontSize: '12px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <svg width="13" height="16" viewBox="0 0 14 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="1" width="12" height="16" rx="2" />
+                        <line x1="4" y1="5" x2="10" y2="5" />
+                        <line x1="4" y1="8" x2="10" y2="8" />
+                        <line x1="4" y1="11" x2="10" y2="11" />
+                      </svg>
+                      Portrait
+                    </button>
+                    <button
+                      onClick={() => setOrientation('landscape')}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
+                        border: `1.5px solid ${orientation === 'landscape' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: orientation === 'landscape'
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        color: orientation === 'landscape' ? c.textHead : c.textMuted,
+                        fontWeight: 600, fontSize: '12px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <svg width="17" height="13" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="1" width="16" height="12" rx="2" />
+                        <line x1="9" y1="4" x2="9" y2="10" />
+                      </svg>
+                      Landscape
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -693,6 +752,7 @@ export default function App() {
               customSubtitle={customSubtitle}
               customFooter={customFooter}
               graphicRef={graphicRef}
+              orientation={orientation}
             />
           )}
         </main>
