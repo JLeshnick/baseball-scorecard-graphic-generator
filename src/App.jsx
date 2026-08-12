@@ -54,7 +54,7 @@ const POSTER_THEMES = [
 ];
 
 export default function App() {
-  const [appTheme, setAppTheme] = useState('dark'); // 'dark' or 'light'
+  const [appTheme, setAppTheme] = useState('light'); // 'dark' or 'light'
   const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
   const [availableGames, setAvailableGames] = useState([]);
   const [selectedGamePk, setSelectedGamePk] = useState('');

@@ -88,7 +88,9 @@ function parsePlayNotation(play) {
   if (event === 'hit_by_pitch') return { code: 'HBP', type: 'walk', bases: 1 };
 
   if (event === 'strikeout') {
-    const isLooking = desc.toLowerCase().includes('called third strike') || desc.toLowerCase().includes('looking');
+    // MLB API uses "called out on strikes" for looking Ks, not "called third strike"
+    const dl = desc.toLowerCase();
+    const isLooking = dl.includes('called out on strikes') || dl.includes('called third strike') || dl.includes('looking');
     return { code: 'K', type: 'strikeout', isLooking };
   }
 
@@ -240,7 +242,8 @@ export function processMLBData(data, gamePkOverride) {
         if (pitcherId) {
           if (!pitcherStrikeoutMap[pitcherId]) pitcherStrikeoutMap[pitcherId] = [];
           const desc = play.result?.description || '';
-          const isLooking = desc.toLowerCase().includes('called third strike') || desc.toLowerCase().includes('looking');
+          const dl = desc.toLowerCase();
+          const isLooking = dl.includes('called out on strikes') || dl.includes('called third strike') || dl.includes('looking');
           pitcherStrikeoutMap[pitcherId].push({ code: 'K', isLooking });
         }
       }
@@ -275,21 +278,28 @@ export function processMLBData(data, gamePkOverride) {
       };
     });
 
-    const starters = [];
-    const subsList = [];
+    // pitcherIds set for filtering subs — pitchers who appear in batting lineup
+    // (e.g. NL games) should not show as positional subs
+    const pitcherIdSet = new Set(pitcherIds);
+
+    const starters = [];   // 9 batting order slots
+    const subsList = [];   // positional subs (PH, PR, defensive)
     let subCharIndex = 0;
     const subLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
     batterIds.forEach(id => {
       const player = playerMap[`ID${id}`];
       if (!player) return;
-      
-      const pos = player.selectedPosition?.abbreviation || player.primaryPosition?.abbreviation || 'DH';
-      const jerseyNumber = player.jerseyNumber || '00';
+
+      // player.position is the game-specific position; primaryPosition is career default
+      const pos = player.position?.abbreviation || player.primaryPosition?.abbreviation || '—';
+      const jerseyNumber = player.jerseyNumber || '—';
       const fullName = player.person?.fullName || '';
       const lastName = fullName.split(' ').pop().toUpperCase();
+      const battingOrderNum = player.battingOrder ? parseInt(player.battingOrder) : null;
 
-      const isStarter = player.battingOrder && (parseInt(player.battingOrder) % 100 === 0 || starters.length < 9);
+      // A starter has a battingOrder ending in 00 (100, 200 … 900)
+      const isStarter = battingOrderNum !== null && battingOrderNum % 100 === 0;
 
       if (isStarter && starters.length < 9) {
         starters.push({
@@ -301,35 +311,33 @@ export function processMLBData(data, gamePkOverride) {
           subNotes: [],
           plays: batterInningPlays[id] || {}
         });
-      } else {
+      } else if (!isStarter && battingOrderNum !== null && !pitcherIdSet.has(id)) {
+        // Substitute — link to the correct batting order slot
+        // battingOrder 301 → slot index 2 (3rd spot, 0-indexed)
+        const slotIndex = Math.floor(battingOrderNum / 100) - 1;
         const subLetter = subLetters[subCharIndex % subLetters.length];
         subCharIndex++;
-        
-        subsList.push({
-          letter: subLetter,
-          name: lastName,
-          note: `PH T${subsList.length + 6}`
-        });
 
-        if (starters.length > 0) {
-          const targetStarter = starters[(subsList.length - 1) % 9];
-          if (targetStarter) {
-            targetStarter.subNotes.push(subLetter);
-            const subPlays = batterInningPlays[id] || {};
-            Object.keys(subPlays).forEach(inn => {
-              targetStarter.plays[inn] = subPlays[inn];
-            });
-          }
+        subsList.push({ letter: subLetter, name: lastName });
+
+        const targetStarter = starters[slotIndex];
+        if (targetStarter) {
+          targetStarter.subNotes.push(subLetter);
+          const subPlays = batterInningPlays[id] || {};
+          Object.keys(subPlays).forEach(inn => {
+            targetStarter.plays[inn] = subPlays[inn];
+          });
         }
       }
     });
 
+    // Pad to 9 rows if needed (short games / data gaps)
     while (starters.length < 9) {
       starters.push({
         id: `empty-${starters.length}`,
-        jerseyNumber: `${10 + starters.length}`,
-        position: 'DH',
-        name: 'PLAYER',
+        jerseyNumber: '—',
+        position: '—',
+        name: '—',
         subNotes: [],
         plays: {}
       });
