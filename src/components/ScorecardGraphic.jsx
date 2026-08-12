@@ -659,7 +659,7 @@ export default function ScorecardGraphic({
               <div style={{
                 fontFamily: "'Oswald', sans-serif",
                 fontWeight: 700,
-                fontSize: 'clamp(20px, 3.5vw, 32px)',
+                fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 color: awayWon ? t.awayColor : t.textPrimary,
@@ -674,7 +674,7 @@ export default function ScorecardGraphic({
                 <span style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontWeight: 900,
-                  fontSize: 'clamp(36px, 6vw, 58px)',
+                  fontSize: '50px',
                   color: awayWon ? t.awayColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
@@ -701,7 +701,7 @@ export default function ScorecardGraphic({
             }}>
               <div style={{
                 fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(28px, 4vw, 40px)',
+                fontSize: '36px',
                 color: t.vsTextColor,
                 letterSpacing: '0.04em',
                 lineHeight: 1,
@@ -740,7 +740,7 @@ export default function ScorecardGraphic({
               <div style={{
                 fontFamily: "'Oswald', sans-serif",
                 fontWeight: 700,
-                fontSize: 'clamp(20px, 3.5vw, 32px)',
+                fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 color: homeWon ? t.homeColor : t.textPrimary,
@@ -757,7 +757,7 @@ export default function ScorecardGraphic({
                 <span style={{
                   fontFamily: "'JetBrains Mono', monospace",
                   fontWeight: 900,
-                  fontSize: 'clamp(36px, 6vw, 58px)',
+                  fontSize: '50px',
                   color: homeWon ? t.homeColor : t.textSecondary,
                   lineHeight: 1,
                 }}>

@@ -84,7 +84,12 @@ export default function App() {
   }, [selectedGamePk]);
 
   useEffect(() => {
+    const bg = isDark ? '#09090b' : '#f0ede8';
     document.documentElement.setAttribute('data-theme', appTheme);
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
   }, [appTheme]);
 
   const fetchGamesForDate = async (dateStr) => {
@@ -130,13 +135,20 @@ export default function App() {
     setExporting(true);
     try {
       const el = graphicRef.current;
+      const prevWidth = el.style.width;
+      const prevMaxWidth = el.style.maxWidth;
+      el.style.width = '920px';
+      el.style.maxWidth = '920px';
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
       const dataUrl = await toPng(el, {
         quality: 0.98,
         pixelRatio: 3,
         width: el.scrollWidth,
         height: el.scrollHeight,
-        style: { overflow: 'visible' },
       });
+      el.style.width = prevWidth;
+      el.style.maxWidth = prevMaxWidth;
       const link = document.createElement('a');
       link.download = `MLB_Scorecard_${scorecardData?.gameInfo?.awayTeam?.abbreviation}_VS_${scorecardData?.gameInfo?.homeTeam?.abbreviation}.png`;
       link.href = dataUrl;
@@ -154,13 +166,20 @@ export default function App() {
     setExporting(true);
     try {
       const el = graphicRef.current;
+      const prevWidth = el.style.width;
+      const prevMaxWidth = el.style.maxWidth;
+      el.style.width = '920px';
+      el.style.maxWidth = '920px';
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
       const dataUrl = await toPng(el, {
         quality: 0.95,
         pixelRatio: 2,
         width: el.scrollWidth,
         height: el.scrollHeight,
-        style: { overflow: 'visible' },
       });
+      el.style.width = prevWidth;
+      el.style.maxWidth = prevMaxWidth;
       const pdf = new jsPDF('portrait', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
