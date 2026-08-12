@@ -201,6 +201,13 @@ export function processMLBData(data, gamePkOverride) {
 
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
 
+  // Per-inning linescore (runs each inning for each team)
+  const linescoreInnings = (linescore.innings || []).map(inn => ({
+    num: inn.num,
+    away: inn.away?.runs ?? '-',
+    home: inn.home?.runs ?? 'x',
+  }));
+
   function parseTeamSide(teamKey, sideHalf) {
     const teamBox = box.teams[teamKey];
     const playerMap = teamBox.players || {};
@@ -222,33 +229,49 @@ export function processMLBData(data, gamePkOverride) {
       batterInningPlays[batterId][inning] = parsed;
     });
 
-    // Pitcher strikeout records
+    // Pitcher strikeout records (from plays)
     const pitcherIds = teamBox.pitchers || [];
-    const pitcherMap = {};
-    pitcherIds.forEach(id => { pitcherMap[id] = []; });
+    const pitcherStrikeoutMap = {};
+    pitcherIds.forEach(id => { pitcherStrikeoutMap[id] = []; });
 
     plays.forEach(play => {
       if (play.about?.halfInning === sideHalf && play.result?.eventType === 'strikeout') {
         const pitcherId = play.matchup?.pitcher?.id;
         if (pitcherId) {
-          if (!pitcherMap[pitcherId]) pitcherMap[pitcherId] = [];
+          if (!pitcherStrikeoutMap[pitcherId]) pitcherStrikeoutMap[pitcherId] = [];
           const desc = play.result?.description || '';
           const isLooking = desc.toLowerCase().includes('called third strike') || desc.toLowerCase().includes('looking');
-          pitcherMap[pitcherId].push({ code: 'K', isLooking });
+          pitcherStrikeoutMap[pitcherId].push({ code: 'K', isLooking });
         }
       }
     });
+
+    // Format innings pitched: outs / 3 → e.g. 7 outs = 2.1
+    const formatIP = (outs) => {
+      if (outs === undefined || outs === null) return null;
+      const full = Math.floor(outs / 3);
+      const rem = outs % 3;
+      return rem === 0 ? `${full}.0` : `${full}.${rem}`;
+    };
 
     const pitchersList = pitcherIds.slice(0, 7).map(id => {
       const p = playerMap[`ID${id}`] || {};
       const name = p.person?.fullName ? p.person.fullName.split(' ').pop().toUpperCase() : 'PITCHER';
       const number = p.jerseyNumber || 'P';
-      const ks = pitcherMap[id] || [];
+      const ks = pitcherStrikeoutMap[id] || [];
+      // MLB Stats API: game-level pitching stats live under player.stats.pitching
+      // The boxscore endpoint returns them inline on each player object
+      const gp = p.stats?.pitching ?? {};
       return {
         id,
         number,
         name,
-        strikeouts: ks
+        strikeouts: ks,
+        ip: formatIP(gp.outs),
+        hits: gp.hits ?? null,
+        runs: gp.runs ?? null,
+        earnedRuns: gp.earnedRuns ?? null,
+        walks: gp.baseOnBalls ?? null,
       };
     });
 
@@ -330,7 +353,8 @@ export function processMLBData(data, gamePkOverride) {
       headline,
       totalInnings,
       awayTeam,
-      homeTeam
+      homeTeam,
+      linescore: linescoreInnings,
     },
     awayData,
     homeData

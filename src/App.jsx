@@ -11,7 +11,7 @@ import {
   FileSpreadsheet,
   RefreshCw,
   Sun,
-  Moon
+  Moon,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -26,6 +26,33 @@ const getYesterdayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const POSTER_THEMES = [
+  {
+    id: 'team-light',
+    label: 'Team Colors',
+    desc: 'Ivory paper · Team primaries',
+    swatch: ['#e8dfc8', '#0e3386', '#c41e3a'],
+  },
+  {
+    id: 'team-dark',
+    label: 'Night Game',
+    desc: 'Deep navy · Vivid team accents',
+    swatch: ['#111622', '#3a80cc', '#f04a5a'],
+  },
+  {
+    id: 'vintage',
+    label: 'Vintage Sepia',
+    desc: 'Aged parchment · Warm tones',
+    swatch: ['#f5eed8', '#3a2010', '#c8922a'],
+  },
+  {
+    id: 'monochrome',
+    label: 'Monochrome',
+    desc: 'Pure white · Ink black',
+    swatch: ['#f9f9f7', '#111111', '#555555'],
+  },
+];
+
 export default function App() {
   const [appTheme, setAppTheme] = useState('dark'); // 'dark' or 'light'
   const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
@@ -36,8 +63,7 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
 
-  // Graphic Theme Preset Options ('team-light' default!)
-  const [activeTab, setActiveTab] = useState('style'); // 'style', 'text'
+  const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
   const [theme, setTheme] = useState('team-light');
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
@@ -47,19 +73,16 @@ export default function App() {
   const graphicRef = useRef(null);
   const dateInputRef = useRef(null);
 
-  // Auto-fetch games on date change
   useEffect(() => {
     fetchGamesForDate(selectedDate);
   }, [selectedDate]);
 
-  // Load scorecard data when selected game changes
   useEffect(() => {
     if (selectedGamePk) {
       loadGameData(selectedGamePk);
     }
   }, [selectedGamePk]);
 
-  // Sync dark/light app theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
@@ -92,7 +115,7 @@ export default function App() {
       const data = await fetchGameScorecardData(gamePk);
       setScorecardData(data);
       setCustomHeadline(data.gameInfo.dateDisplay);
-      setCustomSubtitle(`${data.gameInfo.venue} | ${data.gameInfo.headline}`);
+      setCustomSubtitle(`${data.gameInfo.venue} · ${data.gameInfo.headline}`);
       setCustomFooter(`MLB SCORECARD GRAPHIC ART PRINT • ${data.gameInfo.dateDisplay} • ${data.gameInfo.venue.toUpperCase()}`);
     } catch (err) {
       console.error(err);
@@ -106,12 +129,12 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(graphicRef.current, { quality: 0.95, pixelRatio: 3 });
+      const dataUrl = await toPng(graphicRef.current, { quality: 0.98, pixelRatio: 3 });
       const link = document.createElement('a');
       link.download = `MLB_Scorecard_${scorecardData?.gameInfo?.awayTeam?.abbreviation}_VS_${scorecardData?.gameInfo?.homeTeam?.abbreviation}.png`;
       link.href = dataUrl;
       link.click();
-      confetti({ particleCount: 50, spread: 40, origin: { y: 0.8 } });
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.75 } });
     } catch (err) {
       console.error('Export PNG failed', err);
       alert('Error exporting PNG image.');
@@ -131,7 +154,7 @@ export default function App() {
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`MLB_Scorecard_${selectedGamePk}.pdf`);
-      confetti({ particleCount: 50, spread: 40, origin: { y: 0.8 } });
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.75 } });
     } catch (err) {
       console.error('Export PDF failed', err);
       alert('Error exporting PDF document.');
@@ -140,307 +163,475 @@ export default function App() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   const triggerCalendarPicker = () => {
-    if (dateInputRef.current && dateInputRef.current.showPicker) {
+    if (dateInputRef.current?.showPicker) {
       dateInputRef.current.showPicker();
     }
   };
 
+  // Theme-adaptive CSS variables
+  const isDark = appTheme === 'dark';
+  const c = {
+    bgBody:    isDark ? '#09090b' : '#f0ede8',
+    bgHeader:  isDark ? '#111113' : '#ffffff',
+    bgSidebar: isDark ? '#111113' : '#ffffff',
+    bgCanvas:  isDark ? '#1a1a1e' : '#e8e3dc',
+    bgInput:   isDark ? '#09090b' : '#f8f8f8',
+    bgCard:    isDark ? '#18181c' : '#ffffff',
+    border:    isDark ? '#27272a' : '#e4e0da',
+    borderFocus: isDark ? '#52525b' : '#b0a898',
+    textMain:  isDark ? '#e4e4e7' : '#1c1917',
+    textHead:  isDark ? '#fafafa' : '#0c0a09',
+    textMuted: isDark ? '#71717a' : '#78716c',
+    btnPrimary:    isDark ? '#fafafa' : '#1c1917',
+    btnPrimaryText: isDark ? '#09090b' : '#fafafa',
+    btnSecondary:  isDark ? '#27272a' : '#e4e0da',
+    btnSecondaryText: isDark ? '#e4e4e7' : '#1c1917',
+  };
+
+  const tabStyle = (id) => ({
+    padding: '7px 14px',
+    fontSize: '11px',
+    fontWeight: 600,
+    fontFamily: "'Inter', sans-serif",
+    cursor: 'pointer',
+    border: 'none',
+    background: 'transparent',
+    color: activeTab === id ? c.textHead : c.textMuted,
+    borderBottom: `2px solid ${activeTab === id ? c.btnPrimary : 'transparent'}`,
+    transition: 'all 0.15s ease',
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
+  });
+
   return (
-    <div className={`min-h-screen font-sans antialiased flex flex-col transition-colors ${
-      appTheme === 'dark' ? 'bg-[#09090b] text-[#d4d4d8]' : 'bg-[#ffffff] text-[#27272a]'
-    }`}>
-      
-      {/* HEADER BAR */}
-      <header className={`border-b py-3 px-4 md:px-8 transition-colors ${
-        appTheme === 'dark' ? 'border-[#27272a] bg-[#18181b]' : 'border-[#e4e4e7] bg-[#f4f4f5]'
-      }`}>
-        <div className="max-w-[1500px] mx-auto flex items-center justify-between">
-          
+    <div style={{
+      minHeight: '100vh',
+      fontFamily: "'Inter', sans-serif",
+      backgroundColor: c.bgBody,
+      color: c.textMain,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+
+      {/* ── HEADER BAR ────────────────────────────────────────────────── */}
+      <header style={{
+        borderBottom: `1px solid ${c.border}`,
+        backgroundColor: c.bgHeader,
+        padding: '0 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '54px',
+        flexShrink: 0,
+      }}>
+        {/* Logo / Wordmark */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div>
-            <h1 className={`text-base font-bold tracking-tight leading-none ${
-              appTheme === 'dark' ? 'text-[#fafafa]' : 'text-[#09090b]'
-            }`}>
+            <div style={{
+              fontWeight: 800, fontSize: '14px', letterSpacing: '-0.02em',
+              color: c.textHead, lineHeight: 1.1,
+            }}>
               MLB Scorecard Studio
-            </h1>
-            <p className={`text-[11px] mt-0.5 ${appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'}`}>
-              Framable graphic art generator for any MLB game
-            </p>
+            </div>
+            <div style={{ fontSize: '10px', color: c.textMuted, letterSpacing: '0.02em' }}>
+              Framable graphic art generator
+            </div>
           </div>
+        </div>
 
-          {/* Action Toolbar */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportPNG}
-              disabled={exporting || loading}
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5 shadow-2xs ${
-                appTheme === 'dark'
-                  ? 'bg-[#fafafa] hover:bg-[#e4e4e7] text-[#09090b]'
-                  : 'bg-[#09090b] hover:bg-[#27272a] text-[#fafafa]'
-              }`}
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export PNG
-            </button>
-            <button
-              onClick={handleExportPDF}
-              disabled={exporting || loading}
-              className={`px-3 py-1.5 rounded text-xs font-semibold border transition disabled:opacity-50 flex items-center gap-1.5 ${
-                appTheme === 'dark'
-                  ? 'bg-[#27272a] hover:bg-[#3f3f46] text-[#fafafa] border-[#3f3f46]'
-                  : 'bg-[#e4e4e7] hover:bg-[#d4d4d8] text-[#09090b] border-[#d4d4d8]'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              Export PDF
-            </button>
-            <button
-              onClick={handlePrint}
-              className={`px-3 py-1.5 rounded text-xs font-semibold border transition flex items-center gap-1.5 ${
-                appTheme === 'dark'
-                  ? 'bg-[#27272a] hover:bg-[#3f3f46] text-[#fafafa] border-[#3f3f46]'
-                  : 'bg-[#e4e4e7] hover:bg-[#d4d4d8] text-[#09090b] border-[#d4d4d8]'
-              }`}
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Print
-            </button>
+        {/* Action toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={handleExportPNG}
+            disabled={exporting || loading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '7px 14px', borderRadius: '6px', border: 'none',
+              backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              opacity: (exporting || loading) ? 0.5 : 1,
+              transition: 'opacity 0.15s',
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: '0.01em',
+            }}
+          >
+            <Download style={{ width: '13px', height: '13px' }} />
+            Export PNG
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting || loading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '7px 14px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMain,
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              opacity: (exporting || loading) ? 0.5 : 1,
+              transition: 'opacity 0.15s',
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: '0.01em',
+            }}
+          >
+            <FileSpreadsheet style={{ width: '13px', height: '13px' }} />
+            PDF
+          </button>
+          <button
+            onClick={handlePrint}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '7px 14px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMain,
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            <Printer style={{ width: '13px', height: '13px' }} />
+            Print
+          </button>
 
-            {/* Dark / Light App Theme Toggle */}
-            <button
-              onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}
-              className={`w-8 h-8 rounded border flex items-center justify-center transition ml-1 ${
-                appTheme === 'dark'
-                  ? 'bg-[#18181b] border-[#27272a] text-[#fafafa] hover:bg-[#27272a]'
-                  : 'bg-[#f4f4f5] border-[#e4e4e7] text-[#09090b] hover:bg-[#e4e4e7]'
-              }`}
-              title="Toggle Dark/Light Mode"
-            >
-              {appTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          </div>
+          <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
 
+          <button
+            onClick={() => setAppTheme(isDark ? 'light' : 'dark')}
+            style={{
+              width: '34px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            title="Toggle Dark/Light Mode"
+          >
+            {isDark ? <Sun style={{ width: '15px', height: '15px' }} /> : <Moon style={{ width: '15px', height: '15px' }} />}
+          </button>
         </div>
       </header>
 
 
-      {/* MAIN CONTAINER */}
-      <main className="max-w-[1500px] w-full mx-auto p-4 md:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* LEFT CONTROLS (3 COLS) */}
-        <div className="lg:col-span-3 space-y-4">
-          
-          {/* GAME SELECTOR CARD */}
-          <div className={`border rounded-lg p-4 space-y-3 transition-colors ${
-            appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
-          }`}>
-            <h2 className={`text-xs font-bold uppercase tracking-wider ${
-              appTheme === 'dark' ? 'text-[#fafafa]' : 'text-[#09090b]'
-            }`}>
-              Select Date & Game
-            </h2>
+      {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden',
+      }}>
 
-            <div>
-              <label className={`block text-[11px] mb-1 font-medium ${
-                appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-              }`}>
-                Game Date:
-              </label>
-              
-              <div className="relative flex items-center">
-                <input
-                  ref={dateInputRef}
-                  type="date"
-                  value={selectedDate}
-                  onClick={triggerCalendarPicker}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className={`w-full border rounded px-3 py-1.5 text-xs outline-none font-mono cursor-pointer transition-colors ${
-                    appTheme === 'dark'
-                      ? 'bg-[#09090b] border-[#27272a] focus:border-[#52525b] text-[#fafafa]'
-                      : 'bg-[#ffffff] border-[#e4e4e7] focus:border-[#a1a1aa] text-[#09090b]'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={triggerCalendarPicker}
-                  className="absolute right-2.5 text-[#a1a1aa] hover:text-[#fafafa]"
-                  title="Open Calendar"
-                >
-                  <Calendar className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+        {/* ── SIDEBAR CONTROLS ──────────────────────────────────────────── */}
+        <aside style={{
+          width: '280px',
+          flexShrink: 0,
+          backgroundColor: c.bgSidebar,
+          borderRight: `1px solid ${c.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+        }}>
 
-            <div>
-              <label className={`block text-[11px] mb-1 font-medium flex items-center justify-between ${
-                appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-              }`}>
-                <span>Game ({availableGames.length} available):</span>
-                {searching && <RefreshCw className="w-3 h-3 animate-spin" />}
-              </label>
-              <select
-                value={selectedGamePk}
-                onChange={(e) => setSelectedGamePk(e.target.value)}
-                disabled={searching || availableGames.length === 0}
-                className={`w-full border rounded px-2.5 py-1.5 text-xs outline-none transition-colors disabled:opacity-50 ${
-                  appTheme === 'dark'
-                    ? 'bg-[#09090b] border-[#27272a] focus:border-[#52525b] text-[#fafafa]'
-                    : 'bg-[#ffffff] border-[#e4e4e7] focus:border-[#a1a1aa] text-[#09090b]'
-                }`}
-              >
-                {availableGames.map(g => (
-                  <option key={g.gamePk} value={g.gamePk}>
-                    {g.awayTeam} @ {g.homeTeam} ({g.awayScore} - {g.homeScore})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Tab Nav */}
+          <div style={{
+            display: 'flex',
+            borderBottom: `1px solid ${c.border}`,
+            padding: '0 8px',
+            gap: '0',
+          }}>
+            {[
+              { id: 'game', label: 'Game' },
+              { id: 'style', label: 'Theme' },
+              { id: 'text', label: 'Text' },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle(tab.id)}>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
+          <div style={{ padding: '16px', flex: 1 }}>
 
-          {/* CUSTOMIZER CARD */}
-          <div className={`border rounded-lg p-4 space-y-4 transition-colors ${
-            appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
-          }`}>
-            
-            {/* Segmented Tab Nav */}
-            <div className={`flex border-b ${appTheme === 'dark' ? 'border-[#27272a]' : 'border-[#e4e4e7]'}`}>
-              <button
-                onClick={() => setActiveTab('style')}
-                className={`pb-2 px-3 text-xs font-semibold border-b-2 transition ${
-                  activeTab === 'style'
-                    ? appTheme === 'dark' ? 'border-[#fafafa] text-[#fafafa]' : 'border-[#09090b] text-[#09090b]'
-                    : appTheme === 'dark' ? 'border-transparent text-[#a1a1aa]' : 'border-transparent text-[#71717a]'
-                }`}
-              >
-                Poster Theme
-              </button>
-              <button
-                onClick={() => setActiveTab('text')}
-                className={`pb-2 px-3 text-xs font-semibold border-b-2 transition ${
-                  activeTab === 'text'
-                    ? appTheme === 'dark' ? 'border-[#fafafa] text-[#fafafa]' : 'border-[#09090b] text-[#09090b]'
-                    : appTheme === 'dark' ? 'border-transparent text-[#a1a1aa]' : 'border-transparent text-[#71717a]'
-                }`}
-              >
-                Poster Text
-              </button>
-            </div>
+            {/* ── GAME TAB ──────────────────────────────────────────────── */}
+            {activeTab === 'game' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {activeTab === 'style' && (
-              <div className="space-y-3">
-                <label className={`block text-[11px] font-medium ${
-                  appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-                }`}>
-                  Poster Art Theme:
-                </label>
-                <div className="space-y-1.5">
-                  {[
-                    { id: 'team-light', label: 'Team Colors (Light Poster)' },
-                    { id: 'team-dark', label: 'Team Colors (Dark Poster)' },
-                    { id: 'vintage', label: 'Ballpark Vintage Sepia' },
-                    { id: 'monochrome', label: 'Monochrome Litho' }
-                  ].map(t => (
+                <div>
+                  <label style={{
+                    display: 'block', marginBottom: '6px',
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted,
+                  }}>
+                    Game Date
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      value={selectedDate}
+                      onClick={triggerCalendarPicker}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        border: `1px solid ${c.border}`,
+                        borderRadius: '6px',
+                        padding: '8px 36px 8px 10px',
+                        fontSize: '12px',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 600,
+                        backgroundColor: c.bgInput,
+                        color: c.textMain,
+                        outline: 'none',
+                        cursor: 'pointer',
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                      }}
+                    />
                     <button
-                      key={t.id}
-                      onClick={() => setTheme(t.id)}
-                      className={`w-full p-2.5 rounded border text-xs font-medium text-left transition ${
-                        theme === t.id
-                          ? appTheme === 'dark'
-                            ? 'bg-[#27272a] border-[#52525b] text-[#fafafa]'
-                            : 'bg-[#ffffff] border-[#a1a1aa] text-[#09090b] shadow-2xs font-bold'
-                          : appTheme === 'dark'
-                            ? 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:text-[#fafafa]'
-                            : 'bg-[#ffffff] border-[#e4e4e7] text-[#71717a] hover:text-[#09090b]'
-                      }`}
+                      type="button"
+                      onClick={triggerCalendarPicker}
+                      style={{
+                        position: 'absolute', right: '10px', top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none', border: 'none',
+                        cursor: 'pointer', color: c.textMuted,
+                        display: 'flex', alignItems: 'center',
+                      }}
                     >
-                      {t.label}
+                      <Calendar style={{ width: '14px', height: '14px' }} />
                     </button>
-                  ))}
+                  </div>
                 </div>
+
+                <div>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginBottom: '6px',
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted,
+                  }}>
+                    <span>Select Game</span>
+                    {searching && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: c.textMuted }}>
+                        <RefreshCw style={{ width: '11px', height: '11px', animation: 'spin 1s linear infinite' }} />
+                        Loading…
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={selectedGamePk}
+                    onChange={(e) => setSelectedGamePk(e.target.value)}
+                    disabled={searching || availableGames.length === 0}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      fontSize: '11.5px',
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 500,
+                      backgroundColor: c.bgInput,
+                      color: c.textMain,
+                      outline: 'none',
+                      cursor: 'pointer',
+                      opacity: searching ? 0.6 : 1,
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 10px center',
+                      paddingRight: '32px',
+                    }}
+                  >
+                    {availableGames.map(g => (
+                      <option key={g.gamePk} value={g.gamePk}>
+                        {g.awayTeam} @ {g.homeTeam} ({g.awayScore ?? '?'}–{g.homeScore ?? '?'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Game summary badge */}
+                {scorecardData && !loading && (
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${c.border}`,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                  }}>
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                      gap: '8px',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+                          {scorecardData.gameInfo.awayTeam.abbreviation}
+                        </div>
+                        <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
+                          {scorecardData.gameInfo.awayTeam.hits}H • {scorecardData.gameInfo.awayTeam.errors}E
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: '18px', fontWeight: 900,
+                          color: c.textHead, letterSpacing: '-0.02em',
+                          lineHeight: 1,
+                        }}>
+                          {scorecardData.gameInfo.awayTeam.score}–{scorecardData.gameInfo.homeTeam.score}
+                        </div>
+                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '2px', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
+                          Final
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+                          {scorecardData.gameInfo.homeTeam.abbreviation}
+                        </div>
+                        <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
+                          {scorecardData.gameInfo.homeTeam.hits}H • {scorecardData.gameInfo.homeTeam.errors}E
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{
+                      marginTop: '8px', paddingTop: '8px',
+                      borderTop: `1px solid ${c.border}`,
+                      fontSize: '9.5px', color: c.textMuted,
+                      lineHeight: 1.4,
+                    }}>
+                      {scorecardData.gameInfo.venue}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* ── STYLE TAB ─────────────────────────────────────────────── */}
+            {activeTab === 'style' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{
+                  fontSize: '11px', fontWeight: 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: c.textMuted, marginBottom: '4px',
+                }}>
+                  Poster Art Theme
+                </div>
+                {POSTER_THEMES.map(t_ => (
+                  <button
+                    key={t_.id}
+                    onClick={() => setTheme(t_.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      width: '100%', padding: '10px 12px',
+                      borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                      border: `1.5px solid ${theme === t_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                      backgroundColor: theme === t_.id
+                        ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                        : c.bgInput,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {/* Swatch */}
+                    <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                      {t_.swatch.map((color, i) => (
+                        <div key={i} style={{
+                          width: i === 0 ? '18px' : '10px',
+                          height: '28px',
+                          borderRadius: '3px',
+                          backgroundColor: color,
+                          flexShrink: 0,
+                        }} />
+                      ))}
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: '12px', fontWeight: 700,
+                        color: c.textHead, letterSpacing: '0.01em',
+                      }}>
+                        {t_.label}
+                      </div>
+                      <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
+                        {t_.desc}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── TEXT TAB ──────────────────────────────────────────────── */}
             {activeTab === 'text' && (
-              <div className="space-y-3">
-                <div>
-                  <label className={`block text-[11px] mb-1 ${
-                    appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-                  }`}>
-                    Headline Date Text
-                  </label>
-                  <input
-                    type="text"
-                    value={customHeadline}
-                    onChange={(e) => setCustomHeadline(e.target.value)}
-                    className={`w-full border rounded px-2.5 py-1.5 text-xs outline-none font-mono ${
-                      appTheme === 'dark'
-                        ? 'bg-[#09090b] border-[#27272a] text-[#fafafa]'
-                        : 'bg-[#ffffff] border-[#e4e4e7] text-[#09090b]'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-[11px] mb-1 ${
-                    appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-                  }`}>
-                    Stadium & Game Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={customSubtitle}
-                    onChange={(e) => setCustomSubtitle(e.target.value)}
-                    className={`w-full border rounded px-2.5 py-1.5 text-xs outline-none ${
-                      appTheme === 'dark'
-                        ? 'bg-[#09090b] border-[#27272a] text-[#fafafa]'
-                        : 'bg-[#ffffff] border-[#e4e4e7] text-[#09090b]'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-[11px] mb-1 ${
-                    appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-                  }`}>
-                    Footer Print Text
-                  </label>
-                  <input
-                    type="text"
-                    value={customFooter}
-                    onChange={(e) => setCustomFooter(e.target.value)}
-                    className={`w-full border rounded px-2.5 py-1.5 text-xs outline-none ${
-                      appTheme === 'dark'
-                        ? 'bg-[#09090b] border-[#27272a] text-[#fafafa]'
-                        : 'bg-[#ffffff] border-[#e4e4e7] text-[#09090b]'
-                    }`}
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[
+                  { label: 'Headline / Date Text', key: 'headline', value: customHeadline, setter: setCustomHeadline, mono: true, rows: 2 },
+                  { label: 'Subtitle', key: 'subtitle', value: customSubtitle, setter: setCustomSubtitle, rows: 3 },
+                  { label: 'Footer Print Text', key: 'footer', value: customFooter, setter: setCustomFooter, rows: 3 },
+                ].map(field => (
+                  <div key={field.key}>
+                    <label style={{
+                      display: 'block', marginBottom: '6px',
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted,
+                    }}>
+                      {field.label}
+                    </label>
+                    <textarea
+                      rows={field.rows}
+                      value={field.value}
+                      onChange={(e) => field.setter(e.target.value)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        border: `1px solid ${c.border}`,
+                        borderRadius: '6px',
+                        padding: '8px 10px',
+                        fontSize: '11.5px',
+                        lineHeight: 1.5,
+                        fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif",
+                        backgroundColor: c.bgInput,
+                        color: c.textMain,
+                        outline: 'none',
+                        resize: 'vertical',
+                        minHeight: `${field.rows * 22 + 16}px`,
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             )}
 
           </div>
+        </aside>
 
-        </div>
 
-
-        {/* RIGHT PREVIEW CANVAS CONTAINER (9 COLS - SPACIOUS) */}
-        <div className={`lg:col-span-9 border rounded-lg p-4 md:p-6 w-full overflow-x-auto flex items-start justify-center min-h-[680px] transition-colors ${
-          appTheme === 'dark' ? 'bg-[#18181b] border-[#27272a]' : 'bg-[#f4f4f5] border-[#e4e4e7]'
-        }`}>
+        {/* ── CANVAS AREA ───────────────────────────────────────────────── */}
+        <main style={{
+          flex: 1,
+          overflow: 'auto',
+          backgroundColor: c.bgCanvas,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: '32px 24px',
+        }}>
           {loading ? (
-            <div className={`flex flex-col items-center justify-center py-24 gap-2 ${
-              appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-            }`}>
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              <p className="text-xs font-medium">Fetching MLB Play-by-Play Data...</p>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: '12px', paddingTop: '100px',
+              color: c.textMuted,
+            }}>
+              <RefreshCw style={{ width: '22px', height: '22px', animation: 'spin 1s linear infinite' }} />
+              <p style={{ fontSize: '12px', fontWeight: 500, margin: 0 }}>
+                Fetching MLB Play-by-Play Data…
+              </p>
             </div>
           ) : error ? (
-            <div className="text-center py-24 text-rose-500 text-xs font-medium max-w-sm">
+            <div style={{
+              textAlign: 'center', paddingTop: '100px',
+              color: '#f87171', fontSize: '12px', fontWeight: 500,
+              maxWidth: '320px',
+            }}>
               {error}
             </div>
           ) : (
@@ -453,10 +644,16 @@ export default function App() {
               graphicRef={graphicRef}
             />
           )}
-        </div>
+        </main>
 
-      </main>
+      </div>
 
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
