@@ -130,25 +130,52 @@ export default function App() {
     }
   };
 
+  /**
+   * Capture helper: clones the graphic into an off-screen body-level container
+   * so html-to-image has no parent flex/overflow context to inherit position from.
+   * This is the only reliable way to avoid the "blank left + cutoff right" artifact
+   * caused by the element's document offset bleeding into the canvas origin.
+   */
+  const captureGraphic = async (pixelRatio) => {
+    const el = graphicRef.current;
+
+    // Build an isolated off-screen wrapper free from any app layout context
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = [
+      'position:fixed',
+      'top:-99999px',
+      'left:-99999px',
+      'width:920px',
+      'height:auto',
+      'overflow:visible',
+      'z-index:-1',
+      'pointer-events:none',
+    ].join(';');
+
+    // Deep-clone the graphic and reset any width/margin constraints
+    const clone = el.cloneNode(true);
+    clone.style.width = '920px';
+    clone.style.maxWidth = '920px';
+    clone.style.margin = '0';
+
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    // Two rAFs so the browser fully lays out the clone at 920 px
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r));
+
+    const dataUrl = await toPng(clone, { quality: 0.98, pixelRatio });
+
+    document.body.removeChild(wrapper);
+    return dataUrl;
+  };
+
   const handleExportPNG = async () => {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const el = graphicRef.current;
-      // Force to poster's full width so html-to-image captures the complete graphic.
-      // Do NOT pass width/height to toPng — the library uses getBoundingClientRect()
-      // on the element itself, which avoids the blank-left / right-cutoff offset bug
-      // that occurs when the canvas size doesn't match the element's document position.
-      const prevWidth = el.style.width;
-      const prevMaxWidth = el.style.maxWidth;
-      el.style.width = '920px';
-      el.style.maxWidth = '920px';
-      await new Promise(r => requestAnimationFrame(r));
-      await new Promise(r => requestAnimationFrame(r));
-      const dataUrl = await toPng(el, { quality: 0.98, pixelRatio: 3 });
-      el.style.width = prevWidth;
-      el.style.maxWidth = prevMaxWidth;
-      // Build descriptive filename: AWAY-vs-HOME_DATE.png
+      const dataUrl = await captureGraphic(3);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -168,16 +195,7 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const el = graphicRef.current;
-      const prevWidth = el.style.width;
-      const prevMaxWidth = el.style.maxWidth;
-      el.style.width = '920px';
-      el.style.maxWidth = '920px';
-      await new Promise(r => requestAnimationFrame(r));
-      await new Promise(r => requestAnimationFrame(r));
-      const dataUrl = await toPng(el, { quality: 0.95, pixelRatio: 2 });
-      el.style.width = prevWidth;
-      el.style.maxWidth = prevMaxWidth;
+      const dataUrl = await captureGraphic(2);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -194,6 +212,7 @@ export default function App() {
       setExporting(false);
     }
   };
+
 
   const handlePrint = () => window.print();
 

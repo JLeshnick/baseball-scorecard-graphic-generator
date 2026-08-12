@@ -11,15 +11,15 @@
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "html-to-image": "^1.11.11",
-    "jspdf": "^2.5.2",
-    "lucide-react": "^0.475.0",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.31.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.7",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.0.5",
     "tailwindcss": "^4.0.7",
-    "vite": "^6.1.1"
+    "vite": "^8.2.1"
   }
 }
