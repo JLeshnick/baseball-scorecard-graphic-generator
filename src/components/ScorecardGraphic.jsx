@@ -445,15 +445,19 @@ export default function ScorecardGraphic({
             fontWeight: 900,
             fontFamily: t.fontMono,
             lineHeight: 1,
-            padding: '1px 2px',
+            padding: '1.5px 3px',
             borderRadius: '2px',
             backgroundColor: pillBg,
             color: pillText,
             letterSpacing: '-0.02em',
             whiteSpace: 'nowrap',
             zIndex: 2,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
           }}>
-            {renderHandwrittenText(code, cellKey)}
+            {renderHandwrittenText(code, cellKey, { justifyContent: 'center' })}
           </span>
         </div>
       );
