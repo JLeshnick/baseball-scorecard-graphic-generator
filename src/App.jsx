@@ -86,6 +86,7 @@ export default function App() {
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
   const [showEraserMarks, setShowEraserMarks] = useState(false);
   const [eraserSeed, setEraserSeed] = useState(0);
+  const [handwritingSeed, setHandwritingSeed] = useState(0);
   const [orientation, setOrientation] = useState('portrait'); // 'portrait' or 'landscape'
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
@@ -730,6 +731,25 @@ export default function App() {
                     ))}
                   </div>
 
+                  {fontStyle === 'handwritten' && (
+                    <button
+                      onClick={() => setHandwritingSeed(prev => prev + 1)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        width: '100%', padding: '6px 10px', marginTop: '6px',
+                        borderRadius: '6px', cursor: 'pointer',
+                        border: `1px dashed ${c.border}`,
+                        backgroundColor: 'transparent',
+                        color: c.textHead,
+                        fontSize: '10px', fontWeight: 600,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <RefreshCw style={{ width: '11px', height: '11px' }} />
+                      Re-roll Handwriting Letter Variations
+                    </button>
+                  )}
+
                   {/* ── ERASER MARKS TOGGLE ───────────────────────────────────── */}
                   <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <button
@@ -952,6 +972,7 @@ export default function App() {
                 fontStyle={fontStyle}
                 showEraserMarks={showEraserMarks}
                 eraserSeed={eraserSeed}
+                handwritingSeed={handwritingSeed}
                 customHeadline={customHeadline}
                 customSubtitle={customSubtitle}
                 customFooter={customFooter}

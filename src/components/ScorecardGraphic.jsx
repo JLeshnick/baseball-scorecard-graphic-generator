@@ -12,6 +12,7 @@ export default function ScorecardGraphic({
   fontStyle = 'modern',
   showEraserMarks = false,
   eraserSeed = 0,
+  handwritingSeed = 0,
   customHeadline = '',
   customSubtitle = '',
   customFooter = '',
@@ -274,7 +275,7 @@ export default function ScorecardGraphic({
         {text.split('').map((char, charIdx) => {
           if (char === ' ') return <span key={charIdx} style={{ width: '0.25em' }}> </span>;
           let hash = 0;
-          const seed = `${seedStr}_${char}_${charIdx}`;
+          const seed = `${seedStr}_${char}_${charIdx}_hw_${handwritingSeed}`;
           for (let i = 0; i < seed.length; i++) {
             hash = (hash << 5) - hash + seed.charCodeAt(i);
           }
