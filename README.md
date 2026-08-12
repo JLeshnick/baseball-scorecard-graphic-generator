@@ -17,9 +17,15 @@ Generate **framable, print-quality scorecard posters** for any MLB game — comp
 - **SVG base path diamonds** — each at-bat rendered with accurate base paths (1B, 2B, 3B, HR) and correct backward-K notation for called strikeouts
 - **Inning-by-inning linescore** — runs scored per inning displayed below each team's batting grid
 - **Pitching stats table** — IP, H, R, ER, BB, K for every pitcher used
-- **4 poster art themes** — Team Colors (light), Night Game (dark), Vintage Sepia, Monochrome
-- **Fully customizable text** — edit the headline, subtitle, and footer printed on the poster
-- **High-res export** — PNG at 3× pixel ratio, PDF formatted for A4 printing
+- **Portrait & Landscape Orientations** — switch between vertical stacked view and horizontal side-by-side view (Visiting team on the left, Home team on the right)
+- **Modular Typography Styles** — pair any color theme with your choice of font style:
+  - **Modern Graphic Print** (Crisp Oswald & JetBrains Mono)
+  - **Handwritten Scorebook** (Authentic ballpoint pen ink with OpenType `calt` contextual letter variations)
+  - **Graffiti & Street Tag** (Wildstyle spray paint marker font)
+- **Ballpark Eraser Marks & Pencil Scribbles** — toggle realistic rubber eraser smudges, ghosted erased plays, and double-line graphite pencil scratch-outs with a 1-click re-roll button
+- **6 Poster Color Themes** — Team Colors Light, Night Game Dark, Vintage Sepia, Monochrome, Graffiti Preset, Handwritten Preset
+- **Fully customizable text & game notes** — edit the headline, subtitle, footer, and add multi-line **Game Notes & Highlights** printed directly on the poster
+- **High-res export** — PNG at 3× pixel ratio, PDF formatted for A4 (portrait or landscape page format)
 - **Print-ready** — browser print view hides all controls and outputs just the graphic
 
 ---
@@ -41,19 +47,27 @@ Use the **Game** tab in the left sidebar to select a date and choose from all ga
 
 ---
 
-### Step 2 — Choose a Poster Theme
+### Step 2 — Choose Theme & Layout Orientation
 
-Click the **Theme** tab to pick one of four visual styles:
+Click the **Theme** tab to pick a visual theme and select your layout orientation:
 
-| Theme | Look |
-|-------|------|
-| **Team Colors** | Ivory paper background with each team's primary color accents |
-| **Night Game** | Deep navy background with vivid team color highlights |
-| **Vintage Sepia** | Aged parchment with warm brown and gold tones |
-| **Monochrome** | Clean white and ink black — great for printing without color ink |
+#### Layout Orientation:
+- **Portrait** — standard vertical layout with teams stacked
+- **Landscape** — horizontal layout with Visiting team on the left and Home team on the right
 
-<!-- SCREENSHOT: Side-by-side or 2x2 grid showing the same game rendered in all four themes -->
-> 📸 _Screenshot placeholder — all four themes side by side_
+#### Visual Themes:
+
+| Theme Category | Theme Name | Description |
+|----------------|------------|-------------|
+| **Classic Themes** | **Team Colors** | Ivory paper background with team primary color accents |
+| | **Night Game** | Deep navy background with glowing team color highlights |
+| | **Vintage Sepia** | Aged parchment with warm brown and gold tones |
+| | **Monochrome** | Clean white and ink black — great for grayscale printing |
+| **Artistic & Specialty** | **Graffiti / Street Art** | Neon spray tag style, dark concrete background, wildstyle marker fonts |
+| | **Handwritten Ballpark** | Classic blue ballpoint pen ink, scored by hand look with cursive pen typography |
+
+<!-- SCREENSHOT: Side-by-side or 2x2 grid showing the same game rendered in different themes and orientations -->
+> 📸 _Screenshot placeholder — theme choices and orientation toggle preview_
 
 ---
 
@@ -79,7 +93,7 @@ Use the buttons in the top toolbar to save your graphic:
 | Button | Output |
 |--------|--------|
 | **Export PNG** | High-resolution 3× PNG — best for digital sharing, framing, or custom printing |
-| **PDF** | A4-formatted PDF — ready to send to a print shop |
+| **PDF** | A4-formatted PDF (Portrait or Landscape based on chosen layout orientation) |
 | **Print** | Opens the browser print dialog with just the scorecard — no UI chrome |
 
 <!-- SCREENSHOT: The exported PNG graphic for a real game, full poster at final quality -->
@@ -165,11 +179,11 @@ https://[your-github-username].github.io/baseball-scorecard-graphic-generator/
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | React 19 + Vite 6 |
+| Framework | React 19 + Vite 8 |
 | Styling | Inline styles (export-compatible) + Tailwind CSS utilities |
 | Data | [MLB Stats API](https://statsapi.mlb.com) (public, no key required) |
 | Export | [html-to-image](https://github.com/bubkoo/html-to-image) + [jsPDF](https://github.com/parallax/jsPDF) |
-| Typography | Oswald · JetBrains Mono · Bebas Neue · Inter (Google Fonts) |
+| Typography | Oswald · JetBrains Mono · Bebas Neue · Inter · Permanent Marker · Caveat (Google Fonts) |
 | CI/CD | GitHub Actions → GitHub Pages |
 
 ---

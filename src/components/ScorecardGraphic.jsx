@@ -9,9 +9,13 @@ import React from 'react';
 export default function ScorecardGraphic({
   data,
   theme = 'team-light',
+  fontStyle = 'modern',
+  showEraserMarks = false,
+  eraserSeed = 0,
   customHeadline = '',
   customSubtitle = '',
   customFooter = '',
+  customNotes = '',
   graphicRef = null,
   orientation = 'portrait'
 }) {
@@ -35,11 +39,17 @@ export default function ScorecardGraphic({
     const base = {
       paperTexture: true,
       outerFrame: '#c8bfa8',
+      fontHeader: "'Oswald', sans-serif",
+      fontMono: "'JetBrains Mono', monospace",
+      fontSans: "'Inter', sans-serif",
+      fontDisplay: "'Bebas Neue', sans-serif",
     };
+
+    let themeObj = {};
 
     switch (theme) {
       case 'team-dark':
-        return {
+        themeObj = {
           ...base,
           bg: '#111622',
           paperBg: '#131c2e',
@@ -66,9 +76,10 @@ export default function ScorecardGraphic({
           hitLineColor: away.secondary,
           homeHitLineColor: home.secondary,
         };
+        break;
 
       case 'vintage':
-        return {
+        themeObj = {
           ...base,
           bg: '#e8dfc8',
           paperBg: '#f5eed8',
@@ -96,9 +107,10 @@ export default function ScorecardGraphic({
           homeHitLineColor: '#7a0c1e',
           paperTexture: true,
         };
+        break;
 
       case 'monochrome':
-        return {
+        themeObj = {
           ...base,
           bg: '#e8e8e8',
           paperBg: '#f9f9f7',
@@ -125,10 +137,71 @@ export default function ScorecardGraphic({
           hitLineColor: '#222222',
           homeHitLineColor: '#444444',
         };
+        break;
+
+      case 'graffiti':
+        themeObj = {
+          ...base,
+          bg: '#0c0d12',
+          paperBg: '#14151f',
+          outerFrame: '#ff0055',
+          textPrimary: '#f8fafc',
+          textSecondary: '#cbd5e1',
+          textMuted: '#94a3b8',
+          borderStrong: '#ff0055',
+          borderLight: '#262838',
+          tableHeaderBg: 'rgba(255,0,85,0.14)',
+          tableRowAlt: 'rgba(255,255,255,0.03)',
+          lineScoreBg: 'rgba(0,240,255,0.12)',
+          lineScoreAlt: 'rgba(255,255,255,0.03)',
+          pitchingBg: 'rgba(255,0,85,0.1)',
+          awayColor: '#ff0055',
+          awaySecondary: '#00f0ff',
+          awayText: '#ffffff',
+          homeColor: '#00f0ff',
+          homeSecondary: '#ff0055',
+          homeText: '#000000',
+          scoreTextColor: '#f8fafc',
+          vsTextColor: '#ff0055',
+          cellDiamondStroke: '#00f0ff',
+          hitLineColor: '#ff0055',
+          homeHitLineColor: '#00f0ff',
+        };
+        break;
+
+      case 'handwritten':
+        themeObj = {
+          ...base,
+          bg: '#eadecc',
+          paperBg: '#f7f3e9',
+          outerFrame: '#b8a88a',
+          textPrimary: '#1e293b',
+          textSecondary: '#475569',
+          textMuted: '#64748b',
+          borderStrong: '#2563eb',
+          borderLight: '#cbd5e1',
+          tableHeaderBg: 'rgba(37,99,235,0.06)',
+          tableRowAlt: 'rgba(37,99,235,0.03)',
+          lineScoreBg: 'rgba(37,99,235,0.05)',
+          lineScoreAlt: 'rgba(37,99,235,0.02)',
+          pitchingBg: 'rgba(37,99,235,0.04)',
+          awayColor: '#1d4ed8',
+          awaySecondary: '#b91c1c',
+          awayText: '#ffffff',
+          homeColor: '#b91c1c',
+          homeSecondary: '#1d4ed8',
+          homeText: '#ffffff',
+          scoreTextColor: '#1e293b',
+          vsTextColor: '#2563eb',
+          cellDiamondStroke: '#93c5fd',
+          hitLineColor: '#1d4ed8',
+          homeHitLineColor: '#b91c1c',
+        };
+        break;
 
       case 'team-light':
       default:
-        return {
+        themeObj = {
           ...base,
           bg: '#ddd8cc',
           paperBg: '#f8f5ec',
@@ -155,10 +228,155 @@ export default function ScorecardGraphic({
           hitLineColor: away.secondary,
           homeHitLineColor: home.secondary,
         };
+        break;
     }
+
+    // Apply modular Font Style overrides
+    const effectiveFontStyle = (theme === 'graffiti' || theme === 'handwritten') ? theme : fontStyle;
+
+    if (effectiveFontStyle === 'handwritten') {
+      themeObj.fontHeader = "'Caveat', cursive";
+      themeObj.fontMono = "'Caveat', cursive";
+      themeObj.fontSans = "'Caveat', cursive";
+      themeObj.fontDisplay = "'Caveat', cursive";
+      themeObj.isHandwritten = true;
+    } else if (effectiveFontStyle === 'graffiti') {
+      themeObj.fontHeader = "'Permanent Marker', cursive";
+      themeObj.fontMono = "'Permanent Marker', cursive";
+      themeObj.fontSans = "'Permanent Marker', cursive";
+      themeObj.fontDisplay = "'Permanent Marker', cursive";
+      themeObj.isGraffiti = true;
+    }
+
+    return themeObj;
   };
 
   const t = getTheme();
+
+  /**
+   * Refined Handwritten Text Renderer:
+   * Uses Caveat (with OpenType 'calt' contextual alternates enabled) as the primary font,
+   * applying subtle ±0.75° character tilt and ±0.3px vertical baseline shifts per letter.
+   * Guarantees that identical letters look distinct while keeping handwriting clean & legible.
+   */
+  const renderHandwrittenText = (str, seedStr = '', extraStyle = {}) => {
+    if (str === null || str === undefined) return null;
+    const text = String(str);
+    if (!t.isHandwritten) return <span style={extraStyle}>{text}</span>;
+
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'baseline',
+        fontFamily: "'Caveat', cursive",
+        fontFeatureSettings: '"calt" 1, "liga" 1, "clig" 1',
+        paddingRight: '6px',
+        boxSizing: 'content-box',
+        ...extraStyle
+      }}>
+        {text.split('').map((char, charIdx) => {
+          if (char === ' ') return <span key={charIdx} style={{ width: '0.25em' }}> </span>;
+          let hash = 0;
+          const seed = `${seedStr}_${char}_${charIdx}`;
+          for (let i = 0; i < seed.length; i++) {
+            hash = (hash << 5) - hash + seed.charCodeAt(i);
+          }
+          const deg = (((hash % 15) - 7) * 0.1).toFixed(2); // -0.7deg to +0.7deg (subtle & clean!)
+          const yShift = (((hash % 7) - 3) * 0.1).toFixed(2); // -0.3px to +0.3px
+
+          return (
+            <span
+              key={charIdx}
+              style={{
+                display: 'inline-block',
+                transform: `rotate(${deg}deg) translateY(${yShift}px)`,
+              }}
+            >
+              {char}
+            </span>
+          );
+        })}
+      </span>
+    );
+  };
+
+  /**
+   * Helper: Places rubber eraser smudges, ghosted erased plays, and pencil scratch-out scribbles.
+   * Uses eraserSeed so toggling or clicking 'randomize' re-rolls eraser placements dynamically.
+   */
+  const renderEraserOverlay = (cellKey) => {
+    if (!showEraserMarks || !cellKey) return null;
+    let hash = 0;
+    const s = `${cellKey}_seed_${eraserSeed}`;
+    for (let i = 0; i < s.length; i++) hash = (hash << 5) - hash + s.charCodeAt(i);
+
+    // ~16% of cells get eraser marks
+    if (Math.abs(hash) % 6 !== 1) return null;
+
+    const GHOST_PLAYS = ['F8', '6-3', '4-3', 'L7', 'FOUL', 'FC', 'P5', 'S2', 'B1', 'K', '1B'];
+    const ghostPlay = GHOST_PLAYS[Math.abs(hash) % GHOST_PLAYS.length];
+    const rotation = (hash % 21) - 10; // -10deg to +10deg
+    const hasScribble = Math.abs(hash) % 2 === 0;
+
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 0, overflow: 'hidden',
+      }}>
+        {/* Rubber eraser smudge texture */}
+        <div style={{
+          position: 'absolute', width: '75%', height: '65%', borderRadius: '40%',
+          background: 'radial-gradient(ellipse at center, rgba(235,225,200,0.65) 0%, rgba(200,190,165,0.4) 60%, transparent 100%)',
+          filter: 'blur(1.5px)',
+          transform: `rotate(${rotation}deg)`,
+        }} />
+
+        {/* Pencil scribble / scratch-out mark */}
+        {hasScribble && (
+          <svg
+            viewBox="0 0 50 30"
+            width="34"
+            height="20"
+            style={{
+              position: 'absolute',
+              opacity: 0.45,
+              transform: `rotate(${rotation * 1.2}deg)`,
+              zIndex: 1,
+            }}
+          >
+            <path
+              d="M 4,14 Q 10,6 18,20 T 30,8 T 44,18"
+              fill="none"
+              stroke={t.textPrimary}
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 6,10 Q 16,22 26,8 T 42,20"
+              fill="none"
+              stroke={t.textSecondary}
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+
+        {/* Ghosted erased play with line-through stroke */}
+        <span style={{
+          position: 'absolute', fontSize: '7.5px', fontWeight: 700,
+          fontFamily: t.isHandwritten ? "'Caveat', cursive" : "'JetBrains Mono', monospace",
+          color: t.textMuted, opacity: 0.35, textDecoration: 'line-through',
+          textDecorationColor: 'rgba(120,90,70,0.6)',
+          transform: `rotate(${rotation * 0.7}deg)`,
+          zIndex: 0,
+        }}>
+          {ghostPlay}
+        </span>
+      </div>
+    );
+  };
 
   // ─── Inning linescore per-inning runs ────────────────────────────────────────
   const awayInningRuns = {};
@@ -169,17 +387,20 @@ export default function ScorecardGraphic({
   });
 
   // ─── Play Cell Renderer ───────────────────────────────────────────────────────
-  const renderPlayCell = (play, isHome = false) => {
+  const renderPlayCell = (play, isHome = false, cellKey = '') => {
     if (!play || !play.code) {
       return (
-        <svg viewBox="0 0 40 40" width="28" height="28" style={{ display: 'block', margin: 'auto', opacity: 0.25 }}>
-          <polygon
-            points="20,35 35,20 20,5 5,20"
-            fill="none"
-            stroke={t.cellDiamondStroke}
-            strokeWidth="1.2"
-          />
-        </svg>
+        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {renderEraserOverlay(cellKey)}
+          <svg viewBox="0 0 40 40" width="28" height="28" style={{ display: 'block', margin: 'auto', opacity: 0.25, position: 'relative', zIndex: 1 }}>
+            <polygon
+              points="20,35 35,20 20,5 5,20"
+              fill="none"
+              stroke={t.cellDiamondStroke}
+              strokeWidth="1.2"
+            />
+          </svg>
+        </div>
       );
     }
 
@@ -201,7 +422,8 @@ export default function ScorecardGraphic({
 
       return (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible' }}>
+          {renderEraserOverlay(cellKey)}
+          <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
             {/* Diamond outline */}
             <polygon
               points="20,37 37,20 20,3 3,20"
@@ -221,9 +443,9 @@ export default function ScorecardGraphic({
             position: 'absolute',
             bottom: '2px',
             right: '2px',
-            fontSize: '7px',
+            fontSize: '7.5px',
             fontWeight: 900,
-            fontFamily: "'JetBrains Mono', monospace",
+            fontFamily: t.fontMono,
             lineHeight: 1,
             padding: '1px 2px',
             borderRadius: '2px',
@@ -231,8 +453,9 @@ export default function ScorecardGraphic({
             color: pillText,
             letterSpacing: '-0.02em',
             whiteSpace: 'nowrap',
+            zIndex: 2,
           }}>
-            {code}
+            {renderHandwrittenText(code, cellKey)}
           </span>
         </div>
       );
@@ -241,11 +464,12 @@ export default function ScorecardGraphic({
     if (type === 'strikeout') {
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22 }}>
+          {renderEraserOverlay(cellKey)}
+          <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
             <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
           </svg>
           <span style={{
-            fontFamily: "'Oswald', sans-serif",
+            fontFamily: t.fontHeader,
             fontWeight: 700,
             fontSize: '17px',
             color: t.textPrimary,
@@ -253,9 +477,9 @@ export default function ScorecardGraphic({
             transform: isLooking ? 'scaleX(-1)' : 'none',
             letterSpacing: '-0.04em',
             position: 'relative',
-            zIndex: 1,
+            zIndex: 2,
           }}>
-            K
+            {renderHandwrittenText('K', cellKey + '_K')}
           </span>
         </div>
       );
@@ -264,21 +488,22 @@ export default function ScorecardGraphic({
     // Field outs
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
-        <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22 }}>
+        {renderEraserOverlay(cellKey)}
+        <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
           <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
         </svg>
         <span style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: t.fontMono,
           fontWeight: 700,
           fontSize: type === 'error' ? '9px' : '8.5px',
           color: t.textSecondary,
           position: 'relative',
-          zIndex: 1,
+          zIndex: 2,
           letterSpacing: '-0.03em',
           textAlign: 'center',
           lineHeight: 1.1,
         }}>
-          {code}
+          {renderHandwrittenText(code, cellKey)}
         </span>
       </div>
     );
@@ -298,13 +523,13 @@ export default function ScorecardGraphic({
               width: '18px', height: '18px', borderRadius: '50%',
               backgroundColor: color, color: text,
               fontSize: '7.5px', fontWeight: 800,
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: t.fontMono,
               flexShrink: 0,
             }}>
               {p.number}
             </span>
             <span style={{
-              fontFamily: "'Oswald', sans-serif",
+              fontFamily: t.fontHeader,
               fontWeight: 600,
               fontSize: '11px',
               letterSpacing: '0.02em',
@@ -314,22 +539,22 @@ export default function ScorecardGraphic({
             </span>
           </div>
         </td>
-        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
+        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
           {p.ip || '—'}
         </td>
-        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
+        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
           {p.hits ?? '—'}
         </td>
-        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
+        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
           {p.runs ?? '—'}
         </td>
-        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
+        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
           {p.earnedRuns ?? '—'}
         </td>
-        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
+        <td style={{ padding: '4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 700, color: t.textSecondary }}>
           {p.walks ?? '—'}
         </td>
-        <td style={{ padding: '4px 8px 4px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 800, color: t.textPrimary }}>
+        <td style={{ padding: '4px 8px 4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 800, color: t.textPrimary }}>
           {ks}
         </td>
       </tr>
@@ -344,7 +569,9 @@ export default function ScorecardGraphic({
     const accentSecondary = isHome ? t.homeSecondary : t.awaySecondary;
     const inningRuns = isHome ? homeInningRuns : awayInningRuns;
 
-    const PLAYER_COL_W = 148;
+    const POS_COL_W = 32;
+    const NAME_COL_W = 116;
+    const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 42;
 
     return (
@@ -358,7 +585,7 @@ export default function ScorecardGraphic({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{
-              fontFamily: "'Oswald', sans-serif",
+              fontFamily: t.fontHeader,
               fontWeight: 700,
               fontSize: '13px',
               letterSpacing: '0.08em',
@@ -372,7 +599,7 @@ export default function ScorecardGraphic({
               fontWeight: 600,
               color: accentText,
               opacity: 0.65,
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: t.fontMono,
               letterSpacing: '0.04em',
             }}>
               {isHome ? 'HOME' : 'VISITING'}
@@ -386,10 +613,10 @@ export default function ScorecardGraphic({
               { label: 'E', val: teamInfo.errors },
             ].map(stat => (
               <div key={stat.label} style={{ textAlign: 'center', minWidth: '26px' }}>
-                <div style={{ fontSize: '7px', fontWeight: 700, color: accentText, opacity: 0.6, letterSpacing: '0.08em', fontFamily: "'Inter', sans-serif" }}>
+                <div style={{ fontSize: '7px', fontWeight: 700, color: accentText, opacity: 0.6, letterSpacing: '0.08em', fontFamily: t.fontSans }}>
                   {stat.label}
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 900, color: accentText, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: accentText, lineHeight: 1, fontFamily: t.fontMono }}>
                   {stat.val}
                 </div>
               </div>
@@ -405,20 +632,21 @@ export default function ScorecardGraphic({
             tableLayout: 'fixed',
           }}>
             <colgroup>
-              <col style={{ width: `${PLAYER_COL_W}px` }} />
+              <col style={{ width: `${POS_COL_W}px` }} />
+              <col style={{ width: `${NAME_COL_W}px` }} />
               {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
             </colgroup>
 
             {/* Header */}
             <thead>
               <tr style={{ backgroundColor: t.tableHeaderBg }}>
-                <th style={{
+                <th colSpan={2} style={{
                   textAlign: 'left', padding: '4px 8px',
                   fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em',
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: t.fontSans,
                   color: t.textMuted, textTransform: 'uppercase',
                   borderBottom: `1.5px solid ${t.borderStrong}`,
-                  borderRight: `1px solid ${t.borderLight}`,
+                  borderRight: `1.5px solid ${t.borderStrong}`,
                 }}>
                   BATTING ORDER
                 </th>
@@ -426,7 +654,7 @@ export default function ScorecardGraphic({
                   <th key={n} style={{
                     textAlign: 'center', padding: '4px 2px',
                     fontSize: '9px', fontWeight: 800,
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: t.fontMono,
                     color: t.textMuted,
                     borderBottom: `1.5px solid ${t.borderStrong}`,
                     borderLeft: `1px solid ${t.borderLight}`,
@@ -444,36 +672,55 @@ export default function ScorecardGraphic({
                   backgroundColor: idx % 2 === 1 ? t.tableRowAlt : 'transparent',
                   borderBottom: `1px solid ${t.borderLight}`,
                 }}>
-                  {/* Player cell */}
+                  {/* Position */}
                   <td style={{
-                    padding: '3px 8px', verticalAlign: 'middle',
-                    borderRight: `1px solid ${t.borderStrong}`,
-                    overflow: 'hidden',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    padding: '2px',
+                    borderRight: `1px solid ${t.borderLight}`,
+                    backgroundColor: t.tableRowAlt,
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      {/* Position + Number pill */}
+                    <span style={{
+                      display: 'inline-block',
+                      fontFamily: t.fontMono,
+                      fontWeight: 800,
+                      fontSize: '9px',
+                      color: accentColor,
+                      letterSpacing: '0.02em',
+                    }}>
+                      {b.position}
+                    </span>
+                  </td>
+
+                  {/* Batter Name */}
+                  <td style={{
+                    verticalAlign: 'middle',
+                    padding: '4px 6px',
+                    borderRight: `1.5px solid ${t.borderStrong}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{
-                        display: 'inline-flex', alignItems: 'center',
-                        padding: '2px 4px', borderRadius: '3px',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '18px', height: '18px', borderRadius: '50%',
                         backgroundColor: accentColor, color: accentText,
                         fontSize: '7.5px', fontWeight: 800,
-                        fontFamily: "'JetBrains Mono', monospace",
-                        letterSpacing: '0.01em', whiteSpace: 'nowrap',
+                        fontFamily: t.fontMono,
                         flexShrink: 0,
                       }}>
-                        {b.position} {b.jerseyNumber}
+                        {b.jerseyNumber}
                       </span>
-                      {/* Name */}
                       <span style={{
-                        fontSize: '11px', fontWeight: 700,
-                        fontFamily: "'Oswald', sans-serif",
-                        letterSpacing: '0.04em',
+                        fontSize: t.isHandwritten ? '13px' : '11px', fontWeight: 700,
+                        letterSpacing: '0.02em', textTransform: 'uppercase',
+                        fontFamily: t.fontHeader,
                         color: t.textPrimary,
                         overflow: 'hidden', textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        maxWidth: '82px',
+                        maxWidth: '88px',
+                        paddingRight: '6px',
+                        boxSizing: 'content-box',
                       }}>
-                        {b.name}
+                        {renderHandwrittenText(b.name, 'batter_' + b.id)}
                       </span>
                     </div>
                   </td>
@@ -490,7 +737,7 @@ export default function ScorecardGraphic({
                         position: 'relative',
                         height: '44px',
                       }}>
-                        {renderPlayCell(play, isHome)}
+                        {renderPlayCell(play, isHome, `cell_${b.id}_${n}_${isHome ? 'H' : 'A'}`)}
                       </td>
                     );
                   })}
@@ -502,12 +749,12 @@ export default function ScorecardGraphic({
                 backgroundColor: t.lineScoreBg,
                 borderTop: `2px solid ${t.borderStrong}`,
               }}>
-                <td style={{
+                <td colSpan={2} style={{
                   padding: '5px 8px',
-                  fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
+                  fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.08em',
+                  fontFamily: t.fontSans,
                   color: t.textMuted, textTransform: 'uppercase',
-                  fontFamily: "'Inter', sans-serif",
-                  borderRight: `1px solid ${t.borderStrong}`,
+                  borderRight: `1.5px solid ${t.borderStrong}`,
                 }}>
                   RUNS / INNING
                 </td>
@@ -521,7 +768,7 @@ export default function ScorecardGraphic({
                       backgroundColor: n % 2 === 0 ? t.lineScoreAlt : 'transparent',
                     }}>
                       <span style={{
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: t.fontMono,
                         fontWeight: hasRuns ? 900 : 600,
                         fontSize: hasRuns ? '13px' : '10px',
                         color: hasRuns ? accentColor : t.textMuted,
@@ -551,7 +798,7 @@ export default function ScorecardGraphic({
                     textAlign: 'left', padding: '4px 8px 3px 10px',
                     fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
                     color: t.textMuted, textTransform: 'uppercase',
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: t.fontSans,
                   }}>
                     PITCHING
                   </th>
@@ -641,13 +888,13 @@ export default function ScorecardGraphic({
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: t.awayColor,
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: t.fontSans,
                 marginBottom: '2px',
               }}>
                 VISITING TEAM
               </div>
               <div style={{
-                fontFamily: "'Oswald', sans-serif",
+                fontFamily: t.fontHeader,
                 fontWeight: 700,
                 fontSize: '28px',
                 letterSpacing: '0.04em',
@@ -662,7 +909,7 @@ export default function ScorecardGraphic({
                 marginTop: '6px',
               }}>
                 <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
                   color: awayWon ? t.awayColor : t.textSecondary,
@@ -673,7 +920,7 @@ export default function ScorecardGraphic({
                 {awayWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
-                    color: t.awayColor, fontFamily: "'Inter', sans-serif",
+                    color: t.awayColor, fontFamily: t.fontSans,
                     opacity: 0.8, textTransform: 'uppercase',
                     alignSelf: 'flex-end', paddingBottom: '6px',
                   }}>
@@ -690,7 +937,7 @@ export default function ScorecardGraphic({
               flexDirection: 'column', gap: '4px',
             }}>
               <div style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: t.fontDisplay,
                 fontSize: '36px',
                 color: t.vsTextColor,
                 letterSpacing: '0.04em',
@@ -703,7 +950,7 @@ export default function ScorecardGraphic({
                 backgroundColor: t.borderLight,
               }} />
               <div style={{
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: t.fontMono,
                 fontSize: '8px', fontWeight: 700,
                 color: t.textMuted,
                 letterSpacing: '0.04em',
@@ -722,13 +969,13 @@ export default function ScorecardGraphic({
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: t.homeColor,
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: t.fontSans,
                 marginBottom: '2px',
               }}>
                 HOME TEAM
               </div>
               <div style={{
-                fontFamily: "'Oswald', sans-serif",
+                fontFamily: t.fontHeader,
                 fontWeight: 700,
                 fontSize: '28px',
                 letterSpacing: '0.04em',
@@ -745,7 +992,7 @@ export default function ScorecardGraphic({
                 flexDirection: 'row-reverse',
               }}>
                 <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
                   color: homeWon ? t.homeColor : t.textSecondary,
@@ -756,7 +1003,7 @@ export default function ScorecardGraphic({
                 {homeWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
-                    color: t.homeColor, fontFamily: "'Inter', sans-serif",
+                    color: t.homeColor, fontFamily: t.fontSans,
                     opacity: 0.8, textTransform: 'uppercase',
                     alignSelf: 'flex-end', paddingBottom: '6px',
                   }}>
@@ -775,7 +1022,7 @@ export default function ScorecardGraphic({
             backgroundColor: t.tableHeaderBg,
           }}>
             <span style={{
-              fontFamily: "'Oswald', sans-serif",
+              fontFamily: t.fontHeader,
               fontWeight: 600,
               fontSize: '11px',
               letterSpacing: '0.06em',
@@ -785,7 +1032,7 @@ export default function ScorecardGraphic({
               {customHeadline || gameInfo.dateDisplay}
             </span>
             <span style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: t.fontSans,
               fontWeight: 500,
               fontSize: '10px',
               letterSpacing: '0.04em',
@@ -833,6 +1080,41 @@ export default function ScorecardGraphic({
             </div>
           )}
 
+          {/* Custom Game Notes & Highlights Block */}
+          {customNotes && (
+            <div style={{
+              marginTop: '12px',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              backgroundColor: t.tableHeaderBg,
+              border: `1px solid ${t.borderStrong}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}>
+              <div style={{
+                fontSize: '8px',
+                fontWeight: 800,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: t.textMuted,
+                fontFamily: t.fontSans,
+              }}>
+                GAME NOTES & HIGHLIGHTS
+              </div>
+              <div style={{
+                fontSize: t.isHandwritten ? '14px' : '11px',
+                fontWeight: 600,
+                lineHeight: 1.4,
+                color: t.textPrimary,
+                fontFamily: t.fontHeader,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {renderHandwrittenText(customNotes, 'notes')}
+              </div>
+            </div>
+          )}
+
           {/* Bottom accent line */}
           <div style={{ display: 'flex', height: '5px', marginTop: '10px' }}>
             <div style={{ flex: 1, backgroundColor: t.awayColor }} />
@@ -845,7 +1127,7 @@ export default function ScorecardGraphic({
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <span style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: t.fontSans,
               fontWeight: 600,
               fontSize: '8.5px',
               letterSpacing: '0.22em',

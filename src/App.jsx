@@ -31,25 +31,43 @@ const POSTER_THEMES = [
     id: 'team-light',
     label: 'Team Colors',
     desc: 'Ivory paper · Team primaries',
+    category: 'Classic Themes',
     swatch: ['#e8dfc8', '#0e3386', '#c41e3a'],
   },
   {
     id: 'team-dark',
     label: 'Night Game',
     desc: 'Deep navy · Vivid team accents',
+    category: 'Classic Themes',
     swatch: ['#111622', '#3a80cc', '#f04a5a'],
   },
   {
     id: 'vintage',
     label: 'Vintage Sepia',
     desc: 'Aged parchment · Warm tones',
+    category: 'Classic Themes',
     swatch: ['#f5eed8', '#3a2010', '#c8922a'],
   },
   {
     id: 'monochrome',
     label: 'Monochrome',
     desc: 'Pure white · Ink black',
+    category: 'Classic Themes',
     swatch: ['#f9f9f7', '#111111', '#555555'],
+  },
+  {
+    id: 'graffiti',
+    label: 'Graffiti / Street Art',
+    desc: 'Neon spray tag · Dark concrete · Wildstyle font',
+    category: 'Artistic & Specialty',
+    swatch: ['#0c0d12', '#ff0055', '#00f0ff'],
+  },
+  {
+    id: 'handwritten',
+    label: 'Handwritten Ballpark',
+    desc: 'Scored by hand · Ballpoint pen ink',
+    category: 'Artistic & Specialty',
+    swatch: ['#f7f3e9', '#1d4ed8', '#b91c1c'],
   },
 ];
 
@@ -65,10 +83,14 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
   const [theme, setTheme] = useState('team-light');
+  const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
+  const [showEraserMarks, setShowEraserMarks] = useState(false);
+  const [eraserSeed, setEraserSeed] = useState(0);
   const [orientation, setOrientation] = useState('portrait'); // 'portrait' or 'landscape'
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
   const [customFooter, setCustomFooter] = useState('');
+  const [customNotes, setCustomNotes] = useState('');
   const [exporting, setExporting] = useState(false);
 
   const graphicRef = useRef(null);
@@ -564,57 +586,214 @@ export default function App() {
 
             {/* ── STYLE TAB ─────────────────────────────────────────────── */}
             {activeTab === 'style' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{
-                  fontSize: '11px', fontWeight: 600,
-                  letterSpacing: '0.06em', textTransform: 'uppercase',
-                  color: c.textMuted, marginBottom: '4px',
-                }}>
-                  Poster Art Theme
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                {/* Classic Themes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '2px',
+                  }}>
+                    Classic Poster Themes
+                  </div>
+                  {POSTER_THEMES.filter(t => t.category === 'Classic Themes').map(t_ => (
+                    <button
+                      key={t_.id}
+                      onClick={() => setTheme(t_.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        width: '100%', padding: '9px 12px',
+                        borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${theme === t_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: theme === t_.id
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                        {t_.swatch.map((color, i) => (
+                          <div key={i} style={{
+                            width: i === 0 ? '16px' : '9px',
+                            height: '24px',
+                            borderRadius: '3px',
+                            backgroundColor: color,
+                            flexShrink: 0,
+                          }} />
+                        ))}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: c.textHead }}>
+                          {t_.label}
+                        </div>
+                        <div style={{ fontSize: '9.5px', color: c.textMuted, marginTop: '1px' }}>
+                          {t_.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                {POSTER_THEMES.map(t_ => (
-                  <button
-                    key={t_.id}
-                    onClick={() => setTheme(t_.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      width: '100%', padding: '10px 12px',
-                      borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
-                      border: `1.5px solid ${theme === t_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                      backgroundColor: theme === t_.id
-                        ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                        : c.bgInput,
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {/* Swatch */}
-                    <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                      {t_.swatch.map((color, i) => (
-                        <div key={i} style={{
-                          width: i === 0 ? '18px' : '10px',
-                          height: '28px',
-                          borderRadius: '3px',
-                          backgroundColor: color,
-                          flexShrink: 0,
-                        }} />
-                      ))}
-                    </div>
-                    <div>
+
+                {/* Artistic & Specialty Themes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '2px',
+                  }}>
+                    Artistic & Specialty Themes
+                  </div>
+                  {POSTER_THEMES.filter(t => t.category === 'Artistic & Specialty').map(t_ => (
+                    <button
+                      key={t_.id}
+                      onClick={() => setTheme(t_.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        width: '100%', padding: '9px 12px',
+                        borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${theme === t_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: theme === t_.id
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                        {t_.swatch.map((color, i) => (
+                          <div key={i} style={{
+                            width: i === 0 ? '16px' : '9px',
+                            height: '24px',
+                            borderRadius: '3px',
+                            backgroundColor: color,
+                            flexShrink: 0,
+                          }} />
+                        ))}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: c.textHead }}>
+                          {t_.label}
+                        </div>
+                        <div style={{ fontSize: '9.5px', color: c.textMuted, marginTop: '1px' }}>
+                          {t_.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── TYPOGRAPHY FONT STYLE TOGGLE ───────────────────────────── */}
+                <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}` }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '8px',
+                  }}>
+                    Scorecard Typography Style
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[
+                      { id: 'modern', label: 'Modern Graphic Print', desc: 'Crisp Oswald & JetBrains Mono' },
+                      { id: 'handwritten', label: 'Handwritten Scorebook', desc: 'Authentic pen ink · Unique letter variations' },
+                      { id: 'graffiti', label: 'Graffiti & Street Tag', desc: 'Wildstyle spray marker font' },
+                    ].map(f_ => (
+                      <button
+                        key={f_.id}
+                        onClick={() => setFontStyle(f_.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          width: '100%', padding: '8px 10px',
+                          borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                          border: `1.5px solid ${fontStyle === f_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                          backgroundColor: fontStyle === f_.id
+                            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                            : c.bgInput,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                            {f_.label}
+                          </div>
+                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                            {f_.desc}
+                          </div>
+                        </div>
+                        {fontStyle === f_.id && (
+                          <div style={{
+                            width: '7px', height: '7px', borderRadius: '50%',
+                            backgroundColor: isDark ? '#818cf8' : '#4f46e5',
+                            flexShrink: 0,
+                          }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── ERASER MARKS TOGGLE ───────────────────────────────────── */}
+                  <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <button
+                      onClick={() => {
+                        const next = !showEraserMarks;
+                        setShowEraserMarks(next);
+                        if (next) setEraserSeed(prev => prev + 1);
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '8px 10px',
+                        borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: showEraserMarks
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                          Eraser Marks & Pencil Scribbles
+                        </div>
+                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                          Simulate erased & scratched-out plays on scorebook
+                        </div>
+                      </div>
                       <div style={{
-                        fontSize: '12px', fontWeight: 700,
-                        color: c.textHead, letterSpacing: '0.01em',
+                        width: '32px', height: '18px', borderRadius: '10px',
+                        backgroundColor: showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                        position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
                       }}>
-                        {t_.label}
+                        <div style={{
+                          width: '14px', height: '14px', borderRadius: '50%',
+                          backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                          left: showEraserMarks ? '16px' : '2px',
+                          transition: 'left 0.15s ease',
+                        }} />
                       </div>
-                      <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                        {t_.desc}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+
+                    {showEraserMarks && (
+                      <button
+                        onClick={() => setEraserSeed(prev => prev + 1)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                          width: '100%', padding: '6px 10px',
+                          borderRadius: '6px', cursor: 'pointer',
+                          border: `1px dashed ${c.border}`,
+                          backgroundColor: 'transparent',
+                          color: c.textHead,
+                          fontSize: '10px', fontWeight: 600,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <RefreshCw style={{ width: '11px', height: '11px' }} />
+                        Re-roll Random Eraser & Scribble Spots
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 {/* ── ORIENTATION TOGGLE ────────────────────────────────────── */}
-                <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: `1px solid ${c.border}` }}>
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${c.border}` }}>
                   <div style={{
                     fontSize: '11px', fontWeight: 600,
                     letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -676,6 +855,7 @@ export default function App() {
                 {[
                   { label: 'Headline / Date Text', key: 'headline', value: customHeadline, setter: setCustomHeadline, mono: true, rows: 2 },
                   { label: 'Subtitle', key: 'subtitle', value: customSubtitle, setter: setCustomSubtitle, rows: 3 },
+                  { label: 'Game Notes & Highlights', key: 'notes', value: customNotes, setter: setCustomNotes, rows: 3 },
                   { label: 'Footer Print Text', key: 'footer', value: customFooter, setter: setCustomFooter, rows: 3 },
                 ].map(field => (
                   <div key={field.key}>
@@ -748,9 +928,13 @@ export default function App() {
             <ScorecardGraphic
               data={scorecardData}
               theme={theme}
+              fontStyle={fontStyle}
+              showEraserMarks={showEraserMarks}
+              eraserSeed={eraserSeed}
               customHeadline={customHeadline}
               customSubtitle={customSubtitle}
               customFooter={customFooter}
+              customNotes={customNotes}
               graphicRef={graphicRef}
               orientation={orientation}
             />
