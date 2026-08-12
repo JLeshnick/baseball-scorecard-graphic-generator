@@ -2,6 +2,39 @@
  * MLB Stats API Service & Baseball Scorecard Data Parser
  */
 
+export const TEAM_COLORS = {
+  MIL: { primary: '#0a2351', accent: '#ffc52f', text: '#ffc52f' },
+  CHC: { primary: '#0e3386', accent: '#cc3433', text: '#ffffff' },
+  LAD: { primary: '#005a9c', accent: '#ef3e42', text: '#ffffff' },
+  NYY: { primary: '#0c2340', accent: '#c4ced4', text: '#ffffff' },
+  PHI: { primary: '#e31837', accent: '#002d62', text: '#ffffff' },
+  ATL: { primary: '#13274f', accent: '#ce1141', text: '#ffffff' },
+  BOS: { primary: '#bd3039', accent: '#0c2340', text: '#ffffff' },
+  HOU: { primary: '#002d62', accent: '#eb6e1f', text: '#ffffff' },
+  TEX: { primary: '#003278', accent: '#c0111f', text: '#ffffff' },
+  ARI: { primary: '#a71930', accent: '#e3d4ad', text: '#ffffff' },
+  SD:  { primary: '#2f241d', accent: '#ffc425', text: '#ffc425' },
+  SF:  { primary: '#fd5a1e', accent: '#27251f', text: '#ffffff' },
+  NYM: { primary: '#002d72', accent: '#ff5910', text: '#ffffff' },
+  STL: { primary: '#c41e3a', accent: '#0c2340', text: '#ffffff' },
+  BAL: { primary: '#df4601', accent: '#000000', text: '#ffffff' },
+  CLE: { primary: '#002b5c', accent: '#e31937', text: '#ffffff' },
+  DET: { primary: '#0c2340', accent: '#fa4616', text: '#ffffff' },
+  MIN: { primary: '#002b5c', accent: '#d31145', text: '#ffffff' },
+  CWS: { primary: '#27251f', accent: '#c4ced4', text: '#ffffff' },
+  KC:  { primary: '#004687', accent: '#bd9b60', text: '#ffffff' },
+  TOR: { primary: '#134a8e', accent: '#1d2d5c', text: '#ffffff' },
+  TB:  { primary: '#092c5c', accent: '#8fbce6', text: '#ffffff' },
+  SEA: { primary: '#0c2340', accent: '#005c5c', text: '#ffffff' },
+  OAK: { primary: '#003831', accent: '#efb21e', text: '#efb21e' },
+  LAA: { primary: '#ba0021', accent: '#003263', text: '#ffffff' },
+  COL: { primary: '#330066', accent: '#c4ced4', text: '#ffffff' },
+  MIA: { primary: '#00a3e0', accent: '#ef3340', text: '#ffffff' },
+  WSH: { primary: '#ab0003', accent: '#14225a', text: '#ffffff' },
+  CIN: { primary: '#c6011f', accent: '#000000', text: '#ffffff' },
+  PIT: { primary: '#fdb827', accent: '#000000', text: '#000000' }
+};
+
 export async function searchGamesByDate(dateStr) {
   try {
     const response = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}`);
@@ -46,17 +79,17 @@ function parsePlayNotation(play) {
   const hitDist = play.hitData?.totalDistance;
 
   if (event === 'home_run') {
-    return { code: hitDist ? `HR ${hitDist}'` : 'HR', type: 'hr' };
+    return { code: hitDist ? `HR ${hitDist}'` : 'HR', type: 'hr', bases: 4 };
   }
-  if (event === 'single') return { code: '1B', type: 'hit' };
-  if (event === 'double') return { code: '2B', type: 'hit' };
-  if (event === 'triple') return { code: '3B', type: 'hit' };
-  if (event === 'walk' || event === 'intent_walk') return { code: 'BB', type: 'walk' };
-  if (event === 'hit_by_pitch') return { code: 'HBP', type: 'walk' };
+  if (event === 'single') return { code: '1B', type: 'hit', bases: 1 };
+  if (event === 'double') return { code: '2B', type: 'hit', bases: 2 };
+  if (event === 'triple') return { code: '3B', type: 'hit', bases: 3 };
+  if (event === 'walk' || event === 'intent_walk') return { code: 'BB', type: 'walk', bases: 1 };
+  if (event === 'hit_by_pitch') return { code: 'HBP', type: 'walk', bases: 1 };
 
   if (event === 'strikeout') {
     const isLooking = desc.toLowerCase().includes('called third strike') || desc.toLowerCase().includes('looking');
-    return { code: isLooking ? 'ꓘ' : 'K', type: 'strikeout' };
+    return { code: 'K', type: 'strikeout', isLooking };
   }
 
   if (event === 'grounded_into_double_play' || event === 'strikeout_double_play' || event === 'double_play') {
@@ -123,34 +156,40 @@ export function processMLBData(data, gamePkOverride) {
   const plays = liveData.plays?.allPlays || [];
   const linescore = liveData.linescore;
 
-  // Header Info
   const officialDate = gameData.datetime?.officialDate || '';
   const dateDisplay = formatDateString(officialDate);
   const venue = `${gameData.venue?.name || 'Wrigley Field'} – ${gameData.venue?.location?.city || 'Chicago'}, ${gameData.venue?.location?.stateAbbrev || 'IL'}`;
   
+  const awayAbbr = gameData.teams.away.abbreviation || 'MIL';
+  const homeAbbr = gameData.teams.home.abbreviation || 'CHC';
+
+  const awayColors = TEAM_COLORS[awayAbbr] || { primary: '#0a2351', accent: '#ffc52f', text: '#ffc52f' };
+  const homeColors = TEAM_COLORS[homeAbbr] || { primary: '#0e3386', accent: '#cc3433', text: '#ffffff' };
+
   const awayTeam = {
     id: gameData.teams.away.id,
     name: gameData.teams.away.name,
-    abbreviation: gameData.teams.away.abbreviation || 'MIL',
+    abbreviation: awayAbbr,
     score: linescore.teams?.away?.runs ?? 3,
     hits: linescore.teams?.away?.hits ?? 7,
     errors: linescore.teams?.away?.errors ?? 0,
-    color: '#0a2351',
-    accent: '#ffc52f'
+    color: awayColors.primary,
+    accent: awayColors.accent,
+    textColor: awayColors.text
   };
 
   const homeTeam = {
     id: gameData.teams.home.id,
     name: gameData.teams.home.name,
-    abbreviation: gameData.teams.home.abbreviation || 'CHC',
+    abbreviation: homeAbbr,
     score: linescore.teams?.home?.runs ?? 4,
     hits: linescore.teams?.home?.hits ?? 8,
     errors: linescore.teams?.home?.errors ?? 0,
-    color: '#0e3386',
-    accent: '#cc3433'
+    color: homeColors.primary,
+    accent: homeColors.accent,
+    textColor: homeColors.text
   };
 
-  // Series / game description headline
   let headline = 'POSTSEASON GAME';
   if (gameData.game?.description) {
     headline = gameData.game.description.toUpperCase();
@@ -162,7 +201,6 @@ export function processMLBData(data, gamePkOverride) {
 
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
 
-  // Helper to parse team batters & play matrix
   function parseTeamSide(teamKey, sideHalf) {
     const teamBox = box.teams[teamKey];
     const playerMap = teamBox.players || {};
@@ -196,7 +234,7 @@ export function processMLBData(data, gamePkOverride) {
           if (!pitcherMap[pitcherId]) pitcherMap[pitcherId] = [];
           const desc = play.result?.description || '';
           const isLooking = desc.toLowerCase().includes('called third strike') || desc.toLowerCase().includes('looking');
-          pitcherMap[pitcherId].push(isLooking ? 'ꓘ' : 'K');
+          pitcherMap[pitcherId].push({ code: 'K', isLooking });
         }
       }
     });
@@ -210,11 +248,10 @@ export function processMLBData(data, gamePkOverride) {
         id,
         number,
         name,
-        strikeouts: ks.length > 0 ? ks.join('') : 'K'
+        strikeouts: ks
       };
     });
 
-    // Build Lineup & Substitutes
     const starters = [];
     const subsList = [];
     let subCharIndex = 0;

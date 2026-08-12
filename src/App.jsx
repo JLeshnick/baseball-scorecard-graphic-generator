@@ -6,16 +6,12 @@ import {
 import ScorecardGraphic from './components/ScorecardGraphic';
 import {
   Calendar,
-  Palette,
   Download,
   Printer,
-  Image as ImageIcon,
   FileSpreadsheet,
   RefreshCw,
   Sun,
-  Moon,
-  Type,
-  Sliders
+  Moon
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -40,11 +36,9 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
 
-  // Graphic Options
+  // Graphic Options (Default theme: 'team')
   const [activeTab, setActiveTab] = useState('style'); // 'style', 'text'
-  const [theme, setTheme] = useState('classic');
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [customPhotos, setCustomPhotos] = useState([]);
+  const [theme, setTheme] = useState('team'); // 'team' default!
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
   const [customFooter, setCustomFooter] = useState('');
@@ -53,19 +47,19 @@ export default function App() {
   const graphicRef = useRef(null);
   const dateInputRef = useRef(null);
 
-  // Fetch games when date changes automatically
+  // Auto-fetch games on date change
   useEffect(() => {
     fetchGamesForDate(selectedDate);
   }, [selectedDate]);
 
-  // Load scorecard data when selected game changes
+  // Load scorecard data on selected game change
   useEffect(() => {
     if (selectedGamePk) {
       loadGameData(selectedGamePk);
     }
   }, [selectedGamePk]);
 
-  // Sync appTheme attribute
+  // Sync dark/light theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
@@ -79,8 +73,7 @@ export default function App() {
       if (games.length > 0) {
         setSelectedGamePk(games[0].gamePk);
       } else {
-        // If yesterday has no games (e.g. offseason/all-star break), fallback to classic 2025 NLDS game
-        setError(`No games found for ${dateStr}. Try another date or postseason date.`);
+        setError(`No games found for ${dateStr}. Try another date.`);
         setSelectedGamePk('813049');
       }
     } catch (err) {
@@ -106,19 +99,6 @@ export default function App() {
       setError('Could not load MLB game data.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePhotoUpload = (e, index) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newPhotos = [...customPhotos];
-        newPhotos[index] = event.target.result;
-        setCustomPhotos(newPhotos);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -175,7 +155,7 @@ export default function App() {
       appTheme === 'dark' ? 'bg-[#09090b] text-[#d4d4d8]' : 'bg-[#ffffff] text-[#27272a]'
     }`}>
       
-      {/* HEADER BAR (NO TITLE ICON) */}
+      {/* HEADER BAR */}
       <header className={`border-b py-3 px-4 md:px-8 transition-colors ${
         appTheme === 'dark' ? 'border-[#27272a] bg-[#18181b]' : 'border-[#e4e4e7] bg-[#f4f4f5]'
       }`}>
@@ -192,7 +172,7 @@ export default function App() {
             </p>
           </div>
 
-          {/* Action Toolbar & App Theme Toggle */}
+          {/* Action Toolbar */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportPNG}
@@ -271,7 +251,6 @@ export default function App() {
                 Game Date:
               </label>
               
-              {/* DATE PICKER WITH POPUP CALENDAR TRIGGER */}
               <div className="relative flex items-center">
                 <input
                   ref={dateInputRef}
@@ -338,7 +317,7 @@ export default function App() {
                     : appTheme === 'dark' ? 'border-transparent text-[#a1a1aa]' : 'border-transparent text-[#71717a]'
                 }`}
               >
-                Theme & Layout
+                Theme Preset
               </button>
               <button
                 onClick={() => setActiveTab('text')}
@@ -353,65 +332,36 @@ export default function App() {
             </div>
 
             {activeTab === 'style' && (
-              <div className="space-y-4">
-                <div>
-                  <label className={`block text-[11px] mb-2 font-medium ${
-                    appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
-                  }`}>
-                    Poster Color Preset:
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {[
-                      { id: 'classic', label: 'Ballpark Classic' },
-                      { id: 'team', label: 'Team Official' },
-                      { id: 'vintage', label: 'Vintage Sepia' },
-                      { id: 'dark', label: 'Midnight Slate' },
-                      { id: 'monochrome', label: 'Monochrome' }
-                    ].map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTheme(t.id)}
-                        className={`p-2 rounded border text-xs font-medium text-left transition ${
-                          theme === t.id
-                            ? appTheme === 'dark'
-                              ? 'bg-[#27272a] border-[#52525b] text-[#fafafa]'
-                              : 'bg-[#ffffff] border-[#a1a1aa] text-[#09090b] shadow-2xs'
-                            : appTheme === 'dark'
-                              ? 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:text-[#fafafa]'
-                              : 'bg-[#ffffff] border-[#e4e4e7] text-[#71717a] hover:text-[#09090b]'
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={`pt-3 border-t flex items-center justify-between ${
-                  appTheme === 'dark' ? 'border-[#27272a]' : 'border-[#e4e4e7]'
+              <div className="space-y-3">
+                <label className={`block text-[11px] font-medium ${
+                  appTheme === 'dark' ? 'text-[#a1a1aa]' : 'text-[#71717a]'
                 }`}>
-                  <span className={`text-xs font-medium flex items-center gap-1.5 ${
-                    appTheme === 'dark' ? 'text-[#d4d4d8]' : 'text-[#27272a]'
-                  }`}>
-                    <ImageIcon className="w-3.5 h-3.5 opacity-70" />
-                    Side Photo Strip
-                  </span>
-                  <button
-                    onClick={() => setShowPhotos(!showPhotos)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      showPhotos
-                        ? appTheme === 'dark' ? 'bg-[#fafafa]' : 'bg-[#09090b]'
-                        : appTheme === 'dark' ? 'bg-[#27272a]' : 'bg-[#d4d4d8]'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${
-                        showPhotos
-                          ? appTheme === 'dark' ? 'translate-x-4.5 bg-[#09090b]' : 'translate-x-4.5 bg-[#ffffff]'
-                          : 'translate-x-0.5 bg-white'
+                  Color Theme Preset:
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'team', label: 'Team Official (Default)' },
+                    { id: 'classic', label: 'Ballpark Classic' },
+                    { id: 'vintage', label: 'Vintage Sepia' },
+                    { id: 'dark', label: 'Midnight Slate' },
+                    { id: 'monochrome', label: 'Monochrome' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className={`p-2 rounded border text-xs font-medium text-left transition ${
+                        theme === t.id
+                          ? appTheme === 'dark'
+                            ? 'bg-[#27272a] border-[#52525b] text-[#fafafa]'
+                            : 'bg-[#ffffff] border-[#a1a1aa] text-[#09090b] shadow-2xs'
+                          : appTheme === 'dark'
+                            ? 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:text-[#fafafa]'
+                            : 'bg-[#ffffff] border-[#e4e4e7] text-[#71717a] hover:text-[#09090b]'
                       }`}
-                    />
-                  </button>
+                    >
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -498,12 +448,9 @@ export default function App() {
             <ScorecardGraphic
               data={scorecardData}
               theme={theme}
-              showPhotos={showPhotos}
-              customPhotos={customPhotos}
               customHeadline={customHeadline}
               customSubtitle={customSubtitle}
               customFooter={customFooter}
-              onPhotoUpload={handlePhotoUpload}
               graphicRef={graphicRef}
             />
           )}
