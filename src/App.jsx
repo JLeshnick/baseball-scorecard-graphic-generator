@@ -135,22 +135,25 @@ export default function App() {
     setExporting(true);
     try {
       const el = graphicRef.current;
+      // Force to poster's full width so html-to-image captures the complete graphic.
+      // Do NOT pass width/height to toPng — the library uses getBoundingClientRect()
+      // on the element itself, which avoids the blank-left / right-cutoff offset bug
+      // that occurs when the canvas size doesn't match the element's document position.
       const prevWidth = el.style.width;
       const prevMaxWidth = el.style.maxWidth;
       el.style.width = '920px';
       el.style.maxWidth = '920px';
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
-      const dataUrl = await toPng(el, {
-        quality: 0.98,
-        pixelRatio: 3,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
+      const dataUrl = await toPng(el, { quality: 0.98, pixelRatio: 3 });
       el.style.width = prevWidth;
       el.style.maxWidth = prevMaxWidth;
+      // Build descriptive filename: AWAY-vs-HOME_DATE.png
+      const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
+      const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
+      const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
       const link = document.createElement('a');
-      link.download = `MLB_Scorecard_${scorecardData?.gameInfo?.awayTeam?.abbreviation}_VS_${scorecardData?.gameInfo?.homeTeam?.abbreviation}.png`;
+      link.download = `MLB_Scorecard_${away}-vs-${home}_${dateSlug}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -172,20 +175,18 @@ export default function App() {
       el.style.maxWidth = '920px';
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
-      const dataUrl = await toPng(el, {
-        quality: 0.95,
-        pixelRatio: 2,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
+      const dataUrl = await toPng(el, { quality: 0.95, pixelRatio: 2 });
       el.style.width = prevWidth;
       el.style.maxWidth = prevMaxWidth;
+      const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
+      const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
+      const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
       const pdf = new jsPDF('portrait', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`MLB_Scorecard_${selectedGamePk}.pdf`);
+      pdf.save(`MLB_Scorecard_${away}-vs-${home}_${dateSlug}.pdf`);
     } catch (err) {
       console.error('Export PDF failed', err);
       alert('Error exporting PDF document.');

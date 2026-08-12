@@ -7,6 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // Base path for GitHub Pages: https://jleshnick.github.io/baseball-scorecard-graphic-generator/
+  base: '/baseball-scorecard-graphic-generator/',
   server: {
     port: 3000,
     open: false,

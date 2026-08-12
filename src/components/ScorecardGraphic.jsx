@@ -474,20 +474,6 @@ export default function ScorecardGraphic({
                       }}>
                         {b.name}
                       </span>
-                      {/* Sub badges */}
-                      {b.subNotes?.map((sub, sIdx) => (
-                        <span key={sIdx} style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: '13px', height: '13px', borderRadius: '50%',
-                          backgroundColor: accentSecondary,
-                          color: accentText,
-                          fontSize: '6.5px', fontWeight: 800,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          flexShrink: 0,
-                        }}>
-                          {sub}
-                        </span>
-                      ))}
                     </div>
                   </td>
 
