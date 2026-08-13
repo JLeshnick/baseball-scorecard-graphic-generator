@@ -81,6 +81,7 @@ const POSTER_THEMES = [
 
 export default function App() {
   const [appTheme, setAppTheme] = useState('light'); // 'dark' or 'light'
+  const isDark = appTheme === 'dark';
   const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
   const [availableGames, setAvailableGames] = useState([]);
   const [selectedGamePk, setSelectedGamePk] = useState('');
@@ -126,7 +127,7 @@ export default function App() {
     document.body.style.backgroundColor = bg;
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-  }, [appTheme]);
+  }, [appTheme, isDark]);
 
   const fetchGamesForDate = async (dateStr) => {
     setSearching(true);
@@ -296,7 +297,6 @@ export default function App() {
   };
 
   // Theme-adaptive CSS variables
-  const isDark = appTheme === 'dark';
   const c = {
     bgBody:    isDark ? '#09090b' : '#f0ede8',
     bgHeader:  isDark ? '#111113' : '#ffffff',
