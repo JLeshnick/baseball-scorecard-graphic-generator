@@ -15,6 +15,10 @@ import {
   FileJson,
   SlidersHorizontal,
   Eye,
+  Share2,
+  Link2,
+  Check,
+  Lock,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -66,6 +70,27 @@ const POSTER_THEMES = [
     swatch: ['#f9f9f7', '#111111', '#555555'],
   },
   {
+    id: 'blueprint',
+    label: 'Blueprints & Architecture',
+    desc: 'Cyan drafting blueprint · White grid lines',
+    category: 'Artistic & Specialty',
+    swatch: ['#0b2240', '#1976d2', '#00e5ff'],
+  },
+  {
+    id: 'retro70s',
+    label: '1970s Retro Scorebook',
+    desc: 'Mustard yellow · Rust orange · Topps card retro',
+    category: 'Artistic & Specialty',
+    swatch: ['#f7f2e4', '#c84b2c', '#d89623'],
+  },
+  {
+    id: 'chalkboard',
+    label: 'Chalkboard / Dugout Wall',
+    desc: 'Matte slate chalkboard · Off-white chalk text',
+    category: 'Artistic & Specialty',
+    swatch: ['#1a1e22', '#81d4fa', '#aed581'],
+  },
+  {
     id: 'graffiti',
     label: 'Graffiti / Street Art',
     desc: 'Neon spray tag · Dark concrete · Wildstyle font',
@@ -102,7 +127,17 @@ export default function App() {
   const [showDecisions, setShowDecisions] = useState(true);
   const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
   const [showHRDistances, setShowHRDistances] = useState(true);
-  const [showAtBatDashedLines, setShowAtBatDashedLines] = useState(true);
+  const [showEndInningBases, setShowEndInningBases] = useState(true); // default ON: solid lines for end of inning bases
+
+  // Advanced Stats & Visual Art Toggles (OFF by default as requested)
+  const [showStatcast, setShowStatcast] = useState(false);
+  const [showMomentum, setShowMomentum] = useState(false);
+  const [showMvp, setShowMvp] = useState(false);
+  const [showExtraEvents, setShowExtraEvents] = useState(true);
+  const [showTeamWatermarks, setShowTeamWatermarks] = useState(true);
+  const [customAwayColor, setCustomAwayColor] = useState('');
+  const [customHomeColor, setCustomHomeColor] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
 
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
@@ -167,6 +202,62 @@ export default function App() {
       loadGameData(selectedGamePk);
     }
   }, [selectedGamePk]);
+
+  // ─── URL Permalinks Parsing ────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const pDate = params.get('date');
+    const pGame = params.get('game');
+    const pTheme = params.get('theme');
+    const pFont = params.get('font');
+    const pOrient = params.get('orient');
+    const pNotes = params.get('notes');
+    const pHeadline = params.get('headline');
+    const pSubtitle = params.get('subtitle');
+
+    if (pDate) setSelectedDate(pDate);
+    if (pGame) setSelectedGamePk(pGame);
+    if (pTheme) setTheme(pTheme);
+    if (pFont) setFontStyle(pFont);
+    if (pOrient) setOrientation(pOrient);
+    if (pNotes !== null) setCustomNotes(pNotes);
+    if (pHeadline !== null) setCustomHeadline(pHeadline);
+    if (pSubtitle !== null) setCustomSubtitle(pSubtitle);
+
+    if (params.has('statcast')) setShowStatcast(params.get('statcast') === '1');
+    if (params.has('momentum')) setShowMomentum(params.get('momentum') === '1');
+    if (params.has('mvp')) setShowMvp(params.get('mvp') === '1');
+    if (params.has('extra')) setShowExtraEvents(params.get('extra') === '1');
+    if (params.has('endinning')) setShowEndInningBases(params.get('endinning') === '1');
+    if (params.has('watermark')) setShowTeamWatermarks(params.get('watermark') === '1');
+  }, []);
+
+  const handleCopyShareLink = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('date', selectedDate);
+      if (selectedGamePk) url.searchParams.set('game', selectedGamePk);
+      url.searchParams.set('theme', theme);
+      url.searchParams.set('font', fontStyle);
+      url.searchParams.set('orient', orientation);
+      if (customNotes) url.searchParams.set('notes', customNotes);
+      if (customHeadline) url.searchParams.set('headline', customHeadline);
+      if (customSubtitle) url.searchParams.set('subtitle', customSubtitle);
+      url.searchParams.set('statcast', showStatcast ? '1' : '0');
+      url.searchParams.set('momentum', showMomentum ? '1' : '0');
+      url.searchParams.set('mvp', showMvp ? '1' : '0');
+      url.searchParams.set('extra', showExtraEvents ? '1' : '0');
+      url.searchParams.set('endinning', showEndInningBases ? '1' : '0');
+      url.searchParams.set('watermark', showTeamWatermarks ? '1' : '0');
+
+      navigator.clipboard.writeText(url.toString());
+      setToastMessage('Shareable link copied to clipboard!');
+      setTimeout(() => setToastMessage(''), 3500);
+    } catch (e) {
+      console.error('Copy link failed', e);
+    }
+  };
 
   useEffect(() => {
     const bg = isDark ? '#09090b' : '#f0ede8';
@@ -593,6 +684,23 @@ export default function App() {
             </>
           )}
 
+          {/* Share Permalink Link */}
+          <button
+            onClick={handleCopyShareLink}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '0 10px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMain,
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Copy Shareable URL Link"
+          >
+            <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
+            {!isMobile && 'Share'}
+          </button>
+
           {/* GitHub link (Visible on both PC and Mobile) */}
           <a
             href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
@@ -830,6 +938,7 @@ export default function App() {
                       borderRadius: '8px',
                       border: `1px solid ${c.border}`,
                       backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      display: 'flex', flexDirection: 'column', gap: '10px',
                     }}>
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -865,14 +974,22 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <div style={{
-                        marginTop: '8px', paddingTop: '8px',
-                        borderTop: `1px solid ${c.border}`,
-                        fontSize: '9.5px', color: c.textMuted,
-                        lineHeight: 1.4,
-                      }}>
-                        {scorecardData.gameInfo.venue}
-                      </div>
+
+                      <button
+                        onClick={handleCopyShareLink}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                          width: '100%', padding: '7px 10px',
+                          borderRadius: '6px', cursor: 'pointer',
+                          border: `1px solid ${c.border}`,
+                          backgroundColor: c.bgInput, color: c.textHead,
+                          fontSize: '11.5px', fontWeight: 600,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
+                        Copy Shareable URL Link
+                      </button>
                     </div>
                   )}
                 </div>
@@ -937,8 +1054,110 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* TYPOGRAPHY FONT STYLE TOGGLE (Right under Orientation) */}
+                  {(() => {
+                    const themeFontOverride = theme === 'chalkboard'
+                      ? { font: 'handwritten', themeName: 'Chalkboard / Dugout Wall' }
+                      : theme === 'handwritten'
+                      ? { font: 'handwritten', themeName: 'Handwritten Ballpark' }
+                      : theme === 'graffiti'
+                      ? { font: 'graffiti', themeName: 'Graffiti / Street Art' }
+                      : null;
+
+                    const activeEffectiveFont = themeFontOverride ? themeFontOverride.font : fontStyle;
+
+                    return (
+                      <div style={{ paddingTop: '8px', borderTop: `1px solid ${c.border}` }}>
+                        <div style={{
+                          fontSize: '11px', fontWeight: 600,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: c.textMuted, marginBottom: '6px',
+                        }}>
+                          Scorecard Typography Style
+                        </div>
+
+                        {themeFontOverride && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            marginBottom: '8px', padding: '5px 8px', borderRadius: '5px',
+                            backgroundColor: isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(217, 119, 6, 0.08)',
+                            border: `1px solid ${isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(217, 119, 6, 0.25)'}`,
+                            fontSize: '9.5px', fontWeight: 600, color: isDark ? '#fbbf24' : '#b45309',
+                          }}>
+                            <Lock style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                            <span>Driven by theme: <strong>{themeFontOverride.themeName}</strong></span>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {[
+                            { id: 'modern', label: 'Modern Graphic Print', desc: 'Crisp Oswald & JetBrains Mono' },
+                            { id: 'handwritten', label: 'Handwritten Scorebook', desc: 'Authentic pen ink · Unique letter variations' },
+                            { id: 'graffiti', label: 'Graffiti & Street Tag', desc: 'Wildstyle spray marker font' },
+                          ].map(f_ => {
+                            const isSelected = activeEffectiveFont === f_.id;
+                            const isLockedByTheme = themeFontOverride && themeFontOverride.font === f_.id;
+
+                            return (
+                              <button
+                                key={f_.id}
+                                onClick={() => {
+                                  setFontStyle(f_.id);
+                                  if (themeFontOverride && themeFontOverride.font !== f_.id) {
+                                    setTheme('team-light');
+                                    setToastMessage(`Switched to Team Colors theme to apply ${f_.label}`);
+                                    setTimeout(() => setToastMessage(''), 3500);
+                                  }
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  width: '100%', padding: '8px 10px',
+                                  borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                                  border: `1.5px solid ${isSelected ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                                  backgroundColor: isSelected
+                                    ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                                    : c.bgInput,
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                                    {f_.label}
+                                  </div>
+                                  <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                                    {f_.desc}
+                                  </div>
+                                </div>
+
+                                {isLockedByTheme ? (
+                                  <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                    fontSize: '8.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                    padding: '2px 6px', borderRadius: '4px',
+                                    backgroundColor: isDark ? 'rgba(234, 179, 8, 0.2)' : 'rgba(217, 119, 6, 0.15)',
+                                    color: isDark ? '#fbbf24' : '#b45309',
+                                    flexShrink: 0,
+                                  }}>
+                                    <Lock style={{ width: '9px', height: '9px' }} />
+                                    <span>LOCKED BY THEME</span>
+                                  </div>
+                                ) : isSelected ? (
+                                  <div style={{
+                                    width: '7px', height: '7px', borderRadius: '50%',
+                                    backgroundColor: isDark ? '#818cf8' : '#4f46e5',
+                                    flexShrink: 0,
+                                  }} />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Classic Themes */}
-                  <div style={{ paddingTop: '10px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ paddingTop: '8px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{
                       fontSize: '11px', fontWeight: 600,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -1031,75 +1250,24 @@ export default function App() {
                     ))}
                   </div>
 
-                  {/* TYPOGRAPHY FONT STYLE TOGGLE */}
-                  <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}` }}>
-                    <div style={{
-                      fontSize: '11px', fontWeight: 600,
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: c.textMuted, marginBottom: '8px',
-                    }}>
-                      Scorecard Typography Style
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {[
-                        { id: 'modern', label: 'Modern Graphic Print', desc: 'Crisp Oswald & JetBrains Mono' },
-                        { id: 'handwritten', label: 'Handwritten Scorebook', desc: 'Authentic pen ink · Unique letter variations' },
-                        { id: 'graffiti', label: 'Graffiti & Street Tag', desc: 'Wildstyle spray marker font' },
-                      ].map(f_ => (
-                        <button
-                          key={f_.id}
-                          onClick={() => setFontStyle(f_.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            width: '100%', padding: '8px 10px',
-                            borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                            border: `1.5px solid ${fontStyle === f_.id ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                            backgroundColor: fontStyle === f_.id
-                              ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                              : c.bgInput,
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
-                              {f_.label}
-                            </div>
-                            <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
-                              {f_.desc}
-                            </div>
-                          </div>
-                          {fontStyle === f_.id && (
-                            <div style={{
-                              width: '7px', height: '7px', borderRadius: '50%',
-                              backgroundColor: isDark ? '#818cf8' : '#4f46e5',
-                              flexShrink: 0,
-                            }} />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ERASER MARKS & SCRIBBLES */}
-                  <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* BACKGROUND WATERMARKS & ARTWORK */}
+                  <div style={{ marginTop: '4px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{
                       fontSize: '11px', fontWeight: 600,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       color: c.textMuted, marginBottom: '2px',
                     }}>
-                      Authentic Artifacts
+                      Background Watermarks & Artwork
                     </div>
+
                     <button
-                      onClick={() => {
-                        setShowEraserMarks(v => !v);
-                        if (!showEraserMarks) setEraserSeed(s => s + 1);
-                      }}
+                      onClick={() => setShowTeamWatermarks(v => !v)}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         width: '100%', padding: '8px 10px',
                         borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                        border: `1.5px solid ${showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                        backgroundColor: showEraserMarks
+                        border: `1.5px solid ${showTeamWatermarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: showTeamWatermarks
                           ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
                           : c.bgInput,
                         transition: 'all 0.15s ease',
@@ -1107,42 +1275,65 @@ export default function App() {
                     >
                       <div>
                         <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
-                          Eraser Smudges & Scribbles
+                          Team Header Watermarks
                         </div>
                         <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
-                          Ghosted erased plays & rubber smudges
+                          Large team abbreviation watermark behind score hero
                         </div>
                       </div>
                       <div style={{
                         width: '32px', height: '18px', borderRadius: '10px',
-                        backgroundColor: showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                        backgroundColor: showTeamWatermarks ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
                         position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
                       }}>
                         <div style={{
                           width: '14px', height: '14px', borderRadius: '50%',
                           backgroundColor: '#ffffff', position: 'absolute', top: '2px',
-                          left: showEraserMarks ? '16px' : '2px',
+                          left: showTeamWatermarks ? '16px' : '2px',
                           transition: 'left 0.15s ease',
                         }} />
                       </div>
                     </button>
+                  </div>
 
-                    {showEraserMarks && (
+                  {/* CUSTOM TEAM COLOR OVERRIDES */}
+                  <div style={{ marginTop: '4px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted, marginBottom: '2px',
+                    }}>
+                      Custom Team Color Overrides
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ fontSize: '10px', color: c.textMuted, display: 'block', marginBottom: '4px' }}>Visiting Team Hex</label>
+                        <input
+                          type="color"
+                          value={customAwayColor || '#0e3386'}
+                          onChange={(e) => setCustomAwayColor(e.target.value)}
+                          style={{ width: '100%', height: '32px', border: `1px solid ${c.border}`, borderRadius: '6px', cursor: 'pointer' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '10px', color: c.textMuted, display: 'block', marginBottom: '4px' }}>Home Team Hex</label>
+                        <input
+                          type="color"
+                          value={customHomeColor || '#cc3433'}
+                          onChange={(e) => setCustomHomeColor(e.target.value)}
+                          style={{ width: '100%', height: '32px', border: `1px solid ${c.border}`, borderRadius: '6px', cursor: 'pointer' }}
+                        />
+                      </div>
+                    </div>
+                    {(customAwayColor || customHomeColor) && (
                       <button
-                        onClick={() => setEraserSeed(prev => prev + 1)}
+                        onClick={() => { setCustomAwayColor(''); setCustomHomeColor(''); }}
                         style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                          width: '100%', padding: '6px 10px',
-                          borderRadius: '6px', cursor: 'pointer',
-                          border: `1px dashed ${c.border}`,
-                          backgroundColor: 'transparent',
-                          color: c.textHead,
-                          fontSize: '10px', fontWeight: 600,
-                          transition: 'all 0.15s ease',
+                          fontSize: '10px', color: c.accent, border: 'none', background: 'none',
+                          cursor: 'pointer', textAlign: 'left', fontWeight: 600, padding: 0,
                         }}
                       >
-                        <RefreshCw style={{ width: '11px', height: '11px' }} />
-                        Re-roll Random Eraser & Scribble Spots
+                        Reset to Official MLB Team Colors
                       </button>
                     )}
                   </div>
@@ -1154,22 +1345,126 @@ export default function App() {
               {activeTab === 'data' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                  {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
+                  {/* ── ADVANCED STATS & STATCAST VISUALIZATIONS ────────────── */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{
                       fontSize: '11px', fontWeight: 600,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       color: c.textMuted, marginBottom: '2px',
                     }}>
-                      Game Stats & Display Options
+                      Advanced Stats & Statcast
                     </div>
 
                     {[
+                      { label: 'Statcast Home Run Metrics', desc: 'Exit velocity (MPH), launch angle, distance & pitch info', value: showStatcast, setter: setShowStatcast },
+                      { label: 'Game Momentum & Lead Progression', desc: 'Inning-by-inning score & lead progression chart', value: showMomentum, setter: setShowMomentum },
+                      { label: 'Game MVP Highlight Badge', desc: 'Top performer callout badge in game header', value: showMvp, setter: setShowMvp },
                       { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
+                    ].map(opt => (
+                      <button
+                        key={opt.label}
+                        onClick={() => opt.setter(v => !v)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          width: '100%', padding: '8px 10px',
+                          borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                          border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                          backgroundColor: opt.value
+                            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                            : c.bgInput,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                            {opt.label}
+                          </div>
+                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                            {opt.desc}
+                          </div>
+                        </div>
+                        <div style={{
+                          width: '32px', height: '18px', borderRadius: '10px',
+                          backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                          position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                        }}>
+                          <div style={{
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                            left: opt.value ? '16px' : '2px',
+                            transition: 'left 0.15s ease',
+                          }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── SCOREBOOK NOTATION & DETAILS ───────────────────────── */}
+                  <div style={{ paddingTop: '8px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted, marginBottom: '2px',
+                    }}>
+                      Base Path & Scorebook Details
+                    </div>
+
+                    {[
+                      { label: 'Base Path Extra Event Symbols', desc: 'Stolen bases (SB), Caught stealing (CS), Pickoffs (PO)', value: showExtraEvents, setter: setShowExtraEvents },
+                      { label: 'Show End-of-Inning Base Advancements', desc: 'Solid lines for bases reached on subsequent plays (off = only own at-bat bases)', value: showEndInningBases, setter: setShowEndInningBases },
+                      { label: 'Eraser Smudges & Pencil Scribbles', desc: 'Ghosted erased plays & rubber smudges', value: showEraserMarks, setter: setShowEraserMarks },
+                    ].map(opt => (
+                      <button
+                        key={opt.label}
+                        onClick={() => opt.setter(v => !v)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          width: '100%', padding: '8px 10px',
+                          borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                          border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                          backgroundColor: opt.value
+                            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                            : c.bgInput,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                            {opt.label}
+                          </div>
+                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                            {opt.desc}
+                          </div>
+                        </div>
+                        <div style={{
+                          width: '32px', height: '18px', borderRadius: '10px',
+                          backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                          position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                        }}>
+                          <div style={{
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                            left: opt.value ? '16px' : '2px',
+                            transition: 'left 0.15s ease',
+                          }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── MATCH CONTEXT ─────────────────────────────────────── */}
+                  <div style={{ paddingTop: '8px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted, marginBottom: '2px',
+                    }}>
+                      Match Context & Info
+                    </div>
+
+                    {[
                       { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
-                      { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
-                      { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
-                      { label: 'Dashed Line for At-Bat Base', desc: 'Dashed line for own at-bat reach, solid line for end of inning base', value: showAtBatDashedLines, setter: setShowAtBatDashedLines },
+                      { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
                     ].map(opt => (
                       <button
                         key={opt.label}
@@ -1346,7 +1641,14 @@ export default function App() {
                     showDecisions={showDecisions}
                     showEnvironmentBox={showEnvironmentBox}
                     showHRDistances={showHRDistances}
-                    showAtBatDashedLines={showAtBatDashedLines}
+                    showEndInningBases={showEndInningBases}
+                    showStatcast={showStatcast}
+                    showMomentum={showMomentum}
+                    showMvp={showMvp}
+                    showExtraEvents={showExtraEvents}
+                    showTeamWatermarks={showTeamWatermarks}
+                    customAwayColor={customAwayColor}
+                    customHomeColor={customHomeColor}
                   />
                 </div>
               </div>
@@ -1389,7 +1691,14 @@ export default function App() {
                   showDecisions={showDecisions}
                   showEnvironmentBox={showEnvironmentBox}
                   showHRDistances={showHRDistances}
-                  showAtBatDashedLines={showAtBatDashedLines}
+                  showEndInningBases={showEndInningBases}
+                  showStatcast={showStatcast}
+                  showMomentum={showMomentum}
+                  showMvp={showMvp}
+                  showExtraEvents={showExtraEvents}
+                  showTeamWatermarks={showTeamWatermarks}
+                  customAwayColor={customAwayColor}
+                  customHomeColor={customHomeColor}
                 />
               </div>
             )}
@@ -1397,6 +1706,22 @@ export default function App() {
         )}
 
       </div>
+
+      {/* TOAST NOTIFICATION POPUP */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+          display: 'flex', alignItems: 'center', gap: '8px',
+          backgroundColor: isDark ? '#27272a' : '#1c1917',
+          color: '#ffffff', padding: '10px 16px', borderRadius: '8px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.3)', fontSize: '12px', fontWeight: 600,
+          fontFamily: "'Inter', sans-serif",
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          <Check style={{ width: '15px', height: '15px', color: '#4ade80' }} />
+          {toastMessage}
+        </div>
+      )}
 
       {/* ── UNIFIED MOBILE FLOATING DOCK (MOBILE ONLY) ─────────────────── */}
       {isMobile && (

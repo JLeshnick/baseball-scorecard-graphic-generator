@@ -110,72 +110,81 @@ function getErrorPosition(play) {
 function parsePlayNotation(play) {
   const event = play.result?.eventType || '';
   const desc = play.result?.description || '';
+  const descLower = desc.toLowerCase();
   const hitDist = play.hitData?.totalDistance;
+  const launchSpeed = play.hitData?.launchSpeed;
+  const launchAngle = play.hitData?.launchAngle;
+
+  let extraEvent = '';
+  if (descLower.includes('stole') || descLower.includes('stolen base')) extraEvent = 'SB';
+  else if (descLower.includes('caught stealing')) extraEvent = 'CS';
+  else if (descLower.includes('picked off')) extraEvent = 'PO';
+  else if (descLower.includes('wild pitch')) extraEvent = 'WP';
+  else if (descLower.includes('passed ball')) extraEvent = 'PB';
+
+  const statcast = (launchSpeed || hitDist) ? { launchSpeed, totalDistance: hitDist, launchAngle } : null;
 
   if (event === 'home_run') {
-    return { code: hitDist ? `HR ${hitDist}'` : 'HR', type: 'hr', bases: 4 };
+    return { code: hitDist ? `HR ${Math.round(hitDist)}'` : 'HR', type: 'hr', bases: 4, extraEvent, statcast };
   }
-  if (event === 'single') return { code: '1B', type: 'hit', bases: 1 };
-  if (event === 'double') return { code: '2B', type: 'hit', bases: 2 };
-  if (event === 'triple') return { code: '3B', type: 'hit', bases: 3 };
-  if (event === 'walk' || event === 'intent_walk') return { code: 'BB', type: 'walk', bases: 1 };
-  if (event === 'hit_by_pitch') return { code: 'HBP', type: 'walk', bases: 1 };
+  if (event === 'single') return { code: '1B', type: 'hit', bases: 1, extraEvent, statcast };
+  if (event === 'double') return { code: '2B', type: 'hit', bases: 2, extraEvent, statcast };
+  if (event === 'triple') return { code: '3B', type: 'hit', bases: 3, extraEvent, statcast };
+  if (event === 'walk' || event === 'intent_walk') return { code: 'BB', type: 'walk', bases: 1, extraEvent };
+  if (event === 'hit_by_pitch') return { code: 'HBP', type: 'walk', bases: 1, extraEvent };
 
   if (event === 'strikeout') {
     // MLB API uses "called out on strikes" for looking Ks, not "called third strike"
-    const dl = desc.toLowerCase();
-    const isLooking = dl.includes('called out on strikes') || dl.includes('called third strike') || dl.includes('looking');
-    return { code: 'K', type: 'strikeout', isLooking };
+    const isLooking = descLower.includes('called out on strikes') || descLower.includes('called third strike') || descLower.includes('looking');
+    return { code: 'K', type: 'strikeout', isLooking, extraEvent };
   }
 
   if (event === 'grounded_into_double_play' || event === 'strikeout_double_play' || event === 'double_play') {
-    const d = desc.toLowerCase();
-    if (d.includes('6-4-3') || (d.includes('shortstop') && d.includes('second'))) return { code: '6-4-3', type: 'out' };
-    if (d.includes('4-6-3') || (d.includes('second') && d.includes('shortstop'))) return { code: '4-6-3', type: 'out' };
-    if (d.includes('5-4-3') || (d.includes('third') && d.includes('second'))) return { code: '5-4-3', type: 'out' };
-    return { code: 'DP', type: 'out' };
+    if (descLower.includes('6-4-3') || (descLower.includes('shortstop') && descLower.includes('second'))) return { code: '6-4-3', type: 'out', extraEvent };
+    if (descLower.includes('4-6-3') || (descLower.includes('second') && descLower.includes('shortstop'))) return { code: '4-6-3', type: 'out', extraEvent };
+    if (descLower.includes('5-4-3') || (descLower.includes('third') && descLower.includes('second'))) return { code: '5-4-3', type: 'out', extraEvent };
+    return { code: 'DP', type: 'out', extraEvent };
   }
   if (event === 'force_out' || event === 'fielders_choice') {
-    return { code: 'FC', type: 'out' };
+    return { code: 'FC', type: 'out', extraEvent };
   }
   if (event === 'sac_fly') {
-    return { code: 'SF', type: 'out' };
+    return { code: 'SF', type: 'out', extraEvent };
   }
   if (event === 'sac_bunt') {
-    return { code: 'SAC', type: 'out' };
+    return { code: 'SAC', type: 'out', extraEvent };
   }
-  if (event === 'field_error' || event === 'error' || desc.toLowerCase().includes('error')) {
+  if (event === 'field_error' || event === 'error' || descLower.includes('error')) {
     const pos = getErrorPosition(play);
-    return { code: pos ? `E${pos}` : 'E', type: 'error' };
+    return { code: pos ? `E${pos}` : 'E', type: 'error', extraEvent };
   }
 
   // Handle standard outs
-  const d = desc.toLowerCase();
-  if (d.includes('grounds out to shortstop') || (d.includes('shortstop') && d.includes('first'))) return { code: '6-3', type: 'out' };
-  if (d.includes('grounds out to third') || (d.includes('third baseman') && d.includes('first'))) return { code: '5-3', type: 'out' };
-  if (d.includes('grounds out to second') || (d.includes('second baseman') && d.includes('first'))) return { code: '4-3', type: 'out' };
-  if (d.includes('grounds out to first') || d.includes('first baseman to pitcher')) return { code: '3-1', type: 'out' };
-  if (d.includes('grounds out to pitcher')) return { code: '1-3', type: 'out' };
+  if (descLower.includes('grounds out to shortstop') || (descLower.includes('shortstop') && descLower.includes('first'))) return { code: '6-3', type: 'out', extraEvent };
+  if (descLower.includes('grounds out to third') || (descLower.includes('third baseman') && descLower.includes('first'))) return { code: '5-3', type: 'out', extraEvent };
+  if (descLower.includes('grounds out to second') || (descLower.includes('second baseman') && descLower.includes('first'))) return { code: '4-3', type: 'out', extraEvent };
+  if (descLower.includes('grounds out to first') || descLower.includes('first baseman to pitcher')) return { code: '3-1', type: 'out', extraEvent };
+  if (descLower.includes('grounds out to pitcher')) return { code: '1-3', type: 'out', extraEvent };
 
-  if (d.includes('flies out to center') || d.includes('center fielder')) return { code: 'F8', type: 'out' };
-  if (d.includes('flies out to right') || d.includes('right fielder')) return { code: 'F9', type: 'out' };
-  if (d.includes('flies out to left') || d.includes('left fielder')) return { code: 'F7', type: 'out' };
+  if (descLower.includes('flies out to center') || descLower.includes('center fielder')) return { code: 'F8', type: 'out', extraEvent };
+  if (descLower.includes('flies out to right') || descLower.includes('right fielder')) return { code: 'F9', type: 'out', extraEvent };
+  if (descLower.includes('flies out to left') || descLower.includes('left fielder')) return { code: 'F7', type: 'out', extraEvent };
 
-  if (d.includes('lines out to center')) return { code: 'L8', type: 'out' };
-  if (d.includes('lines out to right')) return { code: 'L9', type: 'out' };
-  if (d.includes('lines out to left')) return { code: 'L7', type: 'out' };
-  if (d.includes('lines out to second')) return { code: 'L4', type: 'out' };
-  if (d.includes('lines out to shortstop')) return { code: 'L6', type: 'out' };
-  if (d.includes('lines out to third')) return { code: 'L5', type: 'out' };
-  if (d.includes('lines out to first')) return { code: 'L3', type: 'out' };
+  if (descLower.includes('lines out to center')) return { code: 'L8', type: 'out', extraEvent };
+  if (descLower.includes('lines out to right')) return { code: 'L9', type: 'out', extraEvent };
+  if (descLower.includes('lines out to left')) return { code: 'L7', type: 'out', extraEvent };
+  if (descLower.includes('lines out to second')) return { code: 'L4', type: 'out', extraEvent };
+  if (descLower.includes('lines out to shortstop')) return { code: 'L6', type: 'out', extraEvent };
+  if (descLower.includes('lines out to third')) return { code: 'L5', type: 'out', extraEvent };
+  if (descLower.includes('lines out to first')) return { code: 'L3', type: 'out', extraEvent };
 
-  if (d.includes('pops out to catcher')) return { code: 'P2', type: 'out' };
-  if (d.includes('pops out to second')) return { code: 'P4', type: 'out' };
-  if (d.includes('pops out to shortstop')) return { code: 'P6', type: 'out' };
-  if (d.includes('pops out to third')) return { code: 'P5', type: 'out' };
-  if (d.includes('pops out to first')) return { code: 'P3', type: 'out' };
+  if (descLower.includes('pops out to catcher')) return { code: 'P2', type: 'out', extraEvent };
+  if (descLower.includes('pops out to second')) return { code: 'P4', type: 'out', extraEvent };
+  if (descLower.includes('pops out to shortstop')) return { code: 'P6', type: 'out', extraEvent };
+  if (descLower.includes('pops out to third')) return { code: 'P5', type: 'out', extraEvent };
+  if (descLower.includes('pops out to first')) return { code: 'P3', type: 'out', extraEvent };
 
-  return { code: 'OUT', type: 'out' };
+  return { code: 'OUT', type: 'out', extraEvent };
 }
 
 function baseToNum(b) {
@@ -553,6 +562,102 @@ export function processMLBData(data, gamePkOverride) {
   const awayData = parseTeamSide('away', 'top');
   const homeData = parseTeamSide('home', 'bottom');
 
+  // Extract Statcast Home Run Highlights and Top Hits across all plays
+  const hrHighlights = [];
+  const topHits = [];
+
+  plays.forEach(p => {
+    const isTop = p.about?.halfInning === 'top';
+    const batterName = extractLastNameGlobal(p.matchup?.batter?.fullName);
+    const pitcherName = extractLastNameGlobal(p.matchup?.pitcher?.fullName);
+    const inn = isTop ? `T${p.about?.inning}` : `B${p.about?.inning}`;
+    const team = isTop ? awayAbbr : homeAbbr;
+
+    const hitDist = p.hitData?.totalDistance;
+    const launchSpeed = p.hitData?.launchSpeed;
+    const launchAngle = p.hitData?.launchAngle;
+
+    const pitchEvt = (p.playEvents || []).find(e => e.isPitch && e.pitchData?.startSpeed);
+    const pitchSpeed = pitchEvt?.pitchData?.startSpeed ? `${pitchEvt.pitchData.startSpeed.toFixed(1)} MPH` : '';
+    const pitchType = pitchEvt?.details?.type?.description || pitchEvt?.details?.type?.code || '';
+
+    const distStr = hitDist ? `${Math.round(hitDist)} FT` : '';
+    const speedStr = launchSpeed ? `${launchSpeed.toFixed(1)} MPH` : '';
+    const angleStr = launchAngle ? `${Math.round(launchAngle)}°` : '';
+    const rbi = p.result?.rbi || 1;
+
+    if (p.result?.eventType === 'home_run') {
+      hrHighlights.push({
+        batterName,
+        pitcherName,
+        team,
+        inn,
+        dist: distStr,
+        speed: speedStr,
+        angle: angleStr,
+        pitchSpeed,
+        pitchType,
+        rbi,
+        desc: p.result?.description || ''
+      });
+    } else if (launchSpeed && launchSpeed >= 90) {
+      topHits.push({
+        batterName,
+        pitcherName,
+        team,
+        inn,
+        event: p.result?.eventType?.replace(/_/g, ' ')?.toUpperCase() || 'HIT',
+        speed: speedStr,
+        dist: distStr,
+        angle: angleStr,
+      });
+    }
+  });
+
+  topHits.sort((a, b) => parseFloat(b.speed) - parseFloat(a.speed));
+
+  // Calculate Inning-by-Inning Score & Momentum Progression
+  let runningAway = 0;
+  let runningHome = 0;
+  const gameMomentum = linescoreInnings.map(inn => {
+    const a = typeof inn.away === 'number' ? inn.away : 0;
+    const h = typeof inn.home === 'number' ? inn.home : 0;
+    runningAway += a;
+    runningHome += h;
+    const diff = runningHome - runningAway;
+    let leader = 'TIE';
+    if (diff > 0) leader = `${homeAbbr} +${diff}`;
+    else if (diff < 0) leader = `${awayAbbr} +${Math.abs(diff)}`;
+
+    return {
+      inning: inn.num,
+      awayCum: runningAway,
+      homeCum: runningHome,
+      diff,
+      leader,
+    };
+  });
+
+  // Determine Game MVP
+  let gameMvp = null;
+  const topHr = hrHighlights[0];
+  if (topHr) {
+    gameMvp = {
+      name: topHr.batterName,
+      team: topHr.team,
+      badge: 'GAME MVP',
+      statLine: `${topHr.rbi} RBI HR ${topHr.dist ? `(${topHr.dist}` : ''}${topHr.speed ? `, ${topHr.speed})` : ')'}`,
+    };
+  } else if (decisions.winner) {
+    const winningTeam = homeTeam.score > awayTeam.score ? homeAbbr : awayAbbr;
+    gameMvp = {
+      name: decisions.winner,
+      team: winningTeam,
+      badge: 'WINNING PITCHER',
+      statLine: `WINNING PITCHER FOR ${winningTeam}`,
+    };
+  }
+
   return {
     gameInfo: {
       gamePk,
@@ -567,6 +672,10 @@ export function processMLBData(data, gamePkOverride) {
       attendance,
       durationStr,
       decisions,
+      hrHighlights,
+      topHits: topHits.slice(0, 4),
+      gameMomentum,
+      gameMvp,
     },
     awayData,
     homeData

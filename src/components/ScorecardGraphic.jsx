@@ -22,7 +22,16 @@ export default function ScorecardGraphic({
   showDecisions = true,
   showEnvironmentBox = false,
   showHRDistances = true,
-  showAtBatDashedLines = true,
+  showEndInningBases = true, // default ON: solid lines for end-of-inning base advancement
+  showStatcast = false, // default OFF as requested
+  showMomentum = false, // default OFF as requested
+  showMvp = false, // default OFF as requested
+  showExtraEvents = true,
+  showTeamWatermarks = true,
+  customAwayColor,
+  customAwaySecondary,
+  customHomeColor,
+  customHomeSecondary,
 }) {
   if (!data) return null;
 
@@ -53,6 +62,99 @@ export default function ScorecardGraphic({
     let themeObj = {};
 
     switch (theme) {
+      case 'chalkboard':
+        themeObj = {
+          ...base,
+          bg: '#1c140e',
+          paperBg: '#101c18',
+          outerFrame: '#2c1e15',
+          textPrimary: '#f4f8f5',
+          textSecondary: '#a5d6a7',
+          textMuted: '#81c784',
+          borderStrong: 'rgba(255, 255, 255, 0.4)',
+          borderLight: 'rgba(255, 255, 255, 0.15)',
+          tableHeaderBg: 'rgba(255, 255, 255, 0.07)',
+          tableRowAlt: 'rgba(255, 255, 255, 0.025)',
+          lineScoreBg: 'rgba(255, 255, 255, 0.06)',
+          lineScoreAlt: 'rgba(255, 255, 255, 0.03)',
+          pitchingBg: 'rgba(255, 255, 255, 0.05)',
+          awayColor: customAwayColor || '#fff59d',
+          awaySecondary: customAwaySecondary || '#80d8ff',
+          awayText: '#101c18',
+          homeColor: customHomeColor || '#80d8ff',
+          homeSecondary: customHomeSecondary || '#fff59d',
+          homeText: '#101c18',
+          scoreTextColor: '#f4f8f5',
+          vsTextColor: '#a5d6a7',
+          cellDiamondStroke: 'rgba(255, 255, 255, 0.45)',
+          hitLineColor: customAwayColor || '#fff59d',
+          homeHitLineColor: customHomeColor || '#80d8ff',
+          isChalkboard: true,
+        };
+        break;
+
+      case 'retro70s':
+        themeObj = {
+          ...base,
+          bg: '#e8dec8',
+          paperBg: '#f6f0dd',
+          outerFrame: '#3d2314',
+          textPrimary: '#3d2314',
+          textSecondary: '#6e4020',
+          textMuted: '#9e6d42',
+          borderStrong: '#d94c26',
+          borderLight: '#e59b24',
+          tableHeaderBg: 'rgba(217, 76, 38, 0.12)',
+          tableRowAlt: 'rgba(229, 155, 36, 0.08)',
+          lineScoreBg: 'rgba(217, 76, 38, 0.1)',
+          lineScoreAlt: 'rgba(229, 155, 36, 0.06)',
+          pitchingBg: 'rgba(217, 76, 38, 0.08)',
+          awayColor: customAwayColor || '#c84b2c',
+          awaySecondary: customAwaySecondary || '#d89623',
+          awayText: '#ffffff',
+          homeColor: customHomeColor || '#3d2314',
+          homeSecondary: customHomeSecondary || '#d89623',
+          homeText: '#f6f0dd',
+          scoreTextColor: '#3d2314',
+          vsTextColor: '#c84b2c',
+          cellDiamondStroke: '#d89623',
+          hitLineColor: customAwayColor || '#c84b2c',
+          homeHitLineColor: customHomeColor || '#3d2314',
+          isRetro70s: true,
+        };
+        break;
+
+      case 'blueprint':
+        themeObj = {
+          ...base,
+          bg: '#07162c',
+          paperBg: '#081c38',
+          outerFrame: '#184275',
+          textPrimary: '#f0f8ff',
+          textSecondary: '#90caf9',
+          textMuted: '#64b5f6',
+          borderStrong: '#00e5ff',
+          borderLight: '#1565c0',
+          tableHeaderBg: 'rgba(0, 229, 255, 0.15)',
+          tableRowAlt: 'rgba(255, 255, 255, 0.03)',
+          lineScoreBg: 'rgba(0, 229, 255, 0.12)',
+          lineScoreAlt: 'rgba(255, 255, 255, 0.04)',
+          pitchingBg: 'rgba(0, 229, 255, 0.1)',
+          awayColor: customAwayColor || '#00e5ff',
+          awaySecondary: customAwaySecondary || '#64ffda',
+          awayText: '#04101e',
+          homeColor: customHomeColor || '#ff4081',
+          homeSecondary: customHomeSecondary || '#ff80ab',
+          homeText: '#ffffff',
+          scoreTextColor: '#f0f8ff',
+          vsTextColor: '#00e5ff',
+          cellDiamondStroke: '#42a5f5',
+          hitLineColor: customAwayColor || '#00e5ff',
+          homeHitLineColor: customHomeColor || '#ff4081',
+          isBlueprint: true,
+        };
+        break;
+
       case 'team-dark':
         themeObj = {
           ...base,
@@ -69,17 +171,17 @@ export default function ScorecardGraphic({
           lineScoreBg: '#0a1221',
           lineScoreAlt: 'rgba(255,255,255,0.04)',
           pitchingBg: '#0d1627',
-          awayColor: away.color,
-          awaySecondary: away.secondary,
+          awayColor: customAwayColor || away.color,
+          awaySecondary: customAwaySecondary || away.secondary,
           awayText: away.textColor || '#fff',
-          homeColor: home.color,
-          homeSecondary: home.secondary,
+          homeColor: customHomeColor || home.color,
+          homeSecondary: customHomeSecondary || home.secondary,
           homeText: home.textColor || '#fff',
           scoreTextColor: '#f1f5f9',
           vsTextColor: '#475569',
           cellDiamondStroke: '#2d4a7a',
-          hitLineColor: away.secondary,
-          homeHitLineColor: home.secondary,
+          hitLineColor: customAwaySecondary || away.secondary,
+          homeHitLineColor: customHomeSecondary || home.secondary,
         };
         break;
 
@@ -99,17 +201,17 @@ export default function ScorecardGraphic({
           lineScoreBg: 'rgba(180,150,100,0.12)',
           lineScoreAlt: 'rgba(180,150,100,0.07)',
           pitchingBg: 'rgba(180,150,100,0.1)',
-          awayColor: '#3a2010',
-          awaySecondary: '#c8922a',
+          awayColor: customAwayColor || '#3a2010',
+          awaySecondary: customAwaySecondary || '#c8922a',
           awayText: '#f5eed8',
-          homeColor: '#7a0c1e',
-          homeSecondary: '#c8922a',
+          homeColor: customHomeColor || '#7a0c1e',
+          homeSecondary: customHomeSecondary || '#c8922a',
           homeText: '#f5eed8',
           scoreTextColor: '#2c1a0e',
           vsTextColor: '#b89a70',
           cellDiamondStroke: '#c8b089',
-          hitLineColor: '#c8922a',
-          homeHitLineColor: '#7a0c1e',
+          hitLineColor: customAwaySecondary || '#c8922a',
+          homeHitLineColor: customHomeColor || '#7a0c1e',
           paperTexture: true,
         };
         break;
@@ -130,17 +232,17 @@ export default function ScorecardGraphic({
           lineScoreBg: '#ececea',
           lineScoreAlt: 'rgba(0,0,0,0.03)',
           pitchingBg: '#f2f2f0',
-          awayColor: '#111111',
-          awaySecondary: '#555555',
+          awayColor: customAwayColor || '#111111',
+          awaySecondary: customAwaySecondary || '#555555',
           awayText: '#ffffff',
-          homeColor: '#333333',
-          homeSecondary: '#888888',
+          homeColor: customHomeColor || '#333333',
+          homeSecondary: customHomeSecondary || '#888888',
           homeText: '#ffffff',
           scoreTextColor: '#111111',
           vsTextColor: '#999999',
           cellDiamondStroke: '#cccccc',
-          hitLineColor: '#222222',
-          homeHitLineColor: '#444444',
+          hitLineColor: customAwayColor || '#222222',
+          homeHitLineColor: customHomeColor || '#444444',
         };
         break;
 
@@ -160,17 +262,17 @@ export default function ScorecardGraphic({
           lineScoreBg: 'rgba(0,240,255,0.12)',
           lineScoreAlt: 'rgba(255,255,255,0.03)',
           pitchingBg: 'rgba(255,0,85,0.1)',
-          awayColor: '#ff0055',
-          awaySecondary: '#00f0ff',
+          awayColor: customAwayColor || '#ff0055',
+          awaySecondary: customAwaySecondary || '#00f0ff',
           awayText: '#ffffff',
-          homeColor: '#00f0ff',
-          homeSecondary: '#ff0055',
+          homeColor: customHomeColor || '#00f0ff',
+          homeSecondary: customHomeSecondary || '#ff0055',
           homeText: '#000000',
           scoreTextColor: '#f8fafc',
           vsTextColor: '#ff0055',
           cellDiamondStroke: '#00f0ff',
-          hitLineColor: '#ff0055',
-          homeHitLineColor: '#00f0ff',
+          hitLineColor: customAwayColor || '#ff0055',
+          homeHitLineColor: customHomeColor || '#00f0ff',
         };
         break;
 
@@ -190,17 +292,17 @@ export default function ScorecardGraphic({
           lineScoreBg: 'rgba(37,99,235,0.05)',
           lineScoreAlt: 'rgba(37,99,235,0.02)',
           pitchingBg: 'rgba(37,99,235,0.04)',
-          awayColor: '#1d4ed8',
-          awaySecondary: '#b91c1c',
+          awayColor: customAwayColor || '#1d4ed8',
+          awaySecondary: customAwaySecondary || '#b91c1c',
           awayText: '#ffffff',
-          homeColor: '#b91c1c',
-          homeSecondary: '#1d4ed8',
+          homeColor: customHomeColor || '#b91c1c',
+          homeSecondary: customHomeSecondary || '#1d4ed8',
           homeText: '#ffffff',
           scoreTextColor: '#1e293b',
           vsTextColor: '#2563eb',
           cellDiamondStroke: '#93c5fd',
-          hitLineColor: '#1d4ed8',
-          homeHitLineColor: '#b91c1c',
+          hitLineColor: customAwayColor || '#1d4ed8',
+          homeHitLineColor: customHomeColor || '#b91c1c',
         };
         break;
 
@@ -221,19 +323,31 @@ export default function ScorecardGraphic({
           lineScoreBg: 'rgba(0,0,0,0.04)',
           lineScoreAlt: 'rgba(0,0,0,0.025)',
           pitchingBg: 'rgba(0,0,0,0.03)',
-          awayColor: away.color,
-          awaySecondary: away.secondary,
+          awayColor: customAwayColor || away.color,
+          awaySecondary: customAwaySecondary || away.secondary,
           awayText: away.textColor || '#fff',
-          homeColor: home.color,
-          homeSecondary: home.secondary,
+          homeColor: customHomeColor || home.color,
+          homeSecondary: customHomeSecondary || home.secondary,
           homeText: home.textColor || '#fff',
           scoreTextColor: '#1a1209',
           vsTextColor: '#c0b499',
           cellDiamondStroke: '#c8bfa8',
-          hitLineColor: away.color,
-          homeHitLineColor: home.color,
+          hitLineColor: customAwayColor || away.color,
+          homeHitLineColor: customHomeColor || home.color,
         };
         break;
+    }
+
+    // Font overrides for theme feel
+    if (theme === 'chalkboard') {
+      themeObj.fontHeader = "'Caveat', cursive";
+      themeObj.fontMono = "'Caveat', cursive";
+      themeObj.fontSans = "'Caveat', cursive";
+      themeObj.fontDisplay = "'Caveat', cursive";
+      themeObj.isHandwritten = true;
+    } else if (theme === 'retro70s') {
+      themeObj.fontHeader = "'Bebas Neue', sans-serif";
+      themeObj.fontDisplay = "'Oswald', sans-serif";
     }
 
     // Apply modular Font Style overrides
@@ -407,40 +521,51 @@ export default function ScorecardGraphic({
       );
     }
 
-    const { code, type, bases, atBatBases, isLooking } = play;
+    const { code, type, bases, atBatBases, isLooking, extraEvent } = play;
     const hitColor = isHome ? t.homeHitLineColor : t.hitLineColor;
     const pillBg = isHome ? t.homeColor : t.awayColor;
     const pillText = isHome ? t.homeText : t.awayText;
 
+    const extraEventBadge = showExtraEvents && extraEvent ? (
+      <span style={{
+        position: 'absolute', top: '2px', left: '2px',
+        fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
+        lineHeight: 1, padding: '1px 3px', borderRadius: '2px',
+        backgroundColor: isHome ? t.homeSecondary : t.awaySecondary,
+        color: '#000000', zIndex: 3, boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+      }}>
+        {extraEvent}
+      </span>
+    ) : null;
+
     if (type === 'hit' || type === 'hr' || type === 'walk' || (bases && bases >= 1) || (atBatBases && atBatBases >= 1)) {
       const isHR = type === 'hr';
 
-      // Base reached on own at-bat vs total bases reached by end of inning
-      // Home runs are scoring hits and are rendered with solid lines all around
+      // Own at-bat reach (bases reached on batter's own at-bat) -> drawn as DASHED lines
       const atBatReach = isHR
-        ? 0
+        ? 4
         : (atBatBases !== undefined ? atBatBases : ((type === 'hit' || type === 'walk') ? (bases || 1) : 0));
+
+      // End of inning reach (total bases reached after subsequent plays) -> drawn as SOLID lines
       const endInningReach = isHR ? 4 : (bases !== undefined ? bases : atBatReach);
 
-      // Determine filled bases by end of inning
-      const b1 = endInningReach >= 1 || isHR;
-      const b2 = endInningReach >= 2 || isHR;
-      const b3 = endInningReach >= 3 || isHR;
-      const b4 = endInningReach >= 4 || isHR; // home = all 4
+      // Own at-bat segments (1 to atBatReach): drawn as DASHED
+      const b1Dash = !isHR && atBatReach >= 1;
+      const b2Dash = !isHR && atBatReach >= 2;
+      const b3Dash = !isHR && atBatReach >= 3;
+      const b4Dash = !isHR && atBatReach >= 4;
 
-      // Determine which bases were reached on own at-bat (HR lines remain solid)
-      const b1AtBat = !isHR && atBatReach >= 1;
-      const b2AtBat = !isHR && atBatReach >= 2;
-      const b3AtBat = !isHR && atBatReach >= 3;
-      const b4AtBat = !isHR && atBatReach >= 4;
-
-      // Helper for dash pattern: rounded pill dashes (strokeLinecap='round') with calibrated gap and pill length
-      const getDashArray = (isAtBat) => (showAtBatDashedLines && isAtBat) ? "1.2 4.2" : undefined;
-      const getStrokeWidth = (isAtBat) => isHR ? 2.5 : ((showAtBatDashedLines && isAtBat) ? 2.0 : 2.4);
+      // Subsequent end-of-inning segments (atBatReach+1 to endInningReach): drawn as SOLID
+      // ONLY if showEndInningBases is true!
+      const b1Solid = isHR || (showEndInningBases && endInningReach >= 1 && 1 > atBatReach);
+      const b2Solid = isHR || (showEndInningBases && endInningReach >= 2 && 2 > atBatReach);
+      const b3Solid = isHR || (showEndInningBases && endInningReach >= 3 && 3 > atBatReach);
+      const b4Solid = isHR || (showEndInningBases && endInningReach >= 4 && 4 > atBatReach);
 
       return (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
           {renderEraserOverlay(cellKey)}
+          {extraEventBadge}
           <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
             {/* Diamond outline */}
             <polygon
@@ -450,11 +575,21 @@ export default function ScorecardGraphic({
               stroke={t.cellDiamondStroke}
               strokeWidth="1.0"
             />
-            {/* Base path lines drawn clockwise: 1B=bottom-right, 2B=top-right, 3B=top-left, HP=bottom-left */}
-            {b1 && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth={getStrokeWidth(b1AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b1AtBat)} />}
-            {b2 && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth={getStrokeWidth(b2AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b2AtBat)} />}
-            {b3 && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth={getStrokeWidth(b3AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b3AtBat)} />}
-            {b4 && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth={getStrokeWidth(b4AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b4AtBat)} />}
+            {/* Base 1 (Home to 1B) */}
+            {b1Solid && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
+            {b1Dash && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
+
+            {/* Base 2 (1B to 2B) */}
+            {b2Solid && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
+            {b2Dash && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
+
+            {/* Base 3 (2B to 3B) */}
+            {b3Solid && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
+            {b3Dash && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
+
+            {/* Base 4 (3B to Home) */}
+            {b4Solid && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
+            {b4Dash && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
           </svg>
           {/* Code badge */}
           <span style={{
@@ -487,6 +622,7 @@ export default function ScorecardGraphic({
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
           {renderEraserOverlay(cellKey)}
+          {extraEventBadge}
           <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
             <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
           </svg>
@@ -511,6 +647,7 @@ export default function ScorecardGraphic({
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
         {renderEraserOverlay(cellKey)}
+        {extraEventBadge}
         <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
           <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
         </svg>
@@ -981,8 +1118,8 @@ export default function ScorecardGraphic({
         maxWidth: graphicMaxWidth,
         margin: '0 auto',
         backgroundColor: t.bg,
-        padding: '10px',
-        boxShadow: '0 30px 60px -15px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08)',
+        padding: t.isChalkboard ? '14px' : '10px',
+        boxShadow: '0 30px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.1)',
         transition: 'max-width 0.3s ease',
       }}
     >
@@ -990,16 +1127,25 @@ export default function ScorecardGraphic({
       <div style={{
         position: 'relative',
         backgroundColor: t.paperBg,
-        border: `3px solid ${t.borderStrong}`,
-        outline: `1px solid ${t.outerFrame}`,
-        outlineOffset: '4px',
+        border: t.isChalkboard
+          ? '12px solid #281c14'
+          : `3px solid ${t.borderStrong}`,
+        outline: t.isChalkboard
+          ? '2px solid #140d09'
+          : `1px solid ${t.outerFrame}`,
+        outlineOffset: t.isChalkboard ? '-2px' : '4px',
+        boxShadow: t.isChalkboard
+          ? 'inset 0 0 25px rgba(0,0,0,0.85), 0 15px 35px rgba(0,0,0,0.6)'
+          : undefined,
       }}>
 
-        {/* Paper grain texture overlay */}
+        {/* Paper grain & chalk dust texture overlay */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E")`,
-          opacity: 0.6,
+          backgroundImage: t.isChalkboard
+            ? `radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.08) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(255,255,255,0.07) 0%, transparent 50%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.09'/%3E%3C/svg%3E")`
+            : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E")`,
+          opacity: t.isChalkboard ? 0.9 : 0.6,
         }} />
 
         {/* HERO HEADER: Teams + Score */}
@@ -1015,12 +1161,35 @@ export default function ScorecardGraphic({
           <div style={{
             display: 'flex', alignItems: 'stretch',
             borderBottom: `2px solid ${t.borderStrong}`,
+            position: 'relative', overflow: 'hidden',
           }}>
+            {/* Team Watermarks behind headers */}
+            {showTeamWatermarks && (
+              <>
+                <div style={{
+                  position: 'absolute', left: '10px', top: '-10px',
+                  fontSize: '90px', fontWeight: 900, fontFamily: t.fontHeader,
+                  color: t.awayColor, opacity: 0.05, pointerEvents: 'none', zIndex: 0,
+                  userSelect: 'none', lineHeight: 1,
+                }}>
+                  {away.abbreviation}
+                </div>
+                <div style={{
+                  position: 'absolute', right: '10px', top: '-10px',
+                  fontSize: '90px', fontWeight: 900, fontFamily: t.fontHeader,
+                  color: t.homeColor, opacity: 0.05, pointerEvents: 'none', zIndex: 0,
+                  userSelect: 'none', lineHeight: 1,
+                }}>
+                  {home.abbreviation}
+                </div>
+              </>
+            )}
+
             {/* Away team */}
             <div style={{
               flex: 1, padding: '18px 20px 14px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              borderRight: `1px solid ${t.borderLight}`,
+              borderRight: `1px solid ${t.borderLight}`, position: 'relative', zIndex: 1,
             }}>
               <div style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
@@ -1072,7 +1241,7 @@ export default function ScorecardGraphic({
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '12px 16px',
-              flexDirection: 'column', gap: '4px',
+              flexDirection: 'column', gap: '4px', position: 'relative', zIndex: 1,
             }}>
               <div style={{
                 fontFamily: t.fontDisplay,
@@ -1101,7 +1270,7 @@ export default function ScorecardGraphic({
             <div style={{
               flex: 1, padding: '18px 20px 14px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end',
-              borderLeft: `1px solid ${t.borderLight}`,
+              borderLeft: `1px solid ${t.borderLight}`, position: 'relative', zIndex: 1,
             }}>
               <div style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
@@ -1181,11 +1350,11 @@ export default function ScorecardGraphic({
             </span>
           </div>
 
-          {/* Combined Decisions + Environment Bar */}
-          {((showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser)) || (showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr))) && (
+          {/* Combined Decisions + Environment + Game MVP Bar */}
+          {((showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser)) || (showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr)) || (showMvp && gameInfo.gameMvp)) && (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px',
-              backgroundColor: t.tableHeaderBg, padding: '4px 14px',
+              backgroundColor: t.tableHeaderBg, padding: '6px 14px',
               borderBottom: `1px solid ${t.borderLight}`,
               fontSize: '8.5px', fontWeight: 600, fontFamily: t.fontMono, color: t.textMuted,
             }}>
@@ -1201,6 +1370,22 @@ export default function ScorecardGraphic({
                   {gameInfo.decisions.save && (
                     <span><strong style={{ color: t.textPrimary }}>SAVE:</strong> {gameInfo.decisions.save}</span>
                   )}
+                </div>
+              )}
+
+              {/* Game MVP Badge */}
+              {showMvp && gameInfo.gameMvp && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  padding: '2px 7px', borderRadius: '4px',
+                  backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                  border: '1px solid rgba(234, 179, 8, 0.4)',
+                  color: t.textPrimary, fontFamily: t.fontMono, fontSize: '8px', fontWeight: 800,
+                }}>
+                  <span style={{ backgroundColor: '#eab308', color: '#000', padding: '1px 3px', borderRadius: '2px', fontSize: '6.5px', fontWeight: 900 }}>
+                    {gameInfo.gameMvp.badge}
+                  </span>
+                  <span>{gameInfo.gameMvp.name} ({gameInfo.gameMvp.team}) — {gameInfo.gameMvp.statLine}</span>
                 </div>
               )}
 
@@ -1252,6 +1437,158 @@ export default function ScorecardGraphic({
             </div>
           )}
 
+          {/* Statcast HR & Hit Metrics Card */}
+          {showStatcast && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px 14px',
+              backgroundColor: t.tableHeaderBg,
+              borderRadius: '6px',
+              border: `1px solid ${t.borderLight}`,
+              position: 'relative', zIndex: 1,
+            }}>
+              <div style={{
+                fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: t.textMuted, fontFamily: t.fontSans, marginBottom: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ backgroundColor: '#10b981', color: '#ffffff', padding: '1px 5px', borderRadius: '2px', fontSize: '7px', fontWeight: 900 }}>
+                    STATCAST
+                  </span>
+                  <span style={{ color: t.textPrimary, fontWeight: 700 }}>HOME RUN & HIT STATCAST METRICS</span>
+                </div>
+                <span style={{ fontSize: '7.5px', opacity: 0.7 }}>MLB ADVANCED TRACKING</span>
+              </div>
+
+              {gameInfo.hrHighlights && gameInfo.hrHighlights.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {gameInfo.hrHighlights.map((hr, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px',
+                      padding: '5px 10px', borderRadius: '4px',
+                      backgroundColor: 'rgba(0,0,0,0.05)',
+                      border: `1px solid ${t.borderLight}`,
+                      fontSize: '9.5px', fontFamily: t.fontMono, color: t.textPrimary, fontWeight: 600,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          backgroundColor: hr.team === away.abbreviation ? t.awayColor : t.homeColor,
+                          color: hr.team === away.abbreviation ? t.awayText : t.homeText,
+                          padding: '2px 6px', borderRadius: '3px', fontWeight: 900, fontSize: '9px',
+                        }}>
+                          {hr.batterName} ({hr.team})
+                        </span>
+                        <span style={{ color: t.textMuted, fontWeight: 700 }}>{hr.inn}</span>
+                        <span style={{ fontWeight: 800, color: t.textPrimary }}>{hr.rbi} RBI HR</span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {hr.speed && (
+                          <span style={{ color: '#10b981', fontWeight: 800 }}>Exit Velo: {hr.speed}</span>
+                        )}
+                        {hr.dist && (
+                          <span style={{ color: t.textPrimary, fontWeight: 800 }}>Distance: {hr.dist}</span>
+                        )}
+                        {hr.angle && (
+                          <span style={{ color: t.textSecondary }}>Launch Angle: {hr.angle}</span>
+                        )}
+                        {hr.pitchSpeed && (
+                          <span style={{ color: t.textMuted, fontSize: '8.5px' }}>{hr.pitchSpeed} {hr.pitchType} {hr.pitcherName ? `off ${hr.pitcherName}` : ''}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : gameInfo.topHits && gameInfo.topHits.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '8px', color: t.textMuted, fontStyle: 'italic', marginBottom: '2px' }}>
+                    No Home Runs in game — Showing Top Hard-Hit Statcast Exit Velocities:
+                  </div>
+                  {gameInfo.topHits.map((hit, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px',
+                      padding: '4px 8px', borderRadius: '4px',
+                      backgroundColor: 'rgba(0,0,0,0.04)',
+                      border: `1px solid ${t.borderLight}`,
+                      fontSize: '9px', fontFamily: t.fontMono, color: t.textPrimary,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: hit.team === away.abbreviation ? t.awayColor : t.homeColor, fontWeight: 900 }}>
+                          {hit.batterName} ({hit.team})
+                        </span>
+                        <span style={{ color: t.textMuted }}>{hit.inn}</span>
+                        <span style={{ fontWeight: 800 }}>{hit.event}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {hit.speed && <span style={{ color: '#10b981', fontWeight: 800 }}>Exit Velo: {hit.speed}</span>}
+                        {hit.dist && <span>Distance: {hit.dist}</span>}
+                        {hit.angle && <span>Angle: {hit.angle}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '9px', color: t.textMuted, fontFamily: t.fontMono }}>
+                  No Statcast tracking metrics recorded for this game.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Inning-by-Inning Score & Lead Progression Grid */}
+          {showMomentum && gameInfo.gameMomentum && gameInfo.gameMomentum.length > 0 && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px 14px',
+              backgroundColor: t.tableHeaderBg,
+              borderRadius: '6px',
+              border: `1px solid ${t.borderLight}`,
+              position: 'relative', zIndex: 1,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: t.textMuted, fontFamily: t.fontSans, marginBottom: '8px',
+              }}>
+                <span>INNING-BY-INNING SCORE & LEAD PROGRESSION</span>
+                <span>{away.abbreviation} ({gameInfo.awayTeam.score}) vs {home.abbreviation} ({gameInfo.homeTeam.score})</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {gameInfo.gameMomentum.map((m, idx) => {
+                  const isAwayLead = m.diff < 0;
+                  const isHomeLead = m.diff > 0;
+                  const pillColor = isHomeLead ? t.homeColor : (isAwayLead ? t.awayColor : t.borderStrong);
+                  const pillTextClr = isHomeLead ? t.homeText : (isAwayLead ? t.awayText : t.textPrimary);
+
+                  return (
+                    <div key={idx} style={{
+                      flex: 1, minWidth: '46px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                      padding: '6px 4px', borderRadius: '5px',
+                      backgroundColor: 'rgba(0,0,0,0.04)', border: `1px solid ${t.borderLight}`,
+                    }}>
+                      <div style={{ fontSize: '8px', fontWeight: 800, color: t.textMuted, fontFamily: t.fontMono }}>
+                        INN {m.inning}
+                      </div>
+                      <div style={{ fontSize: '10px', fontWeight: 900, color: t.textPrimary, fontFamily: t.fontMono, lineHeight: 1 }}>
+                        {m.awayCum}–{m.homeCum}
+                      </div>
+                      <div style={{
+                        fontSize: '7.5px', fontWeight: 900, fontFamily: t.fontMono,
+                        padding: '2px 4px', borderRadius: '3px',
+                        backgroundColor: pillColor, color: pillTextClr,
+                        whiteSpace: 'nowrap', marginTop: '2px',
+                      }}>
+                        {m.leader}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Custom Game Notes & Highlights Block — seamless part of scorecard paper */}
           {customNotes && (
             <div style={{
@@ -1260,6 +1597,7 @@ export default function ScorecardGraphic({
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
+              position: 'relative', zIndex: 1,
             }}>
               <div style={{
                 fontSize: '8px',
