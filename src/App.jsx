@@ -1000,7 +1000,7 @@ export default function App() {
                     {[
                       { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
                       { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
-                      { label: 'Weather & Umpires Info Box', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
+                      { label: 'Weather & Game Conditions Box', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
                       { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
                     ].map(opt => (
                       <button
