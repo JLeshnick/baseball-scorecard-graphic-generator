@@ -221,7 +221,7 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await captureGraphic(3);
+      const dataUrl = await captureGraphic(4);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -242,30 +242,25 @@ export default function App() {
     setExporting(true);
     try {
       const isLandscape = orientation === 'landscape';
-      const dataUrl = await captureGraphic(2);
+      const dataUrl = await captureGraphic(4);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
-      const pdf = new jsPDF(isLandscape ? 'landscape' : 'portrait', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(dataUrl);
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
+
+      const imgProps = new jsPDF().getImageProperties(dataUrl);
       const imgAspect = imgProps.width / imgProps.height;
-      const fitW = pdfW;
-      const fitH = fitW / imgAspect;
 
-      if (fitH <= pdfH) {
-        // Fits on one page — center vertically
-        const yOffset = (pdfH - fitH) / 2;
-        pdf.addImage(dataUrl, 'PNG', 0, yOffset, fitW, fitH);
-      } else {
-        // Taller than one page — scale to fit height instead
-        const scaleH = pdfH;
-        const scaleW = scaleH * imgAspect;
-        const xOffset = (pdfW - scaleW) / 2;
-        pdf.addImage(dataUrl, 'PNG', xOffset, 0, scaleW, scaleH);
-      }
+      // Create a borderless PDF matching the graphic's exact aspect ratio
+      const pdfW = isLandscape ? 297 : 210;
+      const pdfH = pdfW / imgAspect;
 
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: [pdfW, pdfH]
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
       pdf.save(`MLB_Scorecard_${away}-vs-${home}_${dateSlug}.pdf`);
     } catch (err) {
       console.error('Export PDF failed', err);
