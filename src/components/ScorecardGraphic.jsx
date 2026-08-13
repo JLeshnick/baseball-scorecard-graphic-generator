@@ -765,7 +765,7 @@ export default function ScorecardGraphic({
                   color: t.textMuted, textTransform: 'uppercase',
                   borderRight: `1.5px solid ${t.borderStrong}`,
                 }}>
-                  RUNS / INNING
+                  RUNS
                 </td>
                 {innings.map(n => {
                   const runs = inningRuns[n];
@@ -817,7 +817,7 @@ export default function ScorecardGraphic({
                     fontFamily: t.fontSans,
                     borderRight: `1.5px solid ${t.borderStrong}`,
                   }}>
-                    PITCHING (IP • H • R • ER • BB • K)
+                    PITCHING
                   </th>
                   {innings.map(n => (
                     <th key={n} style={{
@@ -1149,37 +1149,37 @@ export default function ScorecardGraphic({
             </span>
           </div>
 
-          {/* Pitcher Decisions Bar (W / L / SV) */}
-          {showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser) && (
+          {/* Combined Decisions + Environment Bar */}
+          {((showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser)) || (showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr))) && (
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px',
-              backgroundColor: t.tableHeaderBg, padding: '5px 12px',
-              borderBottom: `1px solid ${t.borderLight}`,
-              fontSize: '9.5px', fontWeight: 700, fontFamily: t.fontMono, color: t.textMuted,
-            }}>
-              {gameInfo.decisions.winner && (
-                <span><strong style={{ color: t.homeColor }}>WIN:</strong> {gameInfo.decisions.winner}</span>
-              )}
-              {gameInfo.decisions.loser && (
-                <span><strong style={{ color: t.awayColor }}>LOSS:</strong> {gameInfo.decisions.loser}</span>
-              )}
-              {gameInfo.decisions.save && (
-                <span><strong style={{ color: t.textPrimary }}>SAVE:</strong> {gameInfo.decisions.save}</span>
-              )}
-            </div>
-          )}
-
-          {/* Game Environment Bar */}
-          {showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr) && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px',
               backgroundColor: t.tableHeaderBg, padding: '4px 14px',
               borderBottom: `1px solid ${t.borderLight}`,
               fontSize: '8.5px', fontWeight: 600, fontFamily: t.fontMono, color: t.textMuted,
             }}>
-              <span>{gameInfo.weatherStr}</span>
-              <span>{gameInfo.attendance}</span>
-              <span>{gameInfo.durationStr}</span>
+              {/* Left side: Pitcher Decisions */}
+              {showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700 }}>
+                  {gameInfo.decisions.winner && (
+                    <span><strong style={{ color: t.homeColor }}>WIN:</strong> {gameInfo.decisions.winner}</span>
+                  )}
+                  {gameInfo.decisions.loser && (
+                    <span><strong style={{ color: t.awayColor }}>LOSS:</strong> {gameInfo.decisions.loser}</span>
+                  )}
+                  {gameInfo.decisions.save && (
+                    <span><strong style={{ color: t.textPrimary }}>SAVE:</strong> {gameInfo.decisions.save}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Right side: Weather, Attendance & Duration */}
+              {showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {gameInfo.weatherStr && <span>{gameInfo.weatherStr}</span>}
+                  {gameInfo.attendance && <span>{gameInfo.attendance}</span>}
+                  {gameInfo.durationStr && <span>{gameInfo.durationStr}</span>}
+                </div>
+              )}
             </div>
           )}
 

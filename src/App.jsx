@@ -514,6 +514,7 @@ export default function App() {
             {[
               { id: 'game', label: 'Game' },
               { id: 'style', label: 'Theme' },
+              { id: 'data', label: 'Data' },
               { id: 'text', label: 'Text' },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle(tab.id)}>
@@ -925,121 +926,6 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-
-                  {/* ── ERASER MARKS TOGGLE ───────────────────────────────────── */}
-                  <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <button
-                      onClick={() => {
-                        const next = !showEraserMarks;
-                        setShowEraserMarks(next);
-                        if (next) setEraserSeed(prev => prev + 1);
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '8px 10px',
-                        borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                        border: `1.5px solid ${showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                        backgroundColor: showEraserMarks
-                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                          : c.bgInput,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
-                          Eraser Marks & Pencil Scribbles
-                        </div>
-                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
-                          Simulate erased & scratched-out plays on scorebook
-                        </div>
-                      </div>
-                      <div style={{
-                        width: '32px', height: '18px', borderRadius: '10px',
-                        backgroundColor: showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
-                        position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
-                      }}>
-                        <div style={{
-                          width: '14px', height: '14px', borderRadius: '50%',
-                          backgroundColor: '#ffffff', position: 'absolute', top: '2px',
-                          left: showEraserMarks ? '16px' : '2px',
-                          transition: 'left 0.15s ease',
-                        }} />
-                      </div>
-                    </button>
-
-                    {showEraserMarks && (
-                      <button
-                        onClick={() => setEraserSeed(prev => prev + 1)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                          width: '100%', padding: '6px 10px',
-                          borderRadius: '6px', cursor: 'pointer',
-                          border: `1px dashed ${c.border}`,
-                          backgroundColor: 'transparent',
-                          color: c.textHead,
-                          fontSize: '10px', fontWeight: 600,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <RefreshCw style={{ width: '11px', height: '11px' }} />
-                        Re-roll Random Eraser & Scribble Spots
-                      </button>
-                    )}
-                  </div>
-
-                  {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
-                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{
-                      fontSize: '11px', fontWeight: 600,
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: c.textMuted, marginBottom: '2px',
-                    }}>
-                      Display Options & Stats
-                    </div>
-
-                    {[
-                      { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
-                      { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
-                      { label: 'Weather & Game Conditions Box', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
-                      { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
-                    ].map(opt => (
-                      <button
-                        key={opt.label}
-                        onClick={() => opt.setter(v => !v)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          width: '100%', padding: '8px 10px',
-                          borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                          border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                          backgroundColor: opt.value
-                            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                            : c.bgInput,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
-                            {opt.label}
-                          </div>
-                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
-                            {opt.desc}
-                          </div>
-                        </div>
-                        <div style={{
-                          width: '32px', height: '18px', borderRadius: '10px',
-                          backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
-                          position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
-                        }}>
-                          <div style={{
-                            width: '14px', height: '14px', borderRadius: '50%',
-                            backgroundColor: '#ffffff', position: 'absolute', top: '2px',
-                            left: opt.value ? '16px' : '2px',
-                            transition: 'left 0.15s ease',
-                          }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* ── ORIENTATION TOGGLE ────────────────────────────────────── */}
@@ -1096,6 +982,135 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ── DATA TAB ──────────────────────────────────────────────── */}
+            {activeTab === 'data' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '2px',
+                  }}>
+                    Game Stats & Display Options
+                  </div>
+
+                  {[
+                    { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
+                    { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
+                    { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
+                    { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
+                  ].map(opt => (
+                    <button
+                      key={opt.label}
+                      onClick={() => opt.setter(v => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '8px 10px',
+                        borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: opt.value
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                          {opt.desc}
+                        </div>
+                      </div>
+                      <div style={{
+                        width: '32px', height: '18px', borderRadius: '10px',
+                        backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                        position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                      }}>
+                        <div style={{
+                          width: '14px', height: '14px', borderRadius: '50%',
+                          backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                          left: opt.value ? '16px' : '2px',
+                          transition: 'left 0.15s ease',
+                        }} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── ERASER MARKS & SCRIBBLES ─────────────────────────────── */}
+                <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '2px',
+                  }}>
+                    Authentic Artifacts
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !showEraserMarks;
+                      setShowEraserMarks(next);
+                      if (next) setEraserSeed(prev => prev + 1);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      width: '100%', padding: '8px 10px',
+                      borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                      border: `1.5px solid ${showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                      backgroundColor: showEraserMarks
+                        ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                        : c.bgInput,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                        Eraser Marks & Scribbles
+                      </div>
+                      <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                        Simulate erased & scratched-out plays on scorebook
+                      </div>
+                    </div>
+                    <div style={{
+                      width: '32px', height: '18px', borderRadius: '10px',
+                      backgroundColor: showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                      position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                    }}>
+                      <div style={{
+                        width: '14px', height: '14px', borderRadius: '50%',
+                        backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                        left: showEraserMarks ? '16px' : '2px',
+                        transition: 'left 0.15s ease',
+                      }} />
+                    </div>
+                  </button>
+
+                  {showEraserMarks && (
+                    <button
+                      onClick={() => setEraserSeed(prev => prev + 1)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        width: '100%', padding: '6px 10px',
+                        borderRadius: '6px', cursor: 'pointer',
+                        border: `1px dashed ${c.border}`,
+                        backgroundColor: 'transparent',
+                        color: c.textHead,
+                        fontSize: '10px', fontWeight: 600,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <RefreshCw style={{ width: '11px', height: '11px' }} />
+                      Re-roll Random Eraser & Scribble Spots
+                    </button>
+                  )}
+                </div>
+
               </div>
             )}
 
