@@ -19,6 +19,7 @@ import {
   Link2,
   Check,
   Lock,
+  RotateCcw,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -259,6 +260,41 @@ export default function App() {
     }
   };
 
+  const handleGlobalReset = () => {
+    setTheme('team-light');
+    setFontStyle('modern');
+    setOrientation('portrait');
+    setShowEraserMarks(false);
+    setEraserSeed(0);
+    setShowPitchBreakdown(true);
+    setShowDecisions(true);
+    setShowEnvironmentBox(true);
+    setShowHRDistances(true);
+    setShowEndInningBases(true);
+    setShowStatcast(false);
+    setShowMomentum(false);
+    setShowMvp(false);
+    setShowExtraEvents(true);
+    setShowTeamWatermarks(true);
+    setCustomAwayColor('');
+    setCustomHomeColor('');
+
+    // Restore textboxes to default game data values instead of leaving them wiped/blank
+    if (scorecardData) {
+      setCustomHeadline(scorecardData.gameInfo.dateDisplay || '');
+      setCustomSubtitle(`${scorecardData.gameInfo.venue || ''} · ${scorecardData.gameInfo.headline || ''}`);
+      setCustomFooter(`${(scorecardData.gameInfo.venue || '').toUpperCase()} • ${scorecardData.gameInfo.dateDisplay || ''}`);
+    } else {
+      setCustomHeadline('');
+      setCustomSubtitle('');
+      setCustomFooter('');
+    }
+    setCustomNotes('');
+
+    setToastMessage('All options reset to default game values!');
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
   useEffect(() => {
     const bg = isDark ? '#09090b' : '#f0ede8';
     document.documentElement.setAttribute('data-theme', appTheme);
@@ -300,17 +336,9 @@ export default function App() {
       const data = await fetchGameScorecardData(gamePk);
       setScorecardData(data);
       setRawGameData(data._rawData || null);
-      setCustomHeadline(data.gameInfo.dateDisplay);
-      setCustomSubtitle(data.gameInfo.venue);
-
-      const footerParts = [
-        data.gameInfo.dateDisplay,
-        data.gameInfo.venue.toUpperCase(),
-        data.gameInfo.weatherStr,
-        data.gameInfo.attendance,
-        data.gameInfo.durationStr,
-      ].filter(Boolean);
-      setCustomFooter(footerParts.join(' • '));
+      setCustomHeadline(data.gameInfo.dateDisplay || '');
+      setCustomSubtitle(`${data.gameInfo.venue || ''} · ${data.gameInfo.headline || ''}`);
+      setCustomFooter(`${(data.gameInfo.venue || '').toUpperCase()} • ${data.gameInfo.dateDisplay || ''}`);
     } catch (err) {
       console.error(err);
       setError('Could not load MLB game data.');
@@ -699,6 +727,25 @@ export default function App() {
           >
             <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
             {!isMobile && 'Share'}
+          </button>
+
+          {/* Reset Defaults Button */}
+          <button
+            onClick={handleGlobalReset}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '0 10px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Reset all options to default"
+            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+          >
+            <RotateCcw style={{ width: '13px', height: '13px' }} />
+            {!isMobile && 'Reset'}
           </button>
 
           {/* GitHub link (Visible on both PC and Mobile) */}
@@ -1511,23 +1558,54 @@ export default function App() {
               {activeTab === 'text' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {[
-                    { label: 'Headline / Date Text', key: 'headline', value: customHeadline, setter: setCustomHeadline, mono: true, rows: 2 },
-                    { label: 'Subtitle', key: 'subtitle', value: customSubtitle, setter: setCustomSubtitle, rows: 3 },
-                    { label: 'Game Notes & Highlights', key: 'notes', value: customNotes, setter: setCustomNotes, rows: 3 },
-                    { label: 'Footer Print Text', key: 'footer', value: customFooter, setter: setCustomFooter, rows: 3 },
+                    {
+                      label: 'Headline / Date Text',
+                      key: 'headline',
+                      value: customHeadline,
+                      setter: setCustomHeadline,
+                      placeholder: scorecardData ? scorecardData.gameInfo.dateDisplay : 'Date & Headline',
+                      mono: true,
+                      rows: 2
+                    },
+                    {
+                      label: 'Subtitle',
+                      key: 'subtitle',
+                      value: customSubtitle,
+                      setter: setCustomSubtitle,
+                      placeholder: scorecardData ? `${scorecardData.gameInfo.venue} · ${scorecardData.gameInfo.headline}` : 'Venue & Matchup',
+                      rows: 3
+                    },
+                    {
+                      label: 'Game Notes & Highlights',
+                      key: 'notes',
+                      value: customNotes,
+                      setter: setCustomNotes,
+                      placeholder: 'Add custom game notes, key plays, weather or manager notes...',
+                      rows: 3
+                    },
+                    {
+                      label: 'Footer Print Text',
+                      key: 'footer',
+                      value: customFooter,
+                      setter: setCustomFooter,
+                      placeholder: scorecardData ? `${scorecardData.gameInfo.venue.toUpperCase()} • ${scorecardData.gameInfo.dateDisplay}` : 'Venue & Print Footer',
+                      rows: 3
+                    },
                   ].map(field => (
                     <div key={field.key}>
-                      <label style={{
-                        display: 'block', marginBottom: '6px',
-                        fontSize: '11px', fontWeight: 600,
-                        letterSpacing: '0.06em', textTransform: 'uppercase',
-                        color: c.textMuted,
-                      }}>
-                        {field.label}
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{
+                          fontSize: '11px', fontWeight: 600,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: c.textMuted,
+                        }}>
+                          {field.label}
+                        </label>
+                      </div>
                       <textarea
                         rows={field.rows}
                         value={field.value}
+                        placeholder={field.placeholder}
                         onChange={(e) => field.setter(e.target.value)}
                         style={{
                           width: '100%', boxSizing: 'border-box',
@@ -1546,8 +1624,61 @@ export default function App() {
                       />
                     </div>
                   ))}
+
+                  <button
+                    onClick={() => {
+                      if (scorecardData) {
+                        setCustomHeadline(scorecardData.gameInfo.dateDisplay || '');
+                        setCustomSubtitle(`${scorecardData.gameInfo.venue || ''} · ${scorecardData.gameInfo.headline || ''}`);
+                        setCustomFooter(`${(scorecardData.gameInfo.venue || '').toUpperCase()} • ${scorecardData.gameInfo.dateDisplay || ''}`);
+                        setCustomNotes('');
+                        setToastMessage('Text fields restored to game defaults!');
+                        setTimeout(() => setToastMessage(''), 3500);
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                      width: '100%', padding: '7px 10px',
+                      borderRadius: '6px', cursor: 'pointer',
+                      border: `1px solid ${c.border}`,
+                      backgroundColor: c.bgInput, color: c.textHead,
+                      fontSize: '11px', fontWeight: 600,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <RotateCcw style={{ width: '12px', height: '12px', color: c.accent }} />
+                    Restore Default Game Text
+                  </button>
                 </div>
               )}
+
+              {/* ── GLOBAL RESET BUTTON (BOTTOM OF SIDEBAR) ────────────────── */}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${c.border}` }}>
+                <button
+                  onClick={handleGlobalReset}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    width: '100%', padding: '8px 12px',
+                    borderRadius: '6px', cursor: 'pointer',
+                    border: `1px dashed ${c.border}`,
+                    backgroundColor: 'transparent',
+                    color: c.textMuted,
+                    fontSize: '11px', fontWeight: 600,
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#ef4444';
+                    e.currentTarget.style.borderColor = '#ef4444';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = c.textMuted;
+                    e.currentTarget.style.borderColor = c.border;
+                  }}
+                >
+                  <RotateCcw style={{ width: '12px', height: '12px' }} />
+                  Reset All Options to Default
+                </button>
+              </div>
 
             </div>
           </aside>
