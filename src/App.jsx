@@ -95,6 +95,7 @@ export default function App() {
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
   const [showEraserMarks, setShowEraserMarks] = useState(false);
   const [eraserSeed, setEraserSeed] = useState(0);
+  const [orientation, setOrientation] = useState('portrait'); // 'portrait' or 'landscape'
   const [showPitchBreakdown, setShowPitchBreakdown] = useState(true);
   const [showDecisions, setShowDecisions] = useState(true);
   const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
