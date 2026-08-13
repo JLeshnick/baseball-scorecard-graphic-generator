@@ -226,6 +226,16 @@ export function processMLBData(data, gamePkOverride) {
     textColor: homeColors.text
   };
 
+  let headline = '';
+  if (gameData.game?.description) {
+    const desc = gameData.game.description;
+    if (!desc.toLowerCase().includes('regular season')) {
+      headline = desc.toUpperCase();
+    }
+  } else if (gameData.seriesStatus?.description) {
+    headline = gameData.seriesStatus.description.toUpperCase();
+  }
+
   // Smart last name helper
   const SUFFIXES_ALL = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
   const extractLastNameGlobal = (fullName) => {

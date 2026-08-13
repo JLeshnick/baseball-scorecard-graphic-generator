@@ -794,48 +794,11 @@ export default function ScorecardGraphic({
           </table>
         </div>
 
-        {/* Pitching Summary Section */}
+        {/* Unified Pitching & Per-Inning Pitch Breakdown Table */}
         {teamData.pitchers && teamData.pitchers.length > 0 && (
           <div style={{
             backgroundColor: t.pitchingBg,
             borderTop: `2px solid ${t.borderStrong}`,
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${t.borderStrong}` }}>
-                  <th style={{
-                    textAlign: 'left', padding: '4px 8px 3px 10px',
-                    fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
-                    color: t.textMuted, textTransform: 'uppercase',
-                    fontFamily: t.fontSans,
-                  }}>
-                    PITCHING SUMMARY
-                  </th>
-                  {['IP', 'H', 'R', 'ER', 'BB', 'K', 'PC'].map(stat => (
-                    <th key={stat} style={{
-                      textAlign: 'center', padding: '4px 6px 3px',
-                      fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
-                      color: t.textMuted, textTransform: 'uppercase',
-                      fontFamily: "'Inter', sans-serif",
-                      opacity: stat === 'PC' ? 0.8 : 1,
-                    }}>
-                      {stat}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {teamData.pitchers.map(p => renderPitcherRow(p, isHome))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Per-Inning Pitch Breakdown Grid */}
-        {showPitchBreakdown && teamData.pitchers && teamData.pitchers.length > 0 && (
-          <div style={{
-            backgroundColor: t.tableRowAlt,
-            borderTop: `1.5px solid ${t.borderStrong}`,
           }}>
             <table style={{
               width: '100%', borderCollapse: 'collapse',
@@ -845,28 +808,90 @@ export default function ScorecardGraphic({
                 <col style={{ width: `${POS_COL_W + NAME_COL_W}px` }} />
                 {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
               </colgroup>
+              <thead>
+                <tr style={{ backgroundColor: t.tableHeaderBg, borderBottom: `1.5px solid ${t.borderStrong}` }}>
+                  <th style={{
+                    textAlign: 'left', padding: '4px 8px',
+                    fontSize: '8px', fontWeight: 800, letterSpacing: '0.08em',
+                    color: t.textMuted, textTransform: 'uppercase',
+                    fontFamily: t.fontSans,
+                    borderRight: `1.5px solid ${t.borderStrong}`,
+                  }}>
+                    PITCHING (IP • H • R • ER • BB • K)
+                  </th>
+                  {innings.map(n => (
+                    <th key={n} style={{
+                      textAlign: 'center', padding: '4px 2px',
+                      fontSize: '8px', fontWeight: 800,
+                      fontFamily: t.fontMono,
+                      color: t.textMuted,
+                      borderLeft: `1px solid ${t.borderLight}`,
+                    }}>
+                      {showPitchBreakdown ? `${n}` : ''}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
-                {teamData.pitchers.map(p => {
-                  const hasPitches = Object.keys(p.pitchesByInning || {}).length > 0;
-                  if (!hasPitches && !p.totalPitches) return null;
+                {teamData.pitchers.map((p, pIdx) => {
+                  const ks = p.strikeouts?.length || 0;
+                  const color = isHome ? t.homeColor : t.awayColor;
+                  const text = isHome ? t.homeText : t.awayText;
                   return (
-                    <tr key={`p_breakdown_${p.id}`} style={{ borderBottom: `1px solid ${t.borderLight}` }}>
+                    <tr key={p.id} style={{
+                      borderBottom: `1px solid ${t.borderLight}`,
+                      backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
+                    }}>
+                      {/* Name & Core Pitching Stats */}
                       <td style={{
-                        padding: '3px 8px', fontSize: '9px', fontWeight: 700,
-                        color: t.textPrimary, fontFamily: t.fontHeader,
+                        padding: '4px 6px',
                         borderRight: `1.5px solid ${t.borderStrong}`,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        verticalAlign: 'middle',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span>{p.name} <span style={{ fontSize: '7.5px', opacity: 0.6, fontWeight: 600 }}>(PITCHES)</span></span>
-                          {(p.totalPitches > 0 || p.totalStrikes > 0) && (
-                            <span style={{ fontSize: '7.5px', fontFamily: t.fontMono, color: t.textMuted, fontWeight: 600 }}>
-                              {p.totalPitches}P ({p.totalStrikes}S/{p.totalBalls}B)
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              backgroundColor: color, color: text,
+                              fontSize: '7px', fontWeight: 800,
+                              fontFamily: t.fontMono,
+                              flexShrink: 0,
+                            }}>
+                              {p.number}
                             </span>
-                          )}
+                            <span style={{
+                              fontFamily: t.fontHeader, fontWeight: 700,
+                              fontSize: '10.5px', letterSpacing: '0.02em',
+                              color: t.textPrimary, whiteSpace: 'nowrap',
+                              overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                              {p.name}
+                            </span>
+                          </div>
+                          {/* Stats summary chip: IP H R ER BB K */}
+                          <div style={{
+                            fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 700,
+                            color: t.textSecondary, whiteSpace: 'nowrap',
+                            display: 'flex', gap: '4px', opacity: 0.9,
+                          }}>
+                            <span>{p.ip || '—'}IP</span>
+                            <span>{p.hits ?? 0}H</span>
+                            <span>{p.runs ?? 0}R</span>
+                            <span>{p.earnedRuns ?? 0}ER</span>
+                            <span>{p.walks ?? 0}BB</span>
+                            <span style={{ color: t.textPrimary, fontWeight: 800 }}>{ks}K</span>
+                          </div>
                         </div>
                       </td>
+
+                      {/* Inning Pitch Breakdown Cells (or blank space if disabled) */}
                       {innings.map(n => {
+                        if (!showPitchBreakdown) {
+                          return (
+                            <td key={n} style={{ borderLeft: `1px solid ${t.borderLight}` }} />
+                          );
+                        }
                         const innStat = p.pitchesByInning?.[n];
                         const cnt = innStat?.pitches || 0;
                         const str = innStat?.strikes || 0;
