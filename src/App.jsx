@@ -7,15 +7,23 @@ import ScorecardGraphic from './components/ScorecardGraphic';
 import {
   Calendar,
   Download,
-  Printer,
   FileSpreadsheet,
   RefreshCw,
   Sun,
   Moon,
+  ChevronDown,
+  FileJson,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import confetti from 'canvas-confetti';
+
+const GithubIcon = ({ style }) => (
+  <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
 
 const getYesterdayDateString = () => {
   const d = new Date();
@@ -92,6 +100,8 @@ export default function App() {
   const [customFooter, setCustomFooter] = useState('');
   const [customNotes, setCustomNotes] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [rawGameData, setRawGameData] = useState(null);
 
   const graphicRef = useRef(null);
   const dateInputRef = useRef(null);
@@ -122,7 +132,12 @@ export default function App() {
       const games = await searchGamesByDate(dateStr);
       setAvailableGames(games);
       if (games.length > 0) {
-        setSelectedGamePk(games[0].gamePk);
+        // Prefer a game with TB (Rays) if available; otherwise pick first
+        const TB_NAMES = ['Tampa Bay Rays', 'Tampa Bay'];
+        const tbGame = games.find(g =>
+          TB_NAMES.some(n => g.awayTeam.includes(n) || g.homeTeam.includes(n))
+        );
+        setSelectedGamePk((tbGame || games[0]).gamePk);
       } else {
         setError(`No games found for ${dateStr}. Try another date.`);
         setSelectedGamePk('813049');
@@ -142,8 +157,10 @@ export default function App() {
     try {
       const data = await fetchGameScorecardData(gamePk);
       setScorecardData(data);
+      setRawGameData(data._rawData || null);
       setCustomHeadline(data.gameInfo.dateDisplay);
-      setCustomSubtitle(`${data.gameInfo.venue} · ${data.gameInfo.headline}`);
+      // Subtitle: just the venue (no redundant game type text)
+      setCustomSubtitle(data.gameInfo.venue);
       setCustomFooter(`${data.gameInfo.dateDisplay} • ${data.gameInfo.venue.toUpperCase()}`);
     } catch (err) {
       console.error(err);
@@ -227,9 +244,24 @@ export default function App() {
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
       const pdf = new jsPDF(isLandscape ? 'landscape' : 'portrait', 'mm', 'a4');
       const imgProps = pdf.getImageProperties(dataUrl);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+      const imgAspect = imgProps.width / imgProps.height;
+      const fitW = pdfW;
+      const fitH = fitW / imgAspect;
+
+      if (fitH <= pdfH) {
+        // Fits on one page — center vertically
+        const yOffset = (pdfH - fitH) / 2;
+        pdf.addImage(dataUrl, 'PNG', 0, yOffset, fitW, fitH);
+      } else {
+        // Taller than one page — scale to fit height instead
+        const scaleH = pdfH;
+        const scaleW = scaleH * imgAspect;
+        const xOffset = (pdfW - scaleW) / 2;
+        pdf.addImage(dataUrl, 'PNG', xOffset, 0, scaleW, scaleH);
+      }
+
       pdf.save(`MLB_Scorecard_${away}-vs-${home}_${dateSlug}.pdf`);
     } catch (err) {
       console.error('Export PDF failed', err);
@@ -239,8 +271,19 @@ export default function App() {
     }
   };
 
-
-  const handlePrint = () => window.print();
+  const handleExportRawData = () => {
+    if (!rawGameData) return;
+    const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
+    const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
+    const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
+    const blob = new Blob([JSON.stringify(rawGameData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `MLB_GameFeed_${away}-vs-${home}_${dateSlug}.json`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const triggerCalendarPicker = () => {
     if (dateInputRef.current?.showPicker) {
@@ -321,57 +364,100 @@ export default function App() {
 
         {/* Action toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={handleExportPNG}
-            disabled={exporting || loading}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '7px 14px', borderRadius: '6px', border: 'none',
-              backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              opacity: (exporting || loading) ? 0.5 : 1,
-              transition: 'opacity 0.15s',
-              fontFamily: "'Inter', sans-serif",
-              letterSpacing: '0.01em',
-            }}
-          >
-            <Download style={{ width: '13px', height: '13px' }} />
-            Export PNG
-          </button>
-          <button
-            onClick={handleExportPDF}
-            disabled={exporting || loading}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '7px 14px', borderRadius: '6px',
-              border: `1px solid ${c.border}`,
-              backgroundColor: c.bgCard, color: c.textMain,
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              opacity: (exporting || loading) ? 0.5 : 1,
-              transition: 'opacity 0.15s',
-              fontFamily: "'Inter', sans-serif",
-              letterSpacing: '0.01em',
-            }}
-          >
-            <FileSpreadsheet style={{ width: '13px', height: '13px' }} />
-            PDF
-          </button>
-          <button
-            onClick={handlePrint}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '7px 14px', borderRadius: '6px',
-              border: `1px solid ${c.border}`,
-              backgroundColor: c.bgCard, color: c.textMain,
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            <Printer style={{ width: '13px', height: '13px' }} />
-            Print
-          </button>
+
+          {/* ── EXPORT DROPDOWN ─────────────────────────── */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setExportOpen(o => !o)}
+              disabled={exporting || loading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 12px', borderRadius: '6px', border: 'none',
+                backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
+                fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                opacity: (exporting || loading) ? 0.5 : 1,
+                transition: 'opacity 0.15s',
+                fontFamily: "'Inter', sans-serif",
+                letterSpacing: '0.01em',
+              }}
+            >
+              <Download style={{ width: '13px', height: '13px' }} />
+              {exporting ? 'Exporting…' : 'Export'}
+              <ChevronDown style={{ width: '11px', height: '11px', marginLeft: '2px', transition: 'transform 0.15s', transform: exportOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+            </button>
+
+            {exportOpen && (
+              <>
+                {/* Backdrop to close dropdown */}
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                  onClick={() => setExportOpen(false)}
+                />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                  zIndex: 100, minWidth: '180px',
+                  backgroundColor: c.bgCard,
+                  border: `1px solid ${c.border}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
+                  padding: '4px',
+                }}>
+                  {[
+                    { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF', action: () => { setExportOpen(false); handleExportPDF(); } },
+                    { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG', action: () => { setExportOpen(false); handleExportPNG(); } },
+                    { icon: <FileJson style={{ width: '13px', height: '13px' }} />, label: 'Export Raw JSON', action: () => { setExportOpen(false); handleExportRawData(); }, disabled: !rawGameData },
+                  ].map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={item.action}
+                      disabled={item.disabled}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        width: '100%', padding: '8px 10px',
+                        border: 'none', background: 'none',
+                        color: item.disabled ? c.textMuted : c.textMain,
+                        fontSize: '12px', fontWeight: 500,
+                        fontFamily: "'Inter', sans-serif",
+                        cursor: item.disabled ? 'default' : 'pointer',
+                        borderRadius: '5px',
+                        textAlign: 'left',
+                        transition: 'background 0.1s',
+                        opacity: item.disabled ? 0.4 : 1,
+                      }}
+                      onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
+
+          {/* GitHub link */}
+          <a
+            href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              width: '34px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
+            title="View on GitHub"
+            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+          >
+            <GithubIcon style={{ width: '15px', height: '15px' }} />
+          </a>
 
           <button
             onClick={() => setAppTheme(isDark ? 'light' : 'dark')}

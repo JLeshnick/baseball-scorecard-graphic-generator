@@ -66,7 +66,9 @@ export async function fetchGameScorecardData(gamePk) {
     const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    return processMLBData(data, gamePk);
+    const result = processMLBData(data, gamePk);
+    result._rawData = data; // store raw feed for export
+    return result;
   } catch (error) {
     console.error('Error loading game data:', error);
     throw error;
@@ -224,13 +226,15 @@ export function processMLBData(data, gamePkOverride) {
     textColor: homeColors.text
   };
 
-  let headline = 'POSTSEASON GAME';
+  let headline = '';
   if (gameData.game?.description) {
-    headline = gameData.game.description.toUpperCase();
+    // Only use description if it's meaningful (not just 'Regular Season')
+    const desc = gameData.game.description;
+    if (!desc.toLowerCase().includes('regular season')) {
+      headline = desc.toUpperCase();
+    }
   } else if (gameData.seriesStatus?.description) {
     headline = gameData.seriesStatus.description.toUpperCase();
-  } else {
-    headline = `REGULAR SEASON GAME (${awayTeam.abbreviation} VS ${homeTeam.abbreviation})`;
   }
 
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
@@ -263,21 +267,34 @@ export function processMLBData(data, gamePkOverride) {
       batterInningPlays[batterId][inning] = parsed;
     });
 
-    // Pitcher strikeout records (from plays)
+    // Pitcher strikeout records (from plays).
+    // IMPORTANT: pitchers of teamKey pitch during the OPPOSITE half-inning.
+    // e.g. away team pitchers pitch during 'bottom' half, not 'top'.
+    const oppositeHalf = sideHalf === 'top' ? 'bottom' : 'top';
     const pitcherIds = teamBox.pitchers || [];
     const pitcherStrikeoutMap = {};
-    pitcherIds.forEach(id => { pitcherStrikeoutMap[id] = []; });
+    const pitcherPitchMap = {}; // pitcherId → { [inning]: count }
+    pitcherIds.forEach(id => { pitcherStrikeoutMap[id] = []; pitcherPitchMap[id] = {}; });
 
     plays.forEach(play => {
-      if (play.about?.halfInning === sideHalf && play.result?.eventType === 'strikeout') {
-        const pitcherId = play.matchup?.pitcher?.id;
-        if (pitcherId) {
-          if (!pitcherStrikeoutMap[pitcherId]) pitcherStrikeoutMap[pitcherId] = [];
-          const desc = play.result?.description || '';
-          const dl = desc.toLowerCase();
-          const isLooking = dl.includes('called out on strikes') || dl.includes('called third strike') || dl.includes('looking');
-          pitcherStrikeoutMap[pitcherId].push({ code: 'K', isLooking });
-        }
+      if (play.about?.halfInning !== oppositeHalf) return;
+      const pitcherId = play.matchup?.pitcher?.id;
+      if (!pitcherId) return;
+      if (!pitcherStrikeoutMap[pitcherId]) pitcherStrikeoutMap[pitcherId] = [];
+      if (!pitcherPitchMap[pitcherId]) pitcherPitchMap[pitcherId] = {};
+
+      if (play.result?.eventType === 'strikeout') {
+        const desc = play.result?.description || '';
+        const dl = desc.toLowerCase();
+        const isLooking = dl.includes('called out on strikes') || dl.includes('called third strike') || dl.includes('looking');
+        pitcherStrikeoutMap[pitcherId].push({ code: 'K', isLooking });
+      }
+
+      // Count pitches thrown this plate appearance
+      const inning = play.about?.inning;
+      if (inning) {
+        const pitchCount = play.playEvents?.filter(e => e.isPitch)?.length || 0;
+        pitcherPitchMap[pitcherId][inning] = (pitcherPitchMap[pitcherId][inning] || 0) + pitchCount;
       }
     });
 
@@ -289,14 +306,30 @@ export function processMLBData(data, gamePkOverride) {
       return rem === 0 ? `${full}.0` : `${full}.${rem}`;
     };
 
+    // Smart last name: ignore common name suffixes (Jr., Sr., II, III, IV)
+    const SUFFIXES = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+    const extractLastName = (fullName) => {
+      if (!fullName) return 'PITCHER';
+      const parts = fullName.trim().split(/\s+/);
+      // Walk from the end, skipping suffix tokens
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (!SUFFIXES.has(parts[i].toLowerCase())) {
+          return parts[i].toUpperCase();
+        }
+      }
+      return parts[parts.length - 1].toUpperCase();
+    };
+
     const pitchersList = pitcherIds.slice(0, 7).map(id => {
       const p = playerMap[`ID${id}`] || {};
-      const name = p.person?.fullName ? p.person.fullName.split(' ').pop().toUpperCase() : 'PITCHER';
+      const name = extractLastName(p.person?.fullName);
       const number = p.jerseyNumber || 'P';
       const ks = pitcherStrikeoutMap[id] || [];
       // MLB Stats API: game-level pitching stats live under player.stats.pitching
       // The boxscore endpoint returns them inline on each player object
       const gp = p.stats?.pitching ?? {};
+      const pitchesByInning = pitcherPitchMap[id] || {};
+      const totalPitches = Object.values(pitchesByInning).reduce((a, b) => a + b, 0);
       return {
         id,
         number,
@@ -307,6 +340,8 @@ export function processMLBData(data, gamePkOverride) {
         runs: gp.runs ?? null,
         earnedRuns: gp.earnedRuns ?? null,
         walks: gp.baseOnBalls ?? null,
+        pitchesByInning,
+        totalPitches: totalPitches || (gp.numberOfPitches ?? null),
       };
     });
 
@@ -319,6 +354,19 @@ export function processMLBData(data, gamePkOverride) {
     let subCharIndex = 0;
     const subLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
+    // Smart last name: ignore common name suffixes (Jr., Sr., II, III, IV)
+    const SUFFIXES_B = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+    const extractBatterLastName = (fullName) => {
+      if (!fullName) return '—';
+      const parts = fullName.trim().split(/\s+/);
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (!SUFFIXES_B.has(parts[i].toLowerCase())) {
+          return parts[i].toUpperCase();
+        }
+      }
+      return parts[parts.length - 1].toUpperCase();
+    };
+
     batterIds.forEach(id => {
       const player = playerMap[`ID${id}`];
       if (!player) return;
@@ -327,7 +375,7 @@ export function processMLBData(data, gamePkOverride) {
       const pos = player.position?.abbreviation || player.primaryPosition?.abbreviation || '—';
       const jerseyNumber = player.jerseyNumber || '—';
       const fullName = player.person?.fullName || '';
-      const lastName = fullName.split(' ').pop().toUpperCase();
+      const lastName = extractBatterLastName(fullName);
       const battingOrderNum = player.battingOrder ? parseInt(player.battingOrder) : null;
 
       // A starter has a battingOrder ending in 00 (100, 200 … 900)

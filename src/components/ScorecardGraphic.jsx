@@ -559,6 +559,9 @@ export default function ScorecardGraphic({
         <td style={{ padding: '4px 8px 4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 800, color: t.textPrimary }}>
           {ks}
         </td>
+        <td style={{ padding: '4px 8px 4px 6px', textAlign: 'center', fontFamily: t.fontMono, fontSize: '10px', fontWeight: 600, color: t.textMuted, opacity: 0.75 }}>
+          {p.totalPitches ?? '—'}
+        </td>
       </tr>
     );
   };
@@ -804,12 +807,14 @@ export default function ScorecardGraphic({
                   }}>
                     PITCHING
                   </th>
-                  {['IP', 'H', 'R', 'ER', 'BB', 'K'].map(stat => (
+                  {['IP', 'H', 'R', 'ER', 'BB', 'K', 'PC'].map(stat => (
                     <th key={stat} style={{
                       textAlign: 'center', padding: '4px 6px 3px',
                       fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
-                      color: t.textMuted, textTransform: 'uppercase',
+                      color: stat === 'PC' ? t.textMuted : t.textMuted,
+                      textTransform: 'uppercase',
                       fontFamily: "'Inter', sans-serif",
+                      opacity: stat === 'PC' ? 0.7 : 1,
                     }}>
                       {stat}
                     </th>
