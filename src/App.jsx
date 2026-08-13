@@ -192,7 +192,10 @@ export default function App() {
   const captureGraphic = async (pixelRatio = 5) => {
     const el = graphicRef.current;
     const isLandscape = orientation === 'landscape';
-    const targetWidth = isLandscape ? '1240px' : '920px';
+    const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
+    const targetWidth = isLandscape
+      ? `${Math.max(1360, 1360 + (totalInningsCount - 9) * 90)}px`
+      : '920px';
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText = [

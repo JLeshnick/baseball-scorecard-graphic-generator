@@ -842,37 +842,35 @@ export default function ScorecardGraphic({
                       borderBottom: `1px solid ${t.borderLight}`,
                       backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
                     }}>
-                      {/* Name & Core Pitching Stats */}
+                      {/* Name & Core Pitching Stats (Stacked so names never truncate to ...) */}
                       <td style={{
-                        padding: '4px 6px',
+                        padding: '3px 6px',
                         borderRight: `1.5px solid ${t.borderStrong}`,
                         verticalAlign: 'middle',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '16px', height: '16px', borderRadius: '50%',
+                              width: '15px', height: '15px', borderRadius: '50%',
                               backgroundColor: color, color: text,
                               fontSize: '7px', fontWeight: 800,
-                              fontFamily: t.fontMono,
-                              flexShrink: 0,
+                              fontFamily: t.fontMono, flexShrink: 0,
                             }}>
                               {p.number}
                             </span>
                             <span style={{
                               fontFamily: t.fontHeader, fontWeight: 700,
-                              fontSize: '10.5px', letterSpacing: '0.02em',
+                              fontSize: '11px', letterSpacing: '0.02em',
                               color: t.textPrimary, whiteSpace: 'nowrap',
-                              overflow: 'hidden', textOverflow: 'ellipsis',
                             }}>
                               {p.name}
                             </span>
                           </div>
-                          {/* Stats summary chip: IP H R ER BB K */}
+                          {/* Stats summary row: IP H R ER BB K */}
                           <div style={{
-                            fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 700,
-                            color: t.textSecondary, whiteSpace: 'nowrap',
+                            fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
+                            color: t.textMuted, whiteSpace: 'nowrap',
                             display: 'flex', gap: '4px', opacity: 0.9,
                           }}>
                             <span>{p.ip || '—'}IP</span>
@@ -937,6 +935,10 @@ export default function ScorecardGraphic({
   const homeWon = home.score > away.score;
 
   const isLandscape = orientation === 'landscape';
+  const totalInningsCount = Math.max(9, gameInfo.totalInnings || 9);
+  const graphicMaxWidth = isLandscape
+    ? `${Math.max(1360, 1360 + (totalInningsCount - 9) * 90)}px`
+    : '920px';
 
   return (
     <div
@@ -944,7 +946,7 @@ export default function ScorecardGraphic({
       style={{
         position: 'relative',
         width: '100%',
-        maxWidth: isLandscape ? '1240px' : '920px',
+        maxWidth: graphicMaxWidth,
         margin: '0 auto',
         backgroundColor: t.bg,
         padding: '10px',
@@ -1167,7 +1169,7 @@ export default function ScorecardGraphic({
             </div>
           )}
 
-          {/* Game Environment & Umpires Bar */}
+          {/* Game Environment Bar */}
           {showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr) && (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1178,9 +1180,6 @@ export default function ScorecardGraphic({
               <span>{gameInfo.weatherStr}</span>
               <span>{gameInfo.attendance}</span>
               <span>{gameInfo.durationStr}</span>
-              {gameInfo.umpires && gameInfo.umpires.length > 0 && (
-                <span>HP: {gameInfo.umpires.find(u => u?.type && String(u.type).toLowerCase().includes('home'))?.name || gameInfo.umpires[0]?.name || '—'}</span>
-              )}
             </div>
           )}
 

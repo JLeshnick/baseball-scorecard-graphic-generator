@@ -277,12 +277,6 @@ export function processMLBData(data, gamePkOverride) {
     save: liveData?.decisions?.save?.fullName ? extractLastNameGlobal(liveData.decisions.save.fullName) : '',
   };
 
-  // Umpires
-  const umpires = (gameData.officials || []).map(o => ({
-    type: o.officialType || 'Umpire',
-    name: extractLastNameGlobal(o.official?.fullName || '')
-  }));
-
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
 
   // Per-inning linescore (runs each inning for each team)
@@ -517,7 +511,6 @@ export function processMLBData(data, gamePkOverride) {
       attendance,
       durationStr,
       decisions,
-      umpires,
     },
     awayData,
     homeData
