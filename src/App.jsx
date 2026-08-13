@@ -93,6 +93,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
   const [theme, setTheme] = useState('team-light');
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
+  const [showEraserMarks, setShowEraserMarks] = useState(false);
+  const [eraserSeed, setEraserSeed] = useState(0);
   const [showPitchBreakdown, setShowPitchBreakdown] = useState(true);
   const [showDecisions, setShowDecisions] = useState(true);
   const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
