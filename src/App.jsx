@@ -461,16 +461,14 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div>
             <div style={{
-              fontWeight: 800, fontSize: isMobile ? '15px' : '14px', letterSpacing: '-0.02em',
+              fontWeight: 800, fontSize: '14px', letterSpacing: '-0.02em',
               color: c.textHead, lineHeight: 1.1,
             }}>
-              {isMobile ? 'MLB Studio' : 'MLB Scorecard Studio'}
+              MLB Scorecard Studio
             </div>
-            {!isMobile && (
-              <div style={{ fontSize: '10px', color: c.textMuted, letterSpacing: '0.02em' }}>
-                Scorecard Graphic Art Generator
-              </div>
-            )}
+            <div style={{ fontSize: '10px', color: c.textMuted, letterSpacing: '0.02em' }}>
+              Scorecard Graphic Art Generator
+            </div>
           </div>
         </div>
 
@@ -592,30 +590,29 @@ export default function App() {
                   </>
                 )}
               </div>
-
-              <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
-
-              {/* GitHub link */}
-              <a
-                href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  width: '34px', height: '34px', borderRadius: '6px',
-                  border: `1px solid ${c.border}`,
-                  backgroundColor: c.bgCard, color: c.textMuted,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', textDecoration: 'none',
-                  transition: 'color 0.15s',
-                }}
-                title="View on GitHub"
-                onMouseEnter={e => e.currentTarget.style.color = c.textHead}
-                onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
-              >
-                <GithubIcon style={{ width: '15px', height: '15px' }} />
-              </a>
             </>
           )}
+
+          {/* GitHub link (Visible on both PC and Mobile) */}
+          <a
+            href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              width: '34px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
+            title="View on GitHub"
+            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+          >
+            <GithubIcon style={{ width: '15px', height: '15px' }} />
+          </a>
+
 
           {/* Light / Dark Mode Toggle */}
           <button
@@ -1401,34 +1398,34 @@ export default function App() {
 
       </div>
 
-      {/* ── MOBILE FLOATING PILLS BOTTOMLAR (MOBILE ONLY) ─────────────────── */}
+      {/* ── UNIFIED MOBILE FLOATING DOCK (MOBILE ONLY) ─────────────────── */}
       {isMobile && (
         <div style={{
-          position: 'fixed', bottom: '16px', left: '16px', right: '16px',
-          zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '8px', pointerEvents: 'none',
+          position: 'fixed', bottom: '20px', left: 0, right: 0,
+          zIndex: 40, display: 'flex', justifyContent: 'center',
+          pointerEvents: 'none',
         }}>
-          {/* Segmented View Switcher Pill */}
           <div style={{
-            display: 'flex',
-            backgroundColor: isDark ? 'rgba(24,24,28,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex', alignItems: 'center', gap: '3px',
+            backgroundColor: isDark ? 'rgba(20,20,24,0.92)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
             borderRadius: '30px',
-            padding: '4px',
+            padding: '4px 6px',
             border: `1px solid ${c.border}`,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
             pointerEvents: 'auto',
           }}>
             <button
               onClick={() => setMobileView('preview')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: '8px 14px', borderRadius: '24px', border: 'none',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '22px', border: 'none',
                 backgroundColor: mobileView === 'preview' ? (isDark ? '#6366f1' : '#4f46e5') : 'transparent',
                 color: mobileView === 'preview' ? '#ffffff' : c.textMuted,
                 fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 transition: 'all 0.15s ease',
+                fontFamily: "'Inter', sans-serif",
               }}
             >
               <Eye style={{ width: '14px', height: '14px' }} />
@@ -1437,36 +1434,39 @@ export default function App() {
             <button
               onClick={() => setMobileView('controls')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: '8px 14px', borderRadius: '24px', border: 'none',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '22px', border: 'none',
                 backgroundColor: mobileView === 'controls' ? (isDark ? '#6366f1' : '#4f46e5') : 'transparent',
                 color: mobileView === 'controls' ? '#ffffff' : c.textMuted,
                 fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 transition: 'all 0.15s ease',
+                fontFamily: "'Inter', sans-serif",
               }}
             >
               <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
               Controls
             </button>
-          </div>
 
-          {/* Floating Export Pill */}
-          <button
-            onClick={() => setExportOpen(o => !o)}
-            disabled={exporting || loading}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 18px', borderRadius: '30px', border: 'none',
-              backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
-              fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-              pointerEvents: 'auto',
-              opacity: (exporting || loading) ? 0.6 : 1,
-            }}
-          >
-            <Download style={{ width: '14px', height: '14px' }} />
-            {exporting ? 'Exporting…' : 'Export'}
-          </button>
+            <div style={{ width: '1px', height: '18px', backgroundColor: c.border, margin: '0 2px' }} />
+
+            <button
+              onClick={() => setExportOpen(o => !o)}
+              disabled={exporting || loading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '22px', border: 'none',
+                backgroundColor: exportOpen ? (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)') : 'transparent',
+                color: exportOpen ? c.textHead : c.textMain,
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                fontFamily: "'Inter', sans-serif",
+                opacity: (exporting || loading) ? 0.5 : 1,
+              }}
+            >
+              <Download style={{ width: '14px', height: '14px', color: isDark ? '#818cf8' : '#4f46e5' }} />
+              {exporting ? 'Exporting…' : 'Export'}
+            </button>
+          </div>
         </div>
       )}
 
