@@ -107,6 +107,7 @@ export default function App() {
   const [customNotes, setCustomNotes] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportQuality, setExportQuality] = useState(8); // 2, 4, 6, 8 (Default 8x Ultra HD 10K Master)
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
@@ -242,7 +243,7 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await captureGraphic(8);
+      const dataUrl = await captureGraphic(exportQuality);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -263,7 +264,7 @@ export default function App() {
     setExporting(true);
     try {
       const isLandscape = orientation === 'landscape';
-      const dataUrl = await captureGraphic(8);
+      const dataUrl = await captureGraphic(exportQuality);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -414,14 +415,57 @@ export default function App() {
                 />
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                  zIndex: 100, minWidth: '180px',
+                  zIndex: 100, minWidth: '220px',
                   backgroundColor: c.bgCard,
                   border: `1px solid ${c.border}`,
                   borderRadius: '8px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
                   overflow: 'hidden',
-                  padding: '4px',
+                  padding: '6px',
                 }}>
+                  {/* Export Quality Control Box */}
+                  <div style={{
+                    padding: '8px 10px',
+                    borderBottom: `1px solid ${c.border}`,
+                    marginBottom: '4px',
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: '6px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: c.textMuted }}>
+                        Export Quality
+                      </span>
+                      <span style={{
+                        fontSize: '9.5px', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                        color: exportQuality === 8 ? (isDark ? '#818cf8' : '#4f46e5') : c.textHead,
+                        backgroundColor: exportQuality === 8 ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(79,70,229,0.1)') : 'transparent',
+                        padding: '1px 5px', borderRadius: '4px',
+                      }}>
+                        {exportQuality === 8 ? '8x Ultra HD' : exportQuality === 6 ? '6x Super' : exportQuality === 4 ? '4x High' : '2x Standard'}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="2"
+                      max="8"
+                      step="2"
+                      value={exportQuality}
+                      onChange={(e) => setExportQuality(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        accentColor: isDark ? '#6366f1' : '#4f46e5',
+                        cursor: 'pointer',
+                        height: '4px',
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', color: c.textMuted, marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span>2x</span>
+                      <span>4x</span>
+                      <span>6x</span>
+                      <span style={{ fontWeight: 800 }}>8x Max</span>
+                    </div>
+                  </div>
+
                   {[
                     { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG Image', action: () => { setExportOpen(false); handleExportPNG(); } },
                     { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF Document', action: () => { setExportOpen(false); handleExportPDF(); } },
