@@ -1179,7 +1179,7 @@ export default function ScorecardGraphic({
               <span>{gameInfo.attendance}</span>
               <span>{gameInfo.durationStr}</span>
               {gameInfo.umpires && gameInfo.umpires.length > 0 && (
-                <span>HP: {gameInfo.umpires.find(u => u.type.includes('Home'))?.name || gameInfo.umpires[0]?.name}</span>
+                <span>HP: {gameInfo.umpires.find(u => u?.type && String(u.type).toLowerCase().includes('home'))?.name || gameInfo.umpires[0]?.name || '—'}</span>
               )}
             </div>
           )}

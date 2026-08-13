@@ -256,7 +256,7 @@ export function processMLBData(data, gamePkOverride) {
   const weatherStr = [temp, condition, wind].filter(Boolean).join(' ');
 
   // Attendance & Duration
-  const attendanceVal = gameData.gameInfo?.attendance || box.info?.find(i => i.label === 'Att')?.value;
+  const attendanceVal = gameData.gameInfo?.attendance || (box?.info && box.info.find(i => i?.label === 'Att')?.value);
   const attendance = attendanceVal ? `ATT: ${typeof attendanceVal === 'number' ? attendanceVal.toLocaleString() : attendanceVal}` : '';
   
   let durationStr = '';
@@ -265,16 +265,16 @@ export function processMLBData(data, gamePkOverride) {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     durationStr = `TIME: ${h}H ${m}M`;
-  } else {
-    const timeInfo = box.info?.find(i => i.label === 'T' || i.label === 'Game Duration')?.value;
+  } else if (box?.info) {
+    const timeInfo = box.info.find(i => i?.label === 'T' || i?.label === 'Game Duration')?.value;
     if (timeInfo) durationStr = `TIME: ${timeInfo}`;
   }
 
   // Pitcher Decisions
   const decisions = {
-    winner: liveData.decisions?.winner?.fullName ? extractLastNameGlobal(liveData.decisions.winner.fullName) : '',
-    loser: liveData.decisions?.loser?.fullName ? extractLastNameGlobal(liveData.decisions.loser.fullName) : '',
-    save: liveData.decisions?.save?.fullName ? extractLastNameGlobal(liveData.decisions.save.fullName) : '',
+    winner: liveData?.decisions?.winner?.fullName ? extractLastNameGlobal(liveData.decisions.winner.fullName) : '',
+    loser: liveData?.decisions?.loser?.fullName ? extractLastNameGlobal(liveData.decisions.loser.fullName) : '',
+    save: liveData?.decisions?.save?.fullName ? extractLastNameGlobal(liveData.decisions.save.fullName) : '',
   };
 
   // Umpires
