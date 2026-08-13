@@ -189,7 +189,7 @@ export default function App() {
    * Capture helper: clones the graphic into an off-screen body-level container
    * at 5x super high resolution for 300+ DPI crisp printing.
    */
-  const captureGraphic = async (pixelRatio = 5) => {
+  const captureGraphic = async (pixelRatio = 6) => {
     const el = graphicRef.current;
     const isLandscape = orientation === 'landscape';
     const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
@@ -233,7 +233,7 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await captureGraphic(4);
+      const dataUrl = await captureGraphic(6);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -254,7 +254,7 @@ export default function App() {
     setExporting(true);
     try {
       const isLandscape = orientation === 'landscape';
-      const dataUrl = await captureGraphic(4);
+      const dataUrl = await captureGraphic(6);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
