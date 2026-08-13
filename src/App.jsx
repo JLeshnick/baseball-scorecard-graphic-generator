@@ -15,16 +15,9 @@ import {
   FileJson,
   ZoomIn,
   ZoomOut,
-  Maximize2,
   SlidersHorizontal,
   Eye,
-  Settings,
-  Sparkles,
   Check,
-  Move,
-  Layers,
-  Smartphone,
-  Monitor,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -102,7 +95,7 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
 
-  const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
+  const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'data', 'text'
   const [theme, setTheme] = useState('team-light');
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
   const [showEraserMarks, setShowEraserMarks] = useState(false);
@@ -124,7 +117,7 @@ export default function App() {
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
-  // ─── Mobile & Zoom Layout State ──────────────────────────────────────────────
+  // ─── Mobile Viewport & Zoom State ───────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview'); // 'preview' or 'controls'
   const [zoomMode, setZoomMode] = useState('fit'); // 'fit', 1, or custom scale number
@@ -281,8 +274,8 @@ export default function App() {
     try {
       dataUrl = await toPng(clone, { quality: 1.0, pixelRatio, cacheBust: true });
     } catch (err8) {
-      console.warn('8x export resolution fallback to 6x', err8);
-      dataUrl = await toPng(clone, { quality: 1.0, pixelRatio: 6, cacheBust: true });
+      console.warn('Export resolution fallback to 4x', err8);
+      dataUrl = await toPng(clone, { quality: 1.0, pixelRatio: 4, cacheBust: true });
     }
 
     document.body.removeChild(wrapper);
@@ -293,14 +286,45 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await captureGraphic(exportQuality);
+      // Use efficient 4x ratio on mobile to ensure fast generation & small memory footprint
+      const quality = isMobile ? Math.min(exportQuality, 4) : exportQuality;
+      const dataUrl = await captureGraphic(quality);
+      if (!dataUrl) return;
+
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
+      const filename = `MLB_Scorecard_${away}-vs-${home}_${dateSlug}.png`;
+
+      // Convert base64 dataUrl into Blob for reliable mobile browser downloading
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      // Use Web Share API if available on mobile devices (triggers native iOS / Android Save to Photos / Share sheet)
+      if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename,
+          });
+          confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 } });
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+        }
+      }
+
+      // Blob URL download fallback
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `MLB_Scorecard_${away}-vs-${home}_${dateSlug}.png`;
-      link.href = dataUrl;
+      link.download = filename;
+      link.href = blobUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 } });
     } catch (err) {
       console.error('Export PNG failed', err);
@@ -315,7 +339,10 @@ export default function App() {
     setExporting(true);
     try {
       const isLandscape = orientation === 'landscape';
-      const dataUrl = await captureGraphic(exportQuality);
+      const quality = isMobile ? Math.min(exportQuality, 4) : exportQuality;
+      const dataUrl = await captureGraphic(quality);
+      if (!dataUrl) return;
+
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -385,8 +412,7 @@ export default function App() {
   };
 
   const tabStyle = (id) => ({
-    flex: 1,
-    padding: '10px 12px',
+    padding: isMobile ? '10px 12px' : '7px 14px',
     fontSize: isMobile ? '12px' : '11px',
     fontWeight: 600,
     fontFamily: "'Inter', sans-serif",
@@ -397,14 +423,12 @@ export default function App() {
     borderBottom: `2px solid ${activeTab === id ? c.btnPrimary : 'transparent'}`,
     transition: 'all 0.15s ease',
     letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
+    flex: isMobile ? 1 : 'none',
     textAlign: 'center',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
   });
 
-  // Calculate layout widths and poster scaling
+  // Calculate layout widths and poster scaling for mobile
   const isLandscape = orientation === 'landscape';
   const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
   const posterBaseWidth = isLandscape
@@ -446,23 +470,13 @@ export default function App() {
         justifyContent: 'space-between',
         height: '54px',
         flexShrink: 0,
-        gap: '8px',
-        zIndex: 50,
       }}>
         {/* Logo / Wordmark */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <div style={{
-            width: '26px', height: '26px', borderRadius: '6px',
-            backgroundColor: isDark ? '#6366f1' : '#4f46e5',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#ffffff', fontWeight: 800, fontSize: '14px', flexShrink: 0,
-          }}>
-            ⚾
-          </div>
-          <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div>
             <div style={{
-              fontWeight: 800, fontSize: isMobile ? '13px' : '14px', letterSpacing: '-0.02em',
-              color: c.textHead, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              fontWeight: 800, fontSize: '14px', letterSpacing: '-0.02em',
+              color: c.textHead, lineHeight: 1.1,
             }}>
               {isMobile ? 'MLB Studio' : 'MLB Scorecard Studio'}
             </div>
@@ -474,7 +488,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mobile View Switcher Segmented Toggle */}
+        {/* Mobile View Switcher Segmented Toggle (ONLY ON MOBILE) */}
         {isMobile && (
           <div style={{
             display: 'flex',
@@ -517,7 +531,7 @@ export default function App() {
         )}
 
         {/* Action toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
           {/* EXPORT DROPDOWN */}
           <div style={{ position: 'relative' }}>
@@ -525,8 +539,8 @@ export default function App() {
               onClick={() => setExportOpen(o => !o)}
               disabled={exporting || loading}
               style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: isMobile ? '6px 10px' : '7px 12px', borderRadius: '6px', border: 'none',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 12px', borderRadius: '6px', border: 'none',
                 backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
                 fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                 opacity: (exporting || loading) ? 0.5 : 1,
@@ -536,8 +550,8 @@ export default function App() {
               }}
             >
               <Download style={{ width: '13px', height: '13px' }} />
-              <span>{exporting ? (isMobile ? 'Export…' : 'Exporting…') : 'Export'}</span>
-              <ChevronDown style={{ width: '11px', height: '11px', marginLeft: '1px', transition: 'transform 0.15s', transform: exportOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+              {exporting ? 'Exporting…' : 'Export'}
+              <ChevronDown style={{ width: '11px', height: '11px', marginLeft: '2px', transition: 'transform 0.15s', transform: exportOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
             </button>
 
             {exportOpen && (
@@ -548,15 +562,15 @@ export default function App() {
                 />
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                  zIndex: 100, width: isMobile ? '240px' : '220px',
+                  zIndex: 100, minWidth: '220px',
                   backgroundColor: c.bgCard,
                   border: `1px solid ${c.border}`,
                   borderRadius: '8px',
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
                   overflow: 'hidden',
                   padding: '6px',
                 }}>
-                  {/* Export Quality Box */}
+                  {/* Export Quality Control Box */}
                   <div style={{
                     padding: '8px 10px',
                     borderBottom: `1px solid ${c.border}`,
@@ -633,34 +647,32 @@ export default function App() {
             )}
           </div>
 
-          {!isMobile && <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 2px' }} />}
+          <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
 
           {/* GitHub link */}
-          {!isMobile && (
-            <a
-              href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                width: '32px', height: '32px', borderRadius: '6px',
-                border: `1px solid ${c.border}`,
-                backgroundColor: c.bgCard, color: c.textMuted,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', textDecoration: 'none',
-                transition: 'color 0.15s',
-              }}
-              title="View on GitHub"
-              onMouseEnter={e => e.currentTarget.style.color = c.textHead}
-              onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
-            >
-              <GithubIcon style={{ width: '14px', height: '14px' }} />
-            </a>
-          )}
+          <a
+            href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              width: '34px', height: '34px', borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
+            title="View on GitHub"
+            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+          >
+            <GithubIcon style={{ width: '15px', height: '15px' }} />
+          </a>
 
           <button
             onClick={() => setAppTheme(isDark ? 'light' : 'dark')}
             style={{
-              width: '32px', height: '32px', borderRadius: '6px',
+              width: '34px', height: '34px', borderRadius: '6px',
               border: `1px solid ${c.border}`,
               backgroundColor: c.bgCard, color: c.textMuted,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -668,7 +680,7 @@ export default function App() {
             }}
             title="Toggle Dark/Light Mode"
           >
-            {isDark ? <Sun style={{ width: '14px', height: '14px' }} /> : <Moon style={{ width: '14px', height: '14px' }} />}
+            {isDark ? <Sun style={{ width: '15px', height: '15px' }} /> : <Moon style={{ width: '15px', height: '15px' }} />}
           </button>
         </div>
       </header>
@@ -678,9 +690,7 @@ export default function App() {
       <div style={{
         flex: 1,
         display: 'flex',
-        flexDirection: 'row',
         overflow: 'hidden',
-        position: 'relative',
       }}>
 
         {/* ── SIDEBAR CONTROLS ──────────────────────────────────────────── */}
@@ -693,18 +703,14 @@ export default function App() {
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            height: '100%',
-            position: isMobile ? 'relative' : 'static',
-            zIndex: 10,
           }}>
 
-            {/* Tab Navigation */}
+            {/* Tab Nav */}
             <div style={{
               display: 'flex',
               borderBottom: `1px solid ${c.border}`,
-              padding: '0 4px',
-              backgroundColor: isDark ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)',
-              position: 'sticky', top: 0, zIndex: 5,
+              padding: '0 8px',
+              gap: '0',
             }}>
               {[
                 { id: 'game', label: 'Game' },
@@ -744,8 +750,7 @@ export default function App() {
                           width: '100%',
                           border: `1px solid ${c.border}`,
                           borderRadius: '6px',
-                          padding: '9px 12px',
-                          paddingRight: '36px',
+                          padding: '8px 10px',
                           fontSize: '12px',
                           fontFamily: "'Inter', sans-serif",
                           backgroundColor: c.bgInput,
@@ -778,7 +783,7 @@ export default function App() {
                         style={{
                           width: '100%',
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '9px 12px',
+                          padding: '8px 10px',
                           borderRadius: '6px',
                           border: `1px solid ${c.border}`,
                           backgroundColor: c.bgInput,
@@ -810,7 +815,7 @@ export default function App() {
                           <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setGameSelectOpen(false)} />
                           <div style={{
                             position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                            maxHeight: '260px', overflowY: 'auto',
+                            maxHeight: '240px', overflowY: 'auto',
                             backgroundColor: c.bgCard,
                             border: `1px solid ${c.border}`,
                             borderRadius: '8px',
@@ -828,7 +833,7 @@ export default function App() {
                                     setGameSelectOpen(false);
                                   }}
                                   style={{
-                                    display: 'block', width: '100%', padding: '8px 10px',
+                                    display: 'block', width: '100%', padding: '7px 9px',
                                     borderRadius: '5px', border: 'none',
                                     backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
                                     textAlign: 'left', cursor: 'pointer',
@@ -1129,16 +1134,15 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* ERASER MARKS & DISPLAY OPTIONS */}
+                  {/* ERASER MARKS & SCRIBBLES */}
                   <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{
                       fontSize: '11px', fontWeight: 600,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       color: c.textMuted, marginBottom: '2px',
                     }}>
-                      Authentic Artifacts & Display
+                      Authentic Artifacts
                     </div>
-
                     <button
                       onClick={() => {
                         setShowEraserMarks(v => !v);
@@ -1148,7 +1152,7 @@ export default function App() {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         width: '100%', padding: '8px 10px',
                         borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                        border: `1px solid ${c.border}`,
+                        border: `1.5px solid ${showEraserMarks ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
                         backgroundColor: showEraserMarks
                           ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
                           : c.bgInput,
@@ -1177,21 +1181,58 @@ export default function App() {
                       </div>
                     </button>
 
+                    {showEraserMarks && (
+                      <button
+                        onClick={() => setEraserSeed(prev => prev + 1)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                          width: '100%', padding: '6px 10px',
+                          borderRadius: '6px', cursor: 'pointer',
+                          border: `1px dashed ${c.border}`,
+                          backgroundColor: 'transparent',
+                          color: c.textHead,
+                          fontSize: '10px', fontWeight: 600,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <RefreshCw style={{ width: '11px', height: '11px' }} />
+                        Re-roll Random Eraser & Scribble Spots
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {/* ── DATA TAB ──────────────────────────────────────────────── */}
+              {activeTab === 'data' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                  {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted, marginBottom: '2px',
+                    }}>
+                      Game Stats & Display Options
+                    </div>
+
                     {[
-                      { key: 'pitch', label: 'Pitch Breakdown Bar', desc: 'Ball / strike & pitch count breakdown', value: showPitchBreakdown, setter: setShowPitchBreakdown },
-                      { key: 'decisions', label: 'Pitching Decisions Box', desc: 'Win, Loss, and Save pitchers', value: showDecisions, setter: setShowDecisions },
-                      { key: 'env', label: 'Game Environment Box', desc: 'Weather, attendance, & duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
-                      { key: 'hr', label: 'Home Run Distances', desc: 'Show HR distance tags in diamonds', value: showHRDistances, setter: setShowHRDistances },
-                      { key: 'dashed', label: 'At-Bat Connector Lines', desc: 'Dashed pitch tracking guides', value: showAtBatDashedLines, setter: setShowAtBatDashedLines },
+                      { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
+                      { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
+                      { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
+                      { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
+                      { label: 'Dashed Line for At-Bat Base', desc: 'Dashed line for own at-bat reach, solid line for end of inning base', value: showAtBatDashedLines, setter: setShowAtBatDashedLines },
                     ].map(opt => (
                       <button
-                        key={opt.key}
+                        key={opt.label}
                         onClick={() => opt.setter(v => !v)}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           width: '100%', padding: '8px 10px',
                           borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                          border: `1px solid ${c.border}`,
+                          border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
                           backgroundColor: opt.value
                             ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
                             : c.bgInput,
@@ -1252,7 +1293,7 @@ export default function App() {
                           border: `1px solid ${c.border}`,
                           borderRadius: '6px',
                           padding: '8px 10px',
-                          fontSize: '12px',
+                          fontSize: '11.5px',
                           lineHeight: 1.5,
                           fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif",
                           backgroundColor: c.bgInput,
@@ -1269,7 +1310,7 @@ export default function App() {
 
             </div>
 
-            {/* Mobile View Toggle Sticky Footer Button */}
+            {/* Mobile View Toggle Sticky Footer Button (MOBILE ONLY) */}
             {isMobile && (
               <div style={{
                 position: 'fixed', bottom: '16px', left: '16px', right: '16px',
@@ -1302,87 +1343,88 @@ export default function App() {
             style={{
               flex: 1,
               overflow: 'auto',
-              WebkitOverflowScrolling: 'touch',
+              WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
               backgroundColor: c.bgCanvas,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              padding: isMobile ? '12px 12px 90px 12px' : '20px 24px 40px 24px',
+              alignItems: isMobile ? 'center' : 'flex-start',
+              justifyContent: isMobile ? 'flex-start' : 'center',
+              padding: isMobile ? '12px 12px 90px 12px' : '32px 24px',
               position: 'relative',
-              height: '100%',
             }}
           >
-            {/* Poster Zoom Toolbar */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              backgroundColor: isDark ? 'rgba(17,17,19,0.85)' : 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              padding: '5px 10px', borderRadius: '20px',
-              border: `1px solid ${c.border}`,
-              marginBottom: '14px',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-              zIndex: 20,
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: '10.5px', fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
-                Zoom:
-              </span>
-              <button
-                onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.max(0.25, s - 0.15) : Math.max(0.25, autoFitScale - 0.15)))}
-                style={{
-                  width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
-                  backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-                title="Zoom Out"
-              >
-                <ZoomOut style={{ width: '13px', height: '13px' }} />
-              </button>
+            {/* Poster Zoom Toolbar — SHOWN ONLY ON MOBILE DEVICES */}
+            {isMobile && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                backgroundColor: isDark ? 'rgba(17,17,19,0.85)' : 'rgba(255,255,255,0.85)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                padding: '5px 10px', borderRadius: '20px',
+                border: `1px solid ${c.border}`,
+                marginBottom: '14px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+                zIndex: 20,
+                flexShrink: 0,
+              }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
+                  Zoom:
+                </span>
+                <button
+                  onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.max(0.25, s - 0.15) : Math.max(0.25, autoFitScale - 0.15)))}
+                  style={{
+                    width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
+                    backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                  title="Zoom Out"
+                >
+                  <ZoomOut style={{ width: '13px', height: '13px' }} />
+                </button>
 
-              <button
-                onClick={() => setZoomMode('fit')}
-                style={{
-                  padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 'fit' ? c.accent : c.border}`,
-                  backgroundColor: zoomMode === 'fit' ? c.accentBg : c.bgCard,
-                  color: zoomMode === 'fit' ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
-                  fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                Fit ({Math.round(autoFitScale * 100)}%)
-              </button>
+                <button
+                  onClick={() => setZoomMode('fit')}
+                  style={{
+                    padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 'fit' ? c.accent : c.border}`,
+                    backgroundColor: zoomMode === 'fit' ? c.accentBg : c.bgCard,
+                    color: zoomMode === 'fit' ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  Fit ({Math.round(autoFitScale * 100)}%)
+                </button>
 
-              <button
-                onClick={() => setZoomMode(1)}
-                style={{
-                  padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 1 ? c.accent : c.border}`,
-                  backgroundColor: zoomMode === 1 ? c.accentBg : c.bgCard,
-                  color: zoomMode === 1 ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
-                  fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                100%
-              </button>
+                <button
+                  onClick={() => setZoomMode(1)}
+                  style={{
+                    padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 1 ? c.accent : c.border}`,
+                    backgroundColor: zoomMode === 1 ? c.accentBg : c.bgCard,
+                    color: zoomMode === 1 ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  100%
+                </button>
 
-              <button
-                onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.min(2, s + 0.15) : Math.min(2, autoFitScale + 0.15)))}
-                style={{
-                  width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
-                  backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-                title="Zoom In"
-              >
-                <ZoomIn style={{ width: '13px', height: '13px' }} />
-              </button>
-            </div>
+                <button
+                  onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.min(2, s + 0.15) : Math.min(2, autoFitScale + 0.15)))}
+                  style={{
+                    width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
+                    backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                  title="Zoom In"
+                >
+                  <ZoomIn style={{ width: '13px', height: '13px' }} />
+                </button>
+              </div>
+            )}
 
             {loading && !scorecardData ? (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: '12px', paddingTop: '100px',
-                color: c.textMuted,
+                color: c.textMuted, width: '100%',
               }}>
                 <RefreshCw style={{ width: '22px', height: '22px', animation: 'spin 1s linear infinite' }} />
                 <p style={{ fontSize: '12px', fontWeight: 500, margin: 0 }}>
@@ -1393,11 +1435,12 @@ export default function App() {
               <div style={{
                 textAlign: 'center', paddingTop: '100px',
                 color: '#f87171', fontSize: '12px', fontWeight: 500,
-                maxWidth: '320px',
+                maxWidth: '320px', margin: '0 auto',
               }}>
                 {error}
               </div>
-            ) : (
+            ) : isMobile ? (
+              /* Mobile Scaled Container */
               <div style={{
                 width: '100%',
                 display: 'flex',
@@ -1408,7 +1451,7 @@ export default function App() {
               }}>
                 {loading && (
                   <div style={{
-                    position: 'fixed', top: '72px', right: isMobile ? '16px' : '32px', zIndex: 100,
+                    position: 'fixed', top: '72px', right: '16px', zIndex: 100,
                     display: 'flex', alignItems: 'center', gap: '8px',
                     backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
                     backdropFilter: 'blur(8px)',
@@ -1451,9 +1494,51 @@ export default function App() {
                   />
                 </div>
               </div>
+            ) : (
+              /* Original PC Untouched Container */
+              <div style={{
+                position: 'relative', width: '100%',
+                display: 'flex', justifyContent: 'center',
+                transition: 'opacity 0.25s ease',
+                opacity: loading ? 0.65 : 1,
+              }}>
+                {loading && (
+                  <div style={{
+                    position: 'fixed', top: '72px', right: '32px', zIndex: 100,
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
+                    backdropFilter: 'blur(8px)',
+                    padding: '7px 14px', borderRadius: '20px',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                    border: `1px solid ${c.border}`,
+                    fontSize: '11.5px', fontWeight: 600, color: c.textHead,
+                  }}>
+                    <RefreshCw style={{ width: '13px', height: '13px', animation: 'spin 1s linear infinite' }} />
+                    Updating Scorecard…
+                  </div>
+                )}
+                <ScorecardGraphic
+                  data={scorecardData}
+                  theme={theme}
+                  fontStyle={fontStyle}
+                  showEraserMarks={showEraserMarks}
+                  eraserSeed={eraserSeed}
+                  customHeadline={customHeadline}
+                  customSubtitle={customSubtitle}
+                  customFooter={customFooter}
+                  customNotes={customNotes}
+                  graphicRef={graphicRef}
+                  orientation={orientation}
+                  showPitchBreakdown={showPitchBreakdown}
+                  showDecisions={showDecisions}
+                  showEnvironmentBox={showEnvironmentBox}
+                  showHRDistances={showHRDistances}
+                  showAtBatDashedLines={showAtBatDashedLines}
+                />
+              </div>
             )}
 
-            {/* Mobile View Preview Sticky Bottom Action Bar */}
+            {/* Mobile View Preview Sticky Bottom Action Bar (MOBILE ONLY) */}
             {isMobile && (
               <div style={{
                 position: 'fixed', bottom: '16px', left: '16px', right: '16px',
