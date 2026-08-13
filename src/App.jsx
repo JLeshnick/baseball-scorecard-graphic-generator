@@ -189,7 +189,7 @@ export default function App() {
    * Capture helper: clones the graphic into an off-screen body-level container
    * at 5x super high resolution for 300+ DPI crisp printing.
    */
-  const captureGraphic = async (pixelRatio = 6) => {
+  const captureGraphic = async (pixelRatio = 8) => {
     const el = graphicRef.current;
     const isLandscape = orientation === 'landscape';
     const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
@@ -216,6 +216,9 @@ export default function App() {
     clone.style.padding = '0';
     clone.style.boxShadow = 'none';
     clone.style.backgroundColor = 'transparent';
+    clone.style.webkitFontSmoothing = 'antialiased';
+    clone.style.mozOsxFontSmoothing = 'grayscale';
+    clone.style.textRendering = 'optimizeLegibility';
 
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
@@ -223,7 +226,13 @@ export default function App() {
     await new Promise(r => requestAnimationFrame(r));
     await new Promise(r => requestAnimationFrame(r));
 
-    const dataUrl = await toPng(clone, { quality: 1.0, pixelRatio });
+    let dataUrl;
+    try {
+      dataUrl = await toPng(clone, { quality: 1.0, pixelRatio, cacheBust: true });
+    } catch (err8) {
+      console.warn('8x export resolution fallback to 6x', err8);
+      dataUrl = await toPng(clone, { quality: 1.0, pixelRatio: 6, cacheBust: true });
+    }
 
     document.body.removeChild(wrapper);
     return dataUrl;
@@ -233,7 +242,7 @@ export default function App() {
     if (!graphicRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await captureGraphic(6);
+      const dataUrl = await captureGraphic(8);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -254,7 +263,7 @@ export default function App() {
     setExporting(true);
     try {
       const isLandscape = orientation === 'landscape';
-      const dataUrl = await captureGraphic(6);
+      const dataUrl = await captureGraphic(8);
       const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
       const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
