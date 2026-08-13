@@ -230,8 +230,8 @@ export default function ScorecardGraphic({
           scoreTextColor: '#1a1209',
           vsTextColor: '#c0b499',
           cellDiamondStroke: '#c8bfa8',
-          hitLineColor: away.secondary,
-          homeHitLineColor: home.secondary,
+          hitLineColor: away.color,
+          homeHitLineColor: home.color,
         };
         break;
     }
@@ -434,7 +434,7 @@ export default function ScorecardGraphic({
       const b3AtBat = !isHR && atBatReach >= 3;
       const b4AtBat = !isHR && atBatReach >= 4;
 
-      // Helper for dash pattern: rounded pill dashes (strokeLinecap='round') with calibrated 2.2px gap and 3.2px pill length
+      // Helper for dash pattern: rounded pill dashes (strokeLinecap='round') with calibrated gap and pill length
       const getDashArray = (isAtBat) => (showAtBatDashedLines && isAtBat) ? "1.2 4.2" : undefined;
       const getStrokeWidth = (isAtBat) => isHR ? 2.5 : ((showAtBatDashedLines && isAtBat) ? 2.0 : 2.4);
 
@@ -778,7 +778,7 @@ export default function ScorecardGraphic({
                           backgroundColor: n % 2 === 0 ? t.tableInningAlt : 'transparent',
                           position: 'relative',
                         }}>
-                          {renderPlayCell(play, n, b.id)}
+                          {renderPlayCell(play, isHome, `${b.id}_${n}`)}
                         </td>
                       );
                     })}
