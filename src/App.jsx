@@ -1885,7 +1885,7 @@ export default function App() {
               }}
             >
               <Eye style={{ width: '14px', height: '14px' }} />
-              Poster
+              Scorecard
             </button>
             <button
               onClick={() => setMobileView('controls')}
