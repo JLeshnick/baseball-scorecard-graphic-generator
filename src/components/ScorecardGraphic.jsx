@@ -641,24 +641,20 @@ export default function ScorecardGraphic({
             tableLayout: 'fixed',
           }}>
             <colgroup>
+              <col style={{ width: '22px' }} />
               <col style={{ width: `${POS_COL_W}px` }} />
-              <col style={{ width: `${NAME_COL_W}px` }} />
+              <col style={{ width: `${NAME_COL_W - 22}px` }} />
               {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
             </colgroup>
 
             {/* Header */}
             <thead>
               <tr style={{ backgroundColor: t.tableHeaderBg }}>
-                <th colSpan={2} style={{
-                  textAlign: 'left', padding: '4px 8px',
-                  fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em',
-                  fontFamily: t.fontSans,
-                  color: t.textMuted, textTransform: 'uppercase',
+                <th colSpan={3} style={{
                   borderBottom: `1.5px solid ${t.borderStrong}`,
                   borderRight: `1.5px solid ${t.borderStrong}`,
-                }}>
-                  BATTING
-                </th>
+                  backgroundColor: t.tableHeaderBg,
+                }} />
                 {innings.map(n => (
                   <th key={n} style={{
                     textAlign: 'center', padding: '4px 2px',
@@ -683,6 +679,29 @@ export default function ScorecardGraphic({
                     borderBottom: `1px solid ${t.borderLight}`,
                     backgroundColor: bIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
                   }}>
+                    {/* Vertical 90-degree rotated BATTING Sidebar (spans all batter rows) */}
+                    {bIdx === 0 && (
+                      <td rowSpan={teamData.batters.length} style={{
+                        width: '22px', backgroundColor: t.tableHeaderBg,
+                        borderRight: `1.5px solid ${t.borderStrong}`,
+                        textAlign: 'center', verticalAlign: 'middle',
+                        padding: '4px 0',
+                      }}>
+                        <div style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)',
+                          fontFamily: t.fontSans,
+                          fontSize: '8px', fontWeight: 900,
+                          letterSpacing: '0.22em',
+                          color: t.textMuted, textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
+                          margin: '0 auto',
+                        }}>
+                          BATTING
+                        </div>
+                      </td>
+                    )}
+
                     {/* Position code (P, C, 1B, 2B, 3B, SS, LF, CF, RF, DH, PH, PR) */}
                     <td style={{
                       textAlign: 'center',
@@ -756,7 +775,7 @@ export default function ScorecardGraphic({
                 backgroundColor: t.lineScoreBg,
                 borderTop: `2px solid ${t.borderStrong}`,
               }}>
-                <td colSpan={2} style={{
+                <td colSpan={3} style={{
                   padding: '5px 8px',
                   fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.08em',
                   fontFamily: t.fontSans,
@@ -803,21 +822,10 @@ export default function ScorecardGraphic({
               tableLayout: 'fixed',
             }}>
               <colgroup>
-                <col style={{ width: `${POS_COL_W + NAME_COL_W}px` }} />
+                <col style={{ width: '22px' }} />
+                <col style={{ width: `${POS_COL_W + NAME_COL_W - 22}px` }} />
                 {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
               </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: t.tableHeaderBg, borderBottom: `1.5px solid ${t.borderStrong}` }}>
-                  <th colSpan={innings.length + 1} style={{
-                    textAlign: 'left', padding: '4px 8px',
-                    fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.08em',
-                    color: t.textMuted, textTransform: 'uppercase',
-                    fontFamily: t.fontSans,
-                  }}>
-                    PITCHING
-                  </th>
-                </tr>
-              </thead>
               <tbody>
                 {teamData.pitchers.map((p, pIdx) => {
                   const ks = p.strikeouts?.length || 0;
@@ -828,6 +836,28 @@ export default function ScorecardGraphic({
                       borderBottom: `1px solid ${t.borderLight}`,
                       backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
                     }}>
+                      {/* Vertical 90-degree rotated PITCHING Sidebar (spans all pitcher rows) */}
+                      {pIdx === 0 && (
+                        <td rowSpan={teamData.pitchers.length} style={{
+                          width: '22px', backgroundColor: t.tableHeaderBg,
+                          borderRight: `1.5px solid ${t.borderStrong}`,
+                          textAlign: 'center', verticalAlign: 'middle',
+                          padding: '4px 0',
+                        }}>
+                          <div style={{
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)',
+                            fontFamily: t.fontSans,
+                            fontSize: '8px', fontWeight: 900,
+                            letterSpacing: '0.22em',
+                            color: t.textMuted, textTransform: 'uppercase',
+                            whiteSpace: 'nowrap',
+                            margin: '0 auto',
+                          }}>
+                            PITCHING
+                          </div>
+                        </td>
+                      )}
                       {/* Name & Core Pitching Stats (Stacked so names never truncate to ...) */}
                       <td style={{
                         padding: '3px 6px',
