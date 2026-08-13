@@ -790,7 +790,7 @@ export default function ScorecardGraphic({
           </table>
         </div>
 
-        {/* Pitching Section */}
+        {/* Pitching Summary Section */}
         {teamData.pitchers && teamData.pitchers.length > 0 && (
           <div style={{
             backgroundColor: t.pitchingBg,
@@ -805,16 +805,15 @@ export default function ScorecardGraphic({
                     color: t.textMuted, textTransform: 'uppercase',
                     fontFamily: t.fontSans,
                   }}>
-                    PITCHING
+                    PITCHING SUMMARY
                   </th>
                   {['IP', 'H', 'R', 'ER', 'BB', 'K', 'PC'].map(stat => (
                     <th key={stat} style={{
                       textAlign: 'center', padding: '4px 6px 3px',
                       fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.1em',
-                      color: stat === 'PC' ? t.textMuted : t.textMuted,
-                      textTransform: 'uppercase',
+                      color: t.textMuted, textTransform: 'uppercase',
                       fontFamily: "'Inter', sans-serif",
-                      opacity: stat === 'PC' ? 0.7 : 1,
+                      opacity: stat === 'PC' ? 0.8 : 1,
                     }}>
                       {stat}
                     </th>
@@ -823,6 +822,99 @@ export default function ScorecardGraphic({
               </thead>
               <tbody>
                 {teamData.pitchers.map(p => renderPitcherRow(p, isHome))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Per-Inning Pitch Breakdown Grid */}
+        {teamData.pitchers && teamData.pitchers.length > 0 && (
+          <div style={{
+            backgroundColor: t.tableRowAlt,
+            borderTop: `1.5px solid ${t.borderStrong}`,
+          }}>
+            <table style={{
+              width: '100%', borderCollapse: 'collapse',
+              tableLayout: 'fixed',
+            }}>
+              <colgroup>
+                <col style={{ width: `${POS_COL_W + NAME_COL_W}px` }} />
+                {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
+              </colgroup>
+              <thead>
+                <tr style={{ backgroundColor: t.tableHeaderBg, borderBottom: `1px solid ${t.borderLight}` }}>
+                  <th style={{
+                    textAlign: 'left', padding: '3px 8px',
+                    fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.08em',
+                    color: t.textMuted, textTransform: 'uppercase',
+                    fontFamily: t.fontSans,
+                    borderRight: `1.5px solid ${t.borderStrong}`,
+                  }}>
+                    PITCHES BY INNING (PITCH / STRIKES-BALLS)
+                  </th>
+                  {innings.map(n => (
+                    <th key={n} style={{
+                      textAlign: 'center', padding: '3px 1px',
+                      fontSize: '8px', fontWeight: 800,
+                      fontFamily: t.fontMono,
+                      color: t.textMuted,
+                      borderLeft: `1px solid ${t.borderLight}`,
+                    }}>
+                      {n}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {teamData.pitchers.map(p => {
+                  const hasPitches = Object.keys(p.pitchesByInning || {}).length > 0;
+                  if (!hasPitches && !p.totalPitches) return null;
+                  return (
+                    <tr key={`p_breakdown_${p.id}`} style={{ borderBottom: `1px solid ${t.borderLight}` }}>
+                      <td style={{
+                        padding: '3px 8px', fontSize: '9.5px', fontWeight: 700,
+                        color: t.textPrimary, fontFamily: t.fontHeader,
+                        borderRight: `1.5px solid ${t.borderStrong}`,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{p.name}</span>
+                          {(p.totalPitches > 0 || p.totalStrikes > 0) && (
+                            <span style={{ fontSize: '8px', fontFamily: t.fontMono, color: t.textMuted, fontWeight: 600 }}>
+                              {p.totalPitches}P ({p.totalStrikes}S/{p.totalBalls}B)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      {innings.map(n => {
+                        const innStat = p.pitchesByInning?.[n];
+                        const cnt = innStat?.pitches || 0;
+                        const str = innStat?.strikes || 0;
+                        const bll = innStat?.balls || 0;
+                        return (
+                          <td key={n} style={{
+                            textAlign: 'center', padding: '2px 1px',
+                            borderLeft: `1px solid ${t.borderLight}`,
+                            verticalAlign: 'middle',
+                          }}>
+                            {cnt > 0 ? (
+                              <div style={{ lineHeight: 1 }}>
+                                <span style={{ fontFamily: t.fontMono, fontSize: '9px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
+                                  {cnt}
+                                </span>
+                                <span style={{ fontFamily: t.fontMono, fontSize: '6.5px', fontWeight: 600, color: t.textMuted, opacity: 0.8, display: 'block', marginTop: '1px' }}>
+                                  {str}s/{bll}b
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{ fontFamily: t.fontMono, fontSize: '8px', color: t.textMuted, opacity: 0.3 }}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

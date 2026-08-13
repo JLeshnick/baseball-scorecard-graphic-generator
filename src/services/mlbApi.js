@@ -290,11 +290,27 @@ export function processMLBData(data, gamePkOverride) {
         pitcherStrikeoutMap[pitcherId].push({ code: 'K', isLooking });
       }
 
-      // Count pitches thrown this plate appearance
+      // Count pitches, strikes, and balls thrown this inning
       const inning = play.about?.inning;
       if (inning) {
-        const pitchCount = play.playEvents?.filter(e => e.isPitch)?.length || 0;
-        pitcherPitchMap[pitcherId][inning] = (pitcherPitchMap[pitcherId][inning] || 0) + pitchCount;
+        if (!pitcherPitchMap[pitcherId][inning]) {
+          pitcherPitchMap[pitcherId][inning] = { pitches: 0, strikes: 0, balls: 0 };
+        }
+        const innStat = pitcherPitchMap[pitcherId][inning];
+        if (play.playEvents) {
+          play.playEvents.forEach(evt => {
+            if (evt.isPitch) {
+              innStat.pitches++;
+              const callCode = evt.details?.call?.code || '';
+              const isStrike = evt.details?.isStrike || ['S', 'C', 'F', 'O', 'W', 'X'].includes(callCode);
+              if (isStrike) {
+                innStat.strikes++;
+              } else {
+                innStat.balls++;
+              }
+            }
+          });
+        }
       }
     });
 
@@ -311,7 +327,6 @@ export function processMLBData(data, gamePkOverride) {
     const extractLastName = (fullName) => {
       if (!fullName) return 'PITCHER';
       const parts = fullName.trim().split(/\s+/);
-      // Walk from the end, skipping suffix tokens
       for (let i = parts.length - 1; i >= 0; i--) {
         if (!SUFFIXES.has(parts[i].toLowerCase())) {
           return parts[i].toUpperCase();
@@ -325,11 +340,18 @@ export function processMLBData(data, gamePkOverride) {
       const name = extractLastName(p.person?.fullName);
       const number = p.jerseyNumber || 'P';
       const ks = pitcherStrikeoutMap[id] || [];
-      // MLB Stats API: game-level pitching stats live under player.stats.pitching
-      // The boxscore endpoint returns them inline on each player object
       const gp = p.stats?.pitching ?? {};
       const pitchesByInning = pitcherPitchMap[id] || {};
-      const totalPitches = Object.values(pitchesByInning).reduce((a, b) => a + b, 0);
+
+      let totalPitches = 0;
+      let totalStrikes = 0;
+      let totalBalls = 0;
+      Object.values(pitchesByInning).forEach(inn => {
+        totalPitches += inn.pitches || 0;
+        totalStrikes += inn.strikes || 0;
+        totalBalls += inn.balls || 0;
+      });
+
       return {
         id,
         number,
@@ -342,6 +364,8 @@ export function processMLBData(data, gamePkOverride) {
         walks: gp.baseOnBalls ?? null,
         pitchesByInning,
         totalPitches: totalPitches || (gp.numberOfPitches ?? null),
+        totalStrikes,
+        totalBalls,
       };
     });
 

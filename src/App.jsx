@@ -101,6 +101,7 @@ export default function App() {
   const [customNotes, setCustomNotes] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
   const graphicRef = useRef(null);
@@ -199,6 +200,9 @@ export default function App() {
     clone.style.width = targetWidth;
     clone.style.maxWidth = targetWidth;
     clone.style.margin = '0';
+    clone.style.padding = '0';
+    clone.style.boxShadow = 'none';
+    clone.style.backgroundColor = 'transparent';
 
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
@@ -404,9 +408,9 @@ export default function App() {
                   padding: '4px',
                 }}>
                   {[
-                    { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF', action: () => { setExportOpen(false); handleExportPDF(); } },
-                    { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG', action: () => { setExportOpen(false); handleExportPNG(); } },
-                    { icon: <FileJson style={{ width: '13px', height: '13px' }} />, label: 'Export Raw JSON', action: () => { setExportOpen(false); handleExportRawData(); }, disabled: !rawGameData },
+                    { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG Image', action: () => { setExportOpen(false); handleExportPNG(); } },
+                    { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF Document', action: () => { setExportOpen(false); handleExportPDF(); } },
+                    { icon: <FileJson style={{ width: '13px', height: '13px' }} />, label: 'Export Raw Game JSON', action: () => { setExportOpen(false); handleExportRawData(); }, disabled: !rawGameData },
                   ].map((item, i) => (
                     <button
                       key={i}
@@ -566,6 +570,7 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* ── CUSTOM GAME SELECTOR DROPDOWN ─────────────────── */}
                 <div>
                   <label style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -574,7 +579,7 @@ export default function App() {
                     letterSpacing: '0.06em', textTransform: 'uppercase',
                     color: c.textMuted,
                   }}>
-                    <span>Select Game</span>
+                    <span>Select Game ({availableGames.length})</span>
                     {searching && (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: c.textMuted }}>
                         <RefreshCw style={{ width: '11px', height: '11px', animation: 'spin 1s linear infinite' }} />
@@ -582,37 +587,136 @@ export default function App() {
                       </span>
                     )}
                   </label>
-                  <select
-                    value={selectedGamePk}
-                    onChange={(e) => setSelectedGamePk(e.target.value)}
-                    disabled={searching || availableGames.length === 0}
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      border: `1px solid ${c.border}`,
-                      borderRadius: '6px',
-                      padding: '8px 10px',
-                      fontSize: '11.5px',
-                      fontFamily: "'Inter', sans-serif",
-                      fontWeight: 500,
-                      backgroundColor: c.bgInput,
-                      color: c.textMain,
-                      outline: 'none',
-                      cursor: 'pointer',
-                      opacity: searching ? 0.6 : 1,
-                      appearance: 'none',
-                      WebkitAppearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 10px center',
-                      paddingRight: '32px',
-                    }}
-                  >
-                    {availableGames.map(g => (
-                      <option key={g.gamePk} value={g.gamePk}>
-                        {g.awayTeam} @ {g.homeTeam} ({g.awayScore ?? '?'}–{g.homeScore ?? '?'})
-                      </option>
-                    ))}
-                  </select>
+
+                  <div style={{ position: 'relative' }}>
+                    {/* Trigger card button */}
+                    <button
+                      onClick={() => setGameSelectOpen(o => !o)}
+                      disabled={searching || availableGames.length === 0}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        border: `1px solid ${c.border}`,
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        backgroundColor: c.bgInput,
+                        color: c.textMain,
+                        cursor: (searching || availableGames.length === 0) ? 'default' : 'pointer',
+                        opacity: searching ? 0.6 : 1,
+                        textAlign: 'left',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+                        transition: 'border-color 0.15s, background-color 0.15s',
+                      }}
+                    >
+                      {(() => {
+                        const selectedGame = availableGames.find(g => String(g.gamePk) === String(selectedGamePk)) || availableGames[0];
+                        if (!selectedGame) {
+                          return <span style={{ fontSize: '12px', color: c.textMuted }}>No games available</span>;
+                        }
+                        return (
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '12px', fontWeight: 700, color: c.textHead,
+                              lineHeight: 1.3, wordBreak: 'break-word',
+                            }}>
+                              {selectedGame.awayTeam} @ {selectedGame.homeTeam}
+                            </div>
+                            <div style={{
+                              fontSize: '11px', color: c.textMuted, marginTop: '2px',
+                              display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                            }}>
+                              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
+                                {selectedGame.awayScore ?? '?'} – {selectedGame.homeScore ?? '?'}
+                              </span>
+                              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                                {selectedGame.status || 'Final'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
+                              {selectedGame.venue}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      <ChevronDown style={{
+                        width: '14px', height: '14px', flexShrink: 0, color: c.textMuted,
+                        transition: 'transform 0.15s',
+                        transform: gameSelectOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }} />
+                    </button>
+
+                    {/* Floating Dropdown List */}
+                    {gameSelectOpen && availableGames.length > 0 && (
+                      <>
+                        <div
+                          style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                          onClick={() => setGameSelectOpen(false)}
+                        />
+                        <div style={{
+                          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+                          zIndex: 100, maxHeight: '280px', overflowY: 'auto',
+                          backgroundColor: c.bgCard,
+                          border: `1px solid ${c.border}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+                          padding: '4px',
+                          display: 'flex', flexDirection: 'column', gap: '4px',
+                        }}>
+                          {availableGames.map(g => {
+                            const isSelected = String(g.gamePk) === String(selectedGamePk);
+                            return (
+                              <button
+                                key={g.gamePk}
+                                onClick={() => {
+                                  setSelectedGamePk(g.gamePk);
+                                  setGameSelectOpen(false);
+                                }}
+                                style={{
+                                  width: '100%', boxSizing: 'border-box',
+                                  padding: '9px 10px',
+                                  border: `1px solid ${isSelected ? c.btnPrimary : 'transparent'}`,
+                                  borderRadius: '6px',
+                                  backgroundColor: isSelected
+                                    ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
+                                    : 'transparent',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.1s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+                                }}
+                                onMouseLeave={e => {
+                                  if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <div style={{
+                                  fontSize: '11.5px', fontWeight: 700,
+                                  color: isSelected ? c.textHead : c.textMain,
+                                  lineHeight: 1.3, wordBreak: 'break-word',
+                                }}>
+                                  {g.awayTeam} @ {g.homeTeam}
+                                </div>
+                                <div style={{
+                                  fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
+                                  display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                                }}>
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
+                                    {g.awayScore ?? '?'} – {g.homeScore ?? '?'}
+                                  </span>
+                                  <span style={{ fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                                    {g.status || 'Final'}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
+                                  {g.venue}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Game summary badge */}
