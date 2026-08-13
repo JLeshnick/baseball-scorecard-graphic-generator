@@ -11,17 +11,35 @@ html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Touch target & Mobile Input Tweaks ────────────────────────────────────── */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+  }
 }
 
 /* ─── Scrollbar Styling ─────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -55,7 +73,7 @@ select {
 
 /* ─── Print Styles ──────────────────────────────────────────────────────────── */
 @media print {
-  header, aside, .no-print {
+  header, aside, .no-print, .mobile-view-bar, .zoom-toolbar {
     display: none !important;
   }
   main {
@@ -81,3 +99,4 @@ select {
     font-family: 'Oswald', sans-serif;
   }
 }
+
