@@ -13,11 +13,8 @@ import {
   Moon,
   ChevronDown,
   FileJson,
-  ZoomIn,
-  ZoomOut,
   SlidersHorizontal,
   Eye,
-  Check,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -117,10 +114,9 @@ export default function App() {
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
-  // ─── Mobile Viewport & Zoom State ───────────────────────────────────────────
+  // ─── Mobile State ───────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview'); // 'preview' or 'controls'
-  const [zoomMode, setZoomMode] = useState('fit'); // 'fit', 1, or custom scale number
   const [containerWidth, setContainerWidth] = useState(0);
   const [posterHeight, setPosterHeight] = useState(0);
 
@@ -285,8 +281,8 @@ export default function App() {
   const handleExportPNG = async () => {
     if (!graphicRef.current) return;
     setExporting(true);
+    setExportOpen(false);
     try {
-      // Use efficient 4x ratio on mobile to ensure fast generation & small memory footprint
       const quality = isMobile ? Math.min(exportQuality, 4) : exportQuality;
       const dataUrl = await captureGraphic(quality);
       if (!dataUrl) return;
@@ -296,12 +292,10 @@ export default function App() {
       const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
       const filename = `MLB_Scorecard_${away}-vs-${home}_${dateSlug}.png`;
 
-      // Convert base64 dataUrl into Blob for reliable mobile browser downloading
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], filename, { type: 'image/png' });
 
-      // Use Web Share API if available on mobile devices (triggers native iOS / Android Save to Photos / Share sheet)
       if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -315,7 +309,6 @@ export default function App() {
         }
       }
 
-      // Blob URL download fallback
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = filename;
@@ -337,6 +330,7 @@ export default function App() {
   const handleExportPDF = async () => {
     if (!graphicRef.current) return;
     setExporting(true);
+    setExportOpen(false);
     try {
       const isLandscape = orientation === 'landscape';
       const quality = isMobile ? Math.min(exportQuality, 4) : exportQuality;
@@ -372,6 +366,7 @@ export default function App() {
 
   const handleExportRawData = () => {
     if (!rawGameData) return;
+    setExportOpen(false);
     const away = scorecardData?.gameInfo?.awayTeam?.abbreviation || 'AWAY';
     const home = scorecardData?.gameInfo?.homeTeam?.abbreviation || 'HOME';
     const dateSlug = scorecardData?.gameInfo?.dateDisplay?.replace(/\s+/g, '-') || selectedGamePk;
@@ -428,54 +423,45 @@ export default function App() {
     textAlign: 'center',
   });
 
-  // Calculate layout widths and poster scaling for mobile
+  // Calculate poster base width & auto scale for mobile
   const isLandscape = orientation === 'landscape';
   const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
   const posterBaseWidth = isLandscape
     ? Math.max(1360, 1360 + (totalInningsCount - 9) * 90) + 20
     : 940;
 
-  let autoFitScale = 1;
+  let activeScale = 1;
   const paddingOffset = isMobile ? 24 : 48;
   if (containerWidth > 0 && containerWidth < posterBaseWidth + paddingOffset) {
-    autoFitScale = Math.max(0.18, (containerWidth - paddingOffset) / posterBaseWidth);
-  }
-
-  let activeScale = autoFitScale;
-  if (zoomMode === 1) {
-    activeScale = 1;
-  } else if (typeof zoomMode === 'number') {
-    activeScale = zoomMode;
+    activeScale = Math.max(0.18, (containerWidth - paddingOffset) / posterBaseWidth);
   }
 
   return (
     <div style={{
       minHeight: '100vh',
-      height: '100vh',
       fontFamily: "'Inter', sans-serif",
       backgroundColor: c.bgBody,
       color: c.textMain,
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
     }}>
 
       {/* ── HEADER BAR ────────────────────────────────────────────────── */}
       <header style={{
         borderBottom: `1px solid ${c.border}`,
         backgroundColor: c.bgHeader,
-        padding: isMobile ? '0 12px' : '0 24px',
+        padding: isMobile ? '0 16px' : '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         height: '54px',
         flexShrink: 0,
       }}>
-        {/* Logo / Wordmark */}
+        {/* Logo / Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div>
             <div style={{
-              fontWeight: 800, fontSize: '14px', letterSpacing: '-0.02em',
+              fontWeight: 800, fontSize: isMobile ? '15px' : '14px', letterSpacing: '-0.02em',
               color: c.textHead, lineHeight: 1.1,
             }}>
               {isMobile ? 'MLB Studio' : 'MLB Scorecard Studio'}
@@ -488,187 +474,150 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mobile View Switcher Segmented Toggle (ONLY ON MOBILE) */}
-        {isMobile && (
-          <div style={{
-            display: 'flex',
-            backgroundColor: isDark ? '#1a1a1e' : '#e8e5df',
-            borderRadius: '20px',
-            padding: '3px',
-            border: `1px solid ${c.border}`,
-          }}>
-            <button
-              onClick={() => setMobileView('preview')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                padding: '4px 10px', borderRadius: '16px', border: 'none',
-                backgroundColor: mobileView === 'preview' ? c.bgCard : 'transparent',
-                color: mobileView === 'preview' ? c.textHead : c.textMuted,
-                fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                boxShadow: mobileView === 'preview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Eye style={{ width: '12px', height: '12px' }} />
-              Poster
-            </button>
-            <button
-              onClick={() => setMobileView('controls')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                padding: '4px 10px', borderRadius: '16px', border: 'none',
-                backgroundColor: mobileView === 'controls' ? c.bgCard : 'transparent',
-                color: mobileView === 'controls' ? c.textHead : c.textMuted,
-                fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                boxShadow: mobileView === 'controls' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <SlidersHorizontal style={{ width: '12px', height: '12px' }} />
-              Controls
-            </button>
-          </div>
-        )}
-
-        {/* Action toolbar */}
+        {/* Header Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
-          {/* EXPORT DROPDOWN */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setExportOpen(o => !o)}
-              disabled={exporting || loading}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '7px 12px', borderRadius: '6px', border: 'none',
-                backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
-                fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                opacity: (exporting || loading) ? 0.5 : 1,
-                transition: 'opacity 0.15s',
-                fontFamily: "'Inter', sans-serif",
-                letterSpacing: '0.01em',
-              }}
-            >
-              <Download style={{ width: '13px', height: '13px' }} />
-              {exporting ? 'Exporting…' : 'Export'}
-              <ChevronDown style={{ width: '11px', height: '11px', marginLeft: '2px', transition: 'transform 0.15s', transform: exportOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-            </button>
+          {/* PC-only Export Dropdown & GitHub link */}
+          {!isMobile && (
+            <>
+              {/* EXPORT DROPDOWN */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setExportOpen(o => !o)}
+                  disabled={exporting || loading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '7px 12px', borderRadius: '6px', border: 'none',
+                    backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
+                    fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                    opacity: (exporting || loading) ? 0.5 : 1,
+                    transition: 'opacity 0.15s',
+                    fontFamily: "'Inter', sans-serif",
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  <Download style={{ width: '13px', height: '13px' }} />
+                  {exporting ? 'Exporting…' : 'Export'}
+                  <ChevronDown style={{ width: '11px', height: '11px', marginLeft: '2px', transition: 'transform 0.15s', transform: exportOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </button>
 
-            {exportOpen && (
-              <>
-                <div
-                  style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-                  onClick={() => setExportOpen(false)}
-                />
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                  zIndex: 100, minWidth: '220px',
-                  backgroundColor: c.bgCard,
-                  border: `1px solid ${c.border}`,
-                  borderRadius: '8px',
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
-                  overflow: 'hidden',
-                  padding: '6px',
-                }}>
-                  {/* Export Quality Control Box */}
-                  <div style={{
-                    padding: '8px 10px',
-                    borderBottom: `1px solid ${c.border}`,
-                    marginBottom: '4px',
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    borderRadius: '6px',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: c.textMuted }}>
-                        Export Quality
-                      </span>
-                      <span style={{
-                        fontSize: '9.5px', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
-                        color: exportQuality === 8 ? (isDark ? '#818cf8' : '#4f46e5') : c.textHead,
-                        backgroundColor: exportQuality === 8 ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(79,70,229,0.1)') : 'transparent',
-                        padding: '1px 5px', borderRadius: '4px',
-                      }}>
-                        {exportQuality === 8 ? '8x Ultra HD' : exportQuality === 6 ? '6x Super' : exportQuality === 4 ? '4x High' : '2x Standard'}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="2"
-                      max="8"
-                      step="2"
-                      value={exportQuality}
-                      onChange={(e) => setExportQuality(Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        accentColor: isDark ? '#6366f1' : '#4f46e5',
-                        cursor: 'pointer',
-                        height: '4px',
-                      }}
+                {exportOpen && (
+                  <>
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                      onClick={() => setExportOpen(false)}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', color: c.textMuted, marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>
-                      <span>2x</span>
-                      <span>4x</span>
-                      <span>6x</span>
-                      <span style={{ fontWeight: 800 }}>8x Max</span>
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                      zIndex: 100, minWidth: '220px',
+                      backgroundColor: c.bgCard,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '8px',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
+                      overflow: 'hidden',
+                      padding: '6px',
+                    }}>
+                      <div style={{
+                        padding: '8px 10px',
+                        borderBottom: `1px solid ${c.border}`,
+                        marginBottom: '4px',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                        borderRadius: '6px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: c.textMuted }}>
+                            Export Quality
+                          </span>
+                          <span style={{
+                            fontSize: '9.5px', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                            color: exportQuality === 8 ? (isDark ? '#818cf8' : '#4f46e5') : c.textHead,
+                            backgroundColor: exportQuality === 8 ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(79,70,229,0.1)') : 'transparent',
+                            padding: '1px 5px', borderRadius: '4px',
+                          }}>
+                            {exportQuality === 8 ? '8x Ultra HD' : exportQuality === 6 ? '6x Super' : exportQuality === 4 ? '4x High' : '2x Standard'}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="2"
+                          max="8"
+                          step="2"
+                          value={exportQuality}
+                          onChange={(e) => setExportQuality(Number(e.target.value))}
+                          style={{
+                            width: '100%',
+                            accentColor: isDark ? '#6366f1' : '#4f46e5',
+                            cursor: 'pointer',
+                            height: '4px',
+                          }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', color: c.textMuted, marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span>2x</span>
+                          <span>4x</span>
+                          <span>6x</span>
+                          <span style={{ fontWeight: 800 }}>8x Max</span>
+                        </div>
+                      </div>
+
+                      {[
+                        { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG Image', action: () => { setExportOpen(false); handleExportPNG(); } },
+                        { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF Document', action: () => { setExportOpen(false); handleExportPDF(); } },
+                        { icon: <FileJson style={{ width: '13px', height: '13px' }} />, label: 'Export Raw Game JSON', action: () => { setExportOpen(false); handleExportRawData(); }, disabled: !rawGameData },
+                      ].map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={item.action}
+                          disabled={item.disabled}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            width: '100%', padding: '8px 10px',
+                            border: 'none', background: 'none',
+                            color: item.disabled ? c.textMuted : c.textMain,
+                            fontSize: '12px', fontWeight: 500,
+                            fontFamily: "'Inter', sans-serif",
+                            cursor: item.disabled ? 'default' : 'pointer',
+                            borderRadius: '5px',
+                            textAlign: 'left',
+                            transition: 'background 0.1s',
+                            opacity: item.disabled ? 0.4 : 1,
+                          }}
+                          onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          {item.icon}
+                          {item.label}
+                        </button>
+                      ))}
                     </div>
-                  </div>
+                  </>
+                )}
+              </div>
 
-                  {[
-                    { icon: <Download style={{ width: '13px', height: '13px' }} />, label: 'Export PNG Image', action: () => { setExportOpen(false); handleExportPNG(); } },
-                    { icon: <FileSpreadsheet style={{ width: '13px', height: '13px' }} />, label: 'Export PDF Document', action: () => { setExportOpen(false); handleExportPDF(); } },
-                    { icon: <FileJson style={{ width: '13px', height: '13px' }} />, label: 'Export Raw Game JSON', action: () => { setExportOpen(false); handleExportRawData(); }, disabled: !rawGameData },
-                  ].map((item, i) => (
-                    <button
-                      key={i}
-                      onClick={item.action}
-                      disabled={item.disabled}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        width: '100%', padding: '8px 10px',
-                        border: 'none', background: 'none',
-                        color: item.disabled ? c.textMuted : c.textMain,
-                        fontSize: '12px', fontWeight: 500,
-                        fontFamily: "'Inter', sans-serif",
-                        cursor: item.disabled ? 'default' : 'pointer',
-                        borderRadius: '5px',
-                        textAlign: 'left',
-                        transition: 'background 0.1s',
-                        opacity: item.disabled ? 0.4 : 1,
-                      }}
-                      onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+              <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
 
-          <div style={{ width: '1px', height: '20px', backgroundColor: c.border, margin: '0 4px' }} />
+              {/* GitHub link */}
+              <a
+                href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  width: '34px', height: '34px', borderRadius: '6px',
+                  border: `1px solid ${c.border}`,
+                  backgroundColor: c.bgCard, color: c.textMuted,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', textDecoration: 'none',
+                  transition: 'color 0.15s',
+                }}
+                title="View on GitHub"
+                onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+                onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+              >
+                <GithubIcon style={{ width: '15px', height: '15px' }} />
+              </a>
+            </>
+          )}
 
-          {/* GitHub link */}
-          <a
-            href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              width: '34px', height: '34px', borderRadius: '6px',
-              border: `1px solid ${c.border}`,
-              backgroundColor: c.bgCard, color: c.textMuted,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', textDecoration: 'none',
-              transition: 'color 0.15s',
-            }}
-            title="View on GitHub"
-            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
-            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
-          >
-            <GithubIcon style={{ width: '15px', height: '15px' }} />
-          </a>
-
+          {/* Light / Dark Mode Toggle */}
           <button
             onClick={() => setAppTheme(isDark ? 'light' : 'dark')}
             style={{
@@ -690,7 +639,7 @@ export default function App() {
       <div style={{
         flex: 1,
         display: 'flex',
-        overflow: 'hidden',
+        overflow: isMobile ? 'hidden' : 'visible',
       }}>
 
         {/* ── SIDEBAR CONTROLS ──────────────────────────────────────────── */}
@@ -724,7 +673,7 @@ export default function App() {
               ))}
             </div>
 
-            <div style={{ padding: isMobile ? '16px 16px 80px 16px' : '16px', flex: 1 }}>
+            <div style={{ padding: isMobile ? '16px 16px 90px 16px' : '16px', flex: 1 }}>
 
               {/* ── GAME TAB ──────────────────────────────────────────────── */}
               {activeTab === 'game' && (
@@ -1309,29 +1258,6 @@ export default function App() {
               )}
 
             </div>
-
-            {/* Mobile View Toggle Sticky Footer Button (MOBILE ONLY) */}
-            {isMobile && (
-              <div style={{
-                position: 'fixed', bottom: '16px', left: '16px', right: '16px',
-                zIndex: 30, display: 'flex', justifyContent: 'center',
-              }}>
-                <button
-                  onClick={() => setMobileView('preview')}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '12px 24px', borderRadius: '30px', border: 'none',
-                    backgroundColor: c.accent, color: '#ffffff',
-                    fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                >
-                  <Eye style={{ width: '16px', height: '16px' }} />
-                  View Scorecard Poster
-                </button>
-              </div>
-            )}
           </aside>
         )}
 
@@ -1342,84 +1268,17 @@ export default function App() {
             ref={mainContainerRef}
             style={{
               flex: 1,
-              overflow: 'auto',
+              overflowY: 'auto',
               WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
               backgroundColor: c.bgCanvas,
               display: 'flex',
               flexDirection: 'column',
               alignItems: isMobile ? 'center' : 'flex-start',
-              justifyContent: isMobile ? 'flex-start' : 'center',
-              padding: isMobile ? '12px 12px 90px 12px' : '32px 24px',
+              justifyContent: isMobile ? 'flex-start' : 'flex-start',
+              padding: isMobile ? '12px 12px 100px 12px' : '32px 24px 60px 24px',
               position: 'relative',
             }}
           >
-            {/* Poster Zoom Toolbar — SHOWN ONLY ON MOBILE DEVICES */}
-            {isMobile && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                backgroundColor: isDark ? 'rgba(17,17,19,0.85)' : 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                padding: '5px 10px', borderRadius: '20px',
-                border: `1px solid ${c.border}`,
-                marginBottom: '14px',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-                zIndex: 20,
-                flexShrink: 0,
-              }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
-                  Zoom:
-                </span>
-                <button
-                  onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.max(0.25, s - 0.15) : Math.max(0.25, autoFitScale - 0.15)))}
-                  style={{
-                    width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
-                    backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title="Zoom Out"
-                >
-                  <ZoomOut style={{ width: '13px', height: '13px' }} />
-                </button>
-
-                <button
-                  onClick={() => setZoomMode('fit')}
-                  style={{
-                    padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 'fit' ? c.accent : c.border}`,
-                    backgroundColor: zoomMode === 'fit' ? c.accentBg : c.bgCard,
-                    color: zoomMode === 'fit' ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
-                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                  }}
-                >
-                  Fit ({Math.round(autoFitScale * 100)}%)
-                </button>
-
-                <button
-                  onClick={() => setZoomMode(1)}
-                  style={{
-                    padding: '4px 10px', borderRadius: '12px', border: `1px solid ${zoomMode === 1 ? c.accent : c.border}`,
-                    backgroundColor: zoomMode === 1 ? c.accentBg : c.bgCard,
-                    color: zoomMode === 1 ? (isDark ? '#818cf8' : '#4f46e5') : c.textMain,
-                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                  }}
-                >
-                  100%
-                </button>
-
-                <button
-                  onClick={() => setZoomMode(s => (typeof s === 'number' ? Math.min(2, s + 0.15) : Math.min(2, autoFitScale + 0.15)))}
-                  style={{
-                    width: '26px', height: '26px', borderRadius: '50%', border: `1px solid ${c.border}`,
-                    backgroundColor: c.bgCard, color: c.textMain, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title="Zoom In"
-                >
-                  <ZoomIn style={{ width: '13px', height: '13px' }} />
-                </button>
-              </div>
-            )}
-
             {loading && !scorecardData ? (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -1446,7 +1305,7 @@ export default function App() {
                 display: 'flex',
                 justifyContent: 'center',
                 height: activeScale < 1 && posterHeight > 0 ? `${posterHeight * activeScale + 32}px` : 'auto',
-                overflow: activeScale === 1 && posterBaseWidth > containerWidth ? 'auto' : 'visible',
+                overflow: 'visible',
                 transition: 'height 0.2s ease',
               }}>
                 {loading && (
@@ -1498,7 +1357,7 @@ export default function App() {
               /* Original PC Untouched Container */
               <div style={{
                 position: 'relative', width: '100%',
-                display: 'flex', justifyContent: 'center',
+                display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
                 transition: 'opacity 0.25s ease',
                 opacity: loading ? 0.65 : 1,
               }}>
@@ -1537,49 +1396,173 @@ export default function App() {
                 />
               </div>
             )}
-
-            {/* Mobile View Preview Sticky Bottom Action Bar (MOBILE ONLY) */}
-            {isMobile && (
-              <div style={{
-                position: 'fixed', bottom: '16px', left: '16px', right: '16px',
-                zIndex: 30, display: 'flex', gap: '10px', justifyContent: 'center',
-              }}>
-                <button
-                  onClick={() => setMobileView('controls')}
-                  style={{
-                    flex: 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    padding: '12px 16px', borderRadius: '30px', border: `1px solid ${c.border}`,
-                    backgroundColor: c.bgCard, color: c.textHead,
-                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                  }}
-                >
-                  <SlidersHorizontal style={{ width: '15px', height: '15px' }} />
-                  Edit Controls
-                </button>
-                <button
-                  onClick={handleExportPNG}
-                  disabled={exporting || loading}
-                  style={{
-                    flex: 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    padding: '12px 16px', borderRadius: '30px', border: 'none',
-                    backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
-                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                    opacity: (exporting || loading) ? 0.6 : 1,
-                  }}
-                >
-                  <Download style={{ width: '15px', height: '15px' }} />
-                  {exporting ? 'Exporting…' : 'Export PNG'}
-                </button>
-              </div>
-            )}
           </main>
         )}
 
       </div>
+
+      {/* ── MOBILE FLOATING PILLS BOTTOMLAR (MOBILE ONLY) ─────────────────── */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed', bottom: '16px', left: '16px', right: '16px',
+          zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '8px', pointerEvents: 'none',
+        }}>
+          {/* Segmented View Switcher Pill */}
+          <div style={{
+            display: 'flex',
+            backgroundColor: isDark ? 'rgba(24,24,28,0.92)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: '30px',
+            padding: '4px',
+            border: `1px solid ${c.border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+            pointerEvents: 'auto',
+          }}>
+            <button
+              onClick={() => setMobileView('preview')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '8px 14px', borderRadius: '24px', border: 'none',
+                backgroundColor: mobileView === 'preview' ? (isDark ? '#6366f1' : '#4f46e5') : 'transparent',
+                color: mobileView === 'preview' ? '#ffffff' : c.textMuted,
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Eye style={{ width: '14px', height: '14px' }} />
+              Poster
+            </button>
+            <button
+              onClick={() => setMobileView('controls')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '8px 14px', borderRadius: '24px', border: 'none',
+                backgroundColor: mobileView === 'controls' ? (isDark ? '#6366f1' : '#4f46e5') : 'transparent',
+                color: mobileView === 'controls' ? '#ffffff' : c.textMuted,
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <SlidersHorizontal style={{ width: '14px', height: '14px' }} />
+              Controls
+            </button>
+          </div>
+
+          {/* Floating Export Pill */}
+          <button
+            onClick={() => setExportOpen(o => !o)}
+            disabled={exporting || loading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px', borderRadius: '30px', border: 'none',
+              backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
+              fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              pointerEvents: 'auto',
+              opacity: (exporting || loading) ? 0.6 : 1,
+            }}
+          >
+            <Download style={{ width: '14px', height: '14px' }} />
+            {exporting ? 'Exporting…' : 'Export'}
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Export Popup Modal */}
+      {isMobile && exportOpen && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 98, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)' }}
+            onClick={() => setExportOpen(false)}
+          />
+          <div style={{
+            position: 'fixed',
+            bottom: '76px',
+            left: '16px', right: '16px',
+            zIndex: 99,
+            maxWidth: '360px', margin: '0 auto',
+            backgroundColor: c.bgCard,
+            border: `1px solid ${c.border}`,
+            borderRadius: '16px',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+            padding: '12px',
+          }}>
+            <div style={{
+              padding: '8px 10px',
+              borderBottom: `1px solid ${c.border}`,
+              marginBottom: '8px',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              borderRadius: '8px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: c.textMuted }}>
+                  Export Quality
+                </span>
+                <span style={{
+                  fontSize: '9.5px', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace",
+                  color: exportQuality === 8 ? (isDark ? '#818cf8' : '#4f46e5') : c.textHead,
+                  backgroundColor: exportQuality === 8 ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(79,70,229,0.1)') : 'transparent',
+                  padding: '1px 5px', borderRadius: '4px',
+                }}>
+                  {exportQuality === 8 ? '8x Ultra HD' : exportQuality === 6 ? '6x Super' : exportQuality === 4 ? '4x High' : '2x Standard'}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="8"
+                step="2"
+                value={exportQuality}
+                onChange={(e) => setExportQuality(Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  accentColor: isDark ? '#6366f1' : '#4f46e5',
+                  cursor: 'pointer',
+                  height: '6px',
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', color: c.textMuted, marginTop: '4px', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span>2x</span>
+                <span>4x</span>
+                <span>6x</span>
+                <span style={{ fontWeight: 800 }}>8x Max</span>
+              </div>
+            </div>
+
+            {[
+              { icon: <Download style={{ width: '14px', height: '14px' }} />, label: 'Export PNG Image', action: handleExportPNG },
+              { icon: <FileSpreadsheet style={{ width: '14px', height: '14px' }} />, label: 'Export PDF Document', action: handleExportPDF },
+              { icon: <FileJson style={{ width: '14px', height: '14px' }} />, label: 'Export Raw Game JSON', action: handleExportRawData, disabled: !rawGameData },
+            ].map((item, i) => (
+              <button
+                key={i}
+                onClick={item.action}
+                disabled={item.disabled}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  width: '100%', padding: '10px 12px',
+                  border: 'none', background: 'none',
+                  color: item.disabled ? c.textMuted : c.textMain,
+                  fontSize: '13px', fontWeight: 600,
+                  fontFamily: "'Inter', sans-serif",
+                  cursor: item.disabled ? 'default' : 'pointer',
+                  borderRadius: '8px',
+                  textAlign: 'left',
+                  transition: 'background 0.1s',
+                  opacity: item.disabled ? 0.4 : 1,
+                  marginBottom: '2px',
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <style>{`
         @keyframes spin {
