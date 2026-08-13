@@ -785,8 +785,63 @@ export default function App() {
             {activeTab === 'style' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
+                {/* ── ORIENTATION TOGGLE (TOP OF THEME TAB) ──────────────────── */}
+                <div>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '8px',
+                  }}>
+                    Poster Layout Orientation
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      onClick={() => setOrientation('portrait')}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
+                        border: `1.5px solid ${orientation === 'portrait' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: orientation === 'portrait'
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        color: orientation === 'portrait' ? c.textHead : c.textMuted,
+                        fontWeight: 600, fontSize: '12px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <svg width="13" height="16" viewBox="0 0 14 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="1" width="12" height="16" rx="2" />
+                        <line x1="4" y1="5" x2="10" y2="5" />
+                        <line x1="4" y1="8" x2="10" y2="8" />
+                        <line x1="4" y1="11" x2="10" y2="11" />
+                      </svg>
+                      Portrait
+                    </button>
+                    <button
+                      onClick={() => setOrientation('landscape')}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
+                        border: `1.5px solid ${orientation === 'landscape' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: orientation === 'landscape'
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        color: orientation === 'landscape' ? c.textHead : c.textMuted,
+                        fontWeight: 600, fontSize: '12px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <svg width="17" height="13" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="1" width="16" height="12" rx="2" />
+                        <line x1="9" y1="4" x2="9" y2="10" />
+                      </svg>
+                      Landscape
+                    </button>
+                  </div>
+                </div>
+
                 {/* Classic Themes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ paddingTop: '10px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{
                     fontSize: '11px', fontWeight: 600,
                     letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -928,122 +983,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ── ORIENTATION TOGGLE ────────────────────────────────────── */}
-                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${c.border}` }}>
-                  <div style={{
-                    fontSize: '11px', fontWeight: 600,
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: c.textMuted, marginBottom: '8px',
-                  }}>
-                    Poster Layout Orientation
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <button
-                      onClick={() => setOrientation('portrait')}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
-                        border: `1.5px solid ${orientation === 'portrait' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                        backgroundColor: orientation === 'portrait'
-                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                          : c.bgInput,
-                        color: orientation === 'portrait' ? c.textHead : c.textMuted,
-                        fontWeight: 600, fontSize: '12px',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <svg width="13" height="16" viewBox="0 0 14 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="1" y="1" width="12" height="16" rx="2" />
-                        <line x1="4" y1="5" x2="10" y2="5" />
-                        <line x1="4" y1="8" x2="10" y2="8" />
-                        <line x1="4" y1="11" x2="10" y2="11" />
-                      </svg>
-                      Portrait
-                    </button>
-                    <button
-                      onClick={() => setOrientation('landscape')}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        padding: '10px', borderRadius: '8px', cursor: 'pointer',
-                        border: `1.5px solid ${orientation === 'landscape' ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                        backgroundColor: orientation === 'landscape'
-                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                          : c.bgInput,
-                        color: orientation === 'landscape' ? c.textHead : c.textMuted,
-                        fontWeight: 600, fontSize: '12px',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <svg width="17" height="13" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="1" y="1" width="16" height="12" rx="2" />
-                        <line x1="9" y1="4" x2="9" y2="10" />
-                      </svg>
-                      Landscape
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── DATA TAB ──────────────────────────────────────────────── */}
-            {activeTab === 'data' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-
-                {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{
-                    fontSize: '11px', fontWeight: 600,
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: c.textMuted, marginBottom: '2px',
-                  }}>
-                    Game Stats & Display Options
-                  </div>
-
-                  {[
-                    { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
-                    { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
-                    { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
-                    { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
-                  ].map(opt => (
-                    <button
-                      key={opt.label}
-                      onClick={() => opt.setter(v => !v)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '8px 10px',
-                        borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                        border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
-                        backgroundColor: opt.value
-                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
-                          : c.bgInput,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
-                          {opt.label}
-                        </div>
-                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
-                          {opt.desc}
-                        </div>
-                      </div>
-                      <div style={{
-                        width: '32px', height: '18px', borderRadius: '10px',
-                        backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
-                        position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
-                      }}>
-                        <div style={{
-                          width: '14px', height: '14px', borderRadius: '50%',
-                          backgroundColor: '#ffffff', position: 'absolute', top: '2px',
-                          left: opt.value ? '16px' : '2px',
-                          transition: 'left 0.15s ease',
-                        }} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── ERASER MARKS & SCRIBBLES ─────────────────────────────── */}
+                {/* ── ERASER MARKS & SCRIBBLES (AUTHENTIC ARTIFACTS) ───────── */}
                 <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{
                     fontSize: '11px', fontWeight: 600,
@@ -1109,6 +1049,66 @@ export default function App() {
                       Re-roll Random Eraser & Scribble Spots
                     </button>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* ── DATA TAB ──────────────────────────────────────────────── */}
+            {activeTab === 'data' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: c.textMuted, marginBottom: '2px',
+                  }}>
+                    Game Stats & Display Options
+                  </div>
+
+                  {[
+                    { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
+                    { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
+                    { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
+                    { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
+                  ].map(opt => (
+                    <button
+                      key={opt.label}
+                      onClick={() => opt.setter(v => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '8px 10px',
+                        borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                        backgroundColor: opt.value
+                          ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                          : c.bgInput,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                          {opt.desc}
+                        </div>
+                      </div>
+                      <div style={{
+                        width: '32px', height: '18px', borderRadius: '10px',
+                        backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                        position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                      }}>
+                        <div style={{
+                          width: '14px', height: '14px', borderRadius: '50%',
+                          backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                          left: opt.value ? '16px' : '2px',
+                          transition: 'left 0.15s ease',
+                        }} />
+                      </div>
+                    </button>
+                  ))}
                 </div>
 
               </div>
