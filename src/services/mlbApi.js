@@ -178,6 +178,16 @@ function parsePlayNotation(play) {
   return { code: 'OUT', type: 'out' };
 }
 
+function baseToNum(b) {
+  if (!b) return 0;
+  const s = String(b).toUpperCase();
+  if (s === '1B' || s === '1') return 1;
+  if (s === '2B' || s === '2') return 2;
+  if (s === '3B' || s === '3') return 3;
+  if (s === 'SCORE' || s === 'HP' || s === '4B' || s === '4') return 4;
+  return 0;
+}
+
 function formatDateString(dateStr) {
   if (!dateStr) return 'OCTOBER 8, 2025';
   const d = new Date(dateStr + 'T00:00:00');
@@ -293,18 +303,64 @@ export function processMLBData(data, gamePkOverride) {
 
     const batterInningPlays = {};
     
+    // Group plays by inning to track runner base advancement chronologically
+    const playsByInning = {};
     plays.forEach(play => {
       if (play.about?.halfInning !== sideHalf) return;
-      const batterId = play.matchup?.batter?.id;
-      const inning = play.about?.inning;
-      if (!batterId || !inning) return;
+      const inn = play.about?.inning;
+      if (!inn) return;
+      if (!playsByInning[inn]) playsByInning[inn] = [];
+      playsByInning[inn].push(play);
+    });
 
-      if (!batterInningPlays[batterId]) {
-        batterInningPlays[batterId] = {};
-      }
-      
-      const parsed = parsePlayNotation(play);
-      batterInningPlays[batterId][inning] = parsed;
+    Object.keys(playsByInning).forEach(inn => {
+      const innPlays = playsByInning[inn];
+      innPlays.forEach((play, playIdx) => {
+        const batterId = play.matchup?.batter?.id;
+        if (!batterId) return;
+
+        if (!batterInningPlays[batterId]) {
+          batterInningPlays[batterId] = {};
+        }
+
+        const parsed = parsePlayNotation(play);
+
+        // Base reached from own at-bat
+        let atBatBases = parsed.bases || 0;
+        if (parsed.type === 'hr') atBatBases = 4;
+
+        if (play.runners) {
+          play.runners.forEach(r => {
+            if (r.details?.runner?.id === batterId && !r.movement?.isOut) {
+              const reached = baseToNum(r.movement?.end);
+              if (reached > atBatBases) atBatBases = reached;
+            }
+          });
+        }
+
+        // Base reached by end of inning from subsequent plays in same inning
+        let endInningBases = atBatBases;
+        if (atBatBases > 0) {
+          for (let i = playIdx + 1; i < innPlays.length; i++) {
+            const subPlay = innPlays[i];
+            if (subPlay.runners) {
+              subPlay.runners.forEach(r => {
+                if (r.details?.runner?.id === batterId) {
+                  if (!r.movement?.isOut) {
+                    const reached = baseToNum(r.movement?.end);
+                    if (reached > endInningBases) endInningBases = reached;
+                  }
+                }
+              });
+            }
+          }
+        }
+
+        parsed.atBatBases = atBatBases;
+        parsed.bases = Math.max(parsed.bases || 0, endInningBases);
+
+        batterInningPlays[batterId][inn] = parsed;
+      });
     });
 
     // Pitcher strikeout records (from plays).

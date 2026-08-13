@@ -100,6 +100,7 @@ export default function App() {
   const [showDecisions, setShowDecisions] = useState(true);
   const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
   const [showHRDistances, setShowHRDistances] = useState(true);
+  const [showAtBatDashedLines, setShowAtBatDashedLines] = useState(true);
 
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
@@ -1125,6 +1126,7 @@ export default function App() {
                     { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
                     { label: 'Weather & Game Conditions', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
                     { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
+                    { label: 'Dashed Line for At-Bat Base', desc: 'Dashed line for own at-bat reach, solid line for end of inning base', value: showAtBatDashedLines, setter: setShowAtBatDashedLines },
                   ].map(opt => (
                     <button
                       key={opt.label}
@@ -1280,6 +1282,7 @@ export default function App() {
                 showDecisions={showDecisions}
                 showEnvironmentBox={showEnvironmentBox}
                 showHRDistances={showHRDistances}
+                showAtBatDashedLines={showAtBatDashedLines}
               />
             </div>
           )}

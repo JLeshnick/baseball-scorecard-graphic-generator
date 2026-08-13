@@ -22,6 +22,7 @@ export default function ScorecardGraphic({
   showDecisions = true,
   showEnvironmentBox = false,
   showHRDistances = true,
+  showAtBatDashedLines = true,
 }) {
   if (!data) return null;
 
@@ -406,21 +407,36 @@ export default function ScorecardGraphic({
       );
     }
 
-    const { code, type, bases, isLooking } = play;
+    const { code, type, bases, atBatBases, isLooking } = play;
     const hitColor = isHome ? t.homeHitLineColor : t.hitLineColor;
     const pillBg = isHome ? t.homeColor : t.awayColor;
     const pillText = isHome ? t.homeText : t.awayText;
 
-    if (type === 'hit' || type === 'hr' || type === 'walk') {
+    if (type === 'hit' || type === 'hr' || type === 'walk' || (bases && bases >= 1) || (atBatBases && atBatBases >= 1)) {
       const isHR = type === 'hr';
 
-      // Determine filled bases
-      const b1 = bases >= 1 || isHR;
-      const b2 = bases >= 2 || isHR;
-      const b3 = bases >= 3 || isHR;
-      const b4 = isHR; // home = all 4
+      // Base reached on own at-bat vs total bases reached by end of inning
+      // Home runs are scoring hits and are rendered with solid lines all around
+      const atBatReach = isHR
+        ? 0
+        : (atBatBases !== undefined ? atBatBases : ((type === 'hit' || type === 'walk') ? (bases || 1) : 0));
+      const endInningReach = isHR ? 4 : (bases !== undefined ? bases : atBatReach);
 
-      const strokeW = isHR ? 3.5 : 2.5;
+      // Determine filled bases by end of inning
+      const b1 = endInningReach >= 1 || isHR;
+      const b2 = endInningReach >= 2 || isHR;
+      const b3 = endInningReach >= 3 || isHR;
+      const b4 = endInningReach >= 4 || isHR; // home = all 4
+
+      // Determine which bases were reached on own at-bat (HR lines remain solid)
+      const b1AtBat = !isHR && atBatReach >= 1;
+      const b2AtBat = !isHR && atBatReach >= 2;
+      const b3AtBat = !isHR && atBatReach >= 3;
+      const b4AtBat = !isHR && atBatReach >= 4;
+
+      // Helper for dash pattern: rounded pill dashes (strokeLinecap='round') with calibrated 2.2px gap and 3.2px pill length
+      const getDashArray = (isAtBat) => (showAtBatDashedLines && isAtBat) ? "1.2 4.2" : undefined;
+      const getStrokeWidth = (isAtBat) => isHR ? 2.5 : ((showAtBatDashedLines && isAtBat) ? 2.0 : 2.4);
 
       return (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
@@ -432,13 +448,13 @@ export default function ScorecardGraphic({
               fill={isHR ? hitColor : 'none'}
               fillOpacity={isHR ? 0.15 : 0}
               stroke={t.cellDiamondStroke}
-              strokeWidth="1.2"
+              strokeWidth="1.0"
             />
             {/* Base path lines drawn clockwise: 1B=bottom-right, 2B=top-right, 3B=top-left, HP=bottom-left */}
-            {b1 && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth={strokeW} strokeLinecap="round" />}
-            {b2 && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth={strokeW} strokeLinecap="round" />}
-            {b3 && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth={strokeW} strokeLinecap="round" />}
-            {b4 && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth={strokeW} strokeLinecap="round" />}
+            {b1 && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth={getStrokeWidth(b1AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b1AtBat)} />}
+            {b2 && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth={getStrokeWidth(b2AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b2AtBat)} />}
+            {b3 && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth={getStrokeWidth(b3AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b3AtBat)} />}
+            {b4 && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth={getStrokeWidth(b4AtBat)} strokeLinecap="round" strokeDasharray={getDashArray(b4AtBat)} />}
           </svg>
           {/* Code badge */}
           <span style={{
