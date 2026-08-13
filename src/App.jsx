@@ -92,9 +92,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('game'); // 'game', 'style', 'text'
   const [theme, setTheme] = useState('team-light');
   const [fontStyle, setFontStyle] = useState('modern'); // 'modern', 'handwritten', 'graffiti'
-  const [showEraserMarks, setShowEraserMarks] = useState(false);
-  const [eraserSeed, setEraserSeed] = useState(0);
-  const [orientation, setOrientation] = useState('portrait'); // 'portrait' or 'landscape'
+  const [showPitchBreakdown, setShowPitchBreakdown] = useState(true);
+  const [showDecisions, setShowDecisions] = useState(true);
+  const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
+  const [showHRDistances, setShowHRDistances] = useState(true);
+
   const [customHeadline, setCustomHeadline] = useState('');
   const [customSubtitle, setCustomSubtitle] = useState('');
   const [customFooter, setCustomFooter] = useState('');
@@ -160,9 +162,17 @@ export default function App() {
       setScorecardData(data);
       setRawGameData(data._rawData || null);
       setCustomHeadline(data.gameInfo.dateDisplay);
-      // Subtitle: just the venue (no redundant game type text)
       setCustomSubtitle(data.gameInfo.venue);
-      setCustomFooter(`${data.gameInfo.dateDisplay} • ${data.gameInfo.venue.toUpperCase()}`);
+
+      // Default footer with weather, attendance, and duration
+      const footerParts = [
+        data.gameInfo.dateDisplay,
+        data.gameInfo.venue.toUpperCase(),
+        data.gameInfo.weatherStr,
+        data.gameInfo.attendance,
+        data.gameInfo.durationStr,
+      ].filter(Boolean);
+      setCustomFooter(footerParts.join(' • '));
     } catch (err) {
       console.error(err);
       setError('Could not load MLB game data.');
@@ -173,16 +183,13 @@ export default function App() {
 
   /**
    * Capture helper: clones the graphic into an off-screen body-level container
-   * so html-to-image has no parent flex/overflow context to inherit position from.
-   * This is the only reliable way to avoid the "blank left + cutoff right" artifact
-   * caused by the element's document offset bleeding into the canvas origin.
+   * at 5x super high resolution for 300+ DPI crisp printing.
    */
-  const captureGraphic = async (pixelRatio) => {
+  const captureGraphic = async (pixelRatio = 5) => {
     const el = graphicRef.current;
     const isLandscape = orientation === 'landscape';
     const targetWidth = isLandscape ? '1240px' : '920px';
 
-    // Build an isolated off-screen wrapper free from any app layout context
     const wrapper = document.createElement('div');
     wrapper.style.cssText = [
       'position:fixed',
@@ -195,7 +202,6 @@ export default function App() {
       'pointer-events:none',
     ].join(';');
 
-    // Deep-clone the graphic and reset any width/margin constraints
     const clone = el.cloneNode(true);
     clone.style.width = targetWidth;
     clone.style.maxWidth = targetWidth;
@@ -207,11 +213,10 @@ export default function App() {
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
 
-    // Two rAFs so the browser fully lays out the clone at target width
     await new Promise(r => requestAnimationFrame(r));
     await new Promise(r => requestAnimationFrame(r));
 
-    const dataUrl = await toPng(clone, { quality: 0.98, pixelRatio });
+    const dataUrl = await toPng(clone, { quality: 1.0, pixelRatio });
 
     document.body.removeChild(wrapper);
     return dataUrl;
@@ -975,6 +980,60 @@ export default function App() {
                       </button>
                     )}
                   </div>
+
+                  {/* ── DISPLAY OPTIONS & STAT TOGGLES ─────────────────────────── */}
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted, marginBottom: '2px',
+                    }}>
+                      Display Options & Stats
+                    </div>
+
+                    {[
+                      { label: 'Per-Inning Pitch Breakdown', desc: 'Pitches, strikes & balls under each inning', value: showPitchBreakdown, setter: setShowPitchBreakdown },
+                      { label: 'Pitcher Decisions (W / L / SV)', desc: 'Winning, losing, and save pitcher badges', value: showDecisions, setter: setShowDecisions },
+                      { label: 'Weather & Umpires Info Box', desc: 'Temperature, wind, attendance & game duration', value: showEnvironmentBox, setter: setShowEnvironmentBox },
+                      { label: 'Home Run Distances', desc: 'Distance in feet (e.g. 428\') inside HR cells', value: showHRDistances, setter: setShowHRDistances },
+                    ].map(opt => (
+                      <button
+                        key={opt.label}
+                        onClick={() => opt.setter(v => !v)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          width: '100%', padding: '8px 10px',
+                          borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                          border: `1.5px solid ${opt.value ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+                          backgroundColor: opt.value
+                            ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(79,70,229,0.06)')
+                            : c.bgInput,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                            {opt.label}
+                          </div>
+                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '1px' }}>
+                            {opt.desc}
+                          </div>
+                        </div>
+                        <div style={{
+                          width: '32px', height: '18px', borderRadius: '10px',
+                          backgroundColor: opt.value ? (isDark ? '#6366f1' : '#4f46e5') : (isDark ? '#3f3f46' : '#d4d4d8'),
+                          position: 'relative', transition: 'all 0.15s ease', flexShrink: 0,
+                        }}>
+                          <div style={{
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            backgroundColor: '#ffffff', position: 'absolute', top: '2px',
+                            left: opt.value ? '16px' : '2px',
+                            transition: 'left 0.15s ease',
+                          }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* ── ORIENTATION TOGGLE ────────────────────────────────────── */}
@@ -1143,6 +1202,10 @@ export default function App() {
                 customNotes={customNotes}
                 graphicRef={graphicRef}
                 orientation={orientation}
+                showPitchBreakdown={showPitchBreakdown}
+                showDecisions={showDecisions}
+                showEnvironmentBox={showEnvironmentBox}
+                showHRDistances={showHRDistances}
               />
             </div>
           )}

@@ -226,16 +226,52 @@ export function processMLBData(data, gamePkOverride) {
     textColor: homeColors.text
   };
 
-  let headline = '';
-  if (gameData.game?.description) {
-    // Only use description if it's meaningful (not just 'Regular Season')
-    const desc = gameData.game.description;
-    if (!desc.toLowerCase().includes('regular season')) {
-      headline = desc.toUpperCase();
+  // Smart last name helper
+  const SUFFIXES_ALL = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+  const extractLastNameGlobal = (fullName) => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!SUFFIXES_ALL.has(parts[i].toLowerCase())) {
+        return parts[i].toUpperCase();
+      }
     }
-  } else if (gameData.seriesStatus?.description) {
-    headline = gameData.seriesStatus.description.toUpperCase();
+    return parts[parts.length - 1].toUpperCase();
+  };
+
+  // Weather & Environment
+  const temp = gameData.weather?.temp ? `${gameData.weather.temp}°F` : '';
+  const condition = gameData.weather?.condition ? gameData.weather.condition.toUpperCase() : '';
+  const wind = gameData.weather?.wind ? `WIND: ${gameData.weather.wind.toUpperCase()}` : '';
+  const weatherStr = [temp, condition, wind].filter(Boolean).join(' ');
+
+  // Attendance & Duration
+  const attendanceVal = gameData.gameInfo?.attendance || box.info?.find(i => i.label === 'Att')?.value;
+  const attendance = attendanceVal ? `ATT: ${typeof attendanceVal === 'number' ? attendanceVal.toLocaleString() : attendanceVal}` : '';
+  
+  let durationStr = '';
+  if (gameData.gameInfo?.gameDurationMinutes) {
+    const mins = gameData.gameInfo.gameDurationMinutes;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    durationStr = `TIME: ${h}H ${m}M`;
+  } else {
+    const timeInfo = box.info?.find(i => i.label === 'T' || i.label === 'Game Duration')?.value;
+    if (timeInfo) durationStr = `TIME: ${timeInfo}`;
   }
+
+  // Pitcher Decisions
+  const decisions = {
+    winner: liveData.decisions?.winner?.fullName ? extractLastNameGlobal(liveData.decisions.winner.fullName) : '',
+    loser: liveData.decisions?.loser?.fullName ? extractLastNameGlobal(liveData.decisions.loser.fullName) : '',
+    save: liveData.decisions?.save?.fullName ? extractLastNameGlobal(liveData.decisions.save.fullName) : '',
+  };
+
+  // Umpires
+  const umpires = (gameData.officials || []).map(o => ({
+    type: o.officialType || 'Umpire',
+    name: extractLastNameGlobal(o.official?.fullName || '')
+  }));
 
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
 
@@ -467,6 +503,11 @@ export function processMLBData(data, gamePkOverride) {
       awayTeam,
       homeTeam,
       linescore: linescoreInnings,
+      weatherStr,
+      attendance,
+      durationStr,
+      decisions,
+      umpires,
     },
     awayData,
     homeData

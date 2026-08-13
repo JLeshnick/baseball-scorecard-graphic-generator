@@ -12,12 +12,16 @@ export default function ScorecardGraphic({
   fontStyle = 'modern',
   showEraserMarks = false,
   eraserSeed = 0,
-  customHeadline = '',
-  customSubtitle = '',
-  customFooter = '',
-  customNotes = '',
-  graphicRef = null,
-  orientation = 'portrait'
+  customHeadline,
+  customSubtitle,
+  customFooter,
+  customNotes,
+  graphicRef,
+  orientation = 'portrait',
+  showPitchBreakdown = true,
+  showDecisions = true,
+  showEnvironmentBox = false,
+  showHRDistances = true,
 }) {
   if (!data) return null;
 
@@ -828,7 +832,7 @@ export default function ScorecardGraphic({
         )}
 
         {/* Per-Inning Pitch Breakdown Grid */}
-        {teamData.pitchers && teamData.pitchers.length > 0 && (
+        {showPitchBreakdown && teamData.pitchers && teamData.pitchers.length > 0 && (
           <div style={{
             backgroundColor: t.tableRowAlt,
             borderTop: `1.5px solid ${t.borderStrong}`,
@@ -841,30 +845,6 @@ export default function ScorecardGraphic({
                 <col style={{ width: `${POS_COL_W + NAME_COL_W}px` }} />
                 {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
               </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: t.tableHeaderBg, borderBottom: `1px solid ${t.borderLight}` }}>
-                  <th style={{
-                    textAlign: 'left', padding: '3px 8px',
-                    fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.08em',
-                    color: t.textMuted, textTransform: 'uppercase',
-                    fontFamily: t.fontSans,
-                    borderRight: `1.5px solid ${t.borderStrong}`,
-                  }}>
-                    PITCHES BY INNING (PITCH / STRIKES-BALLS)
-                  </th>
-                  {innings.map(n => (
-                    <th key={n} style={{
-                      textAlign: 'center', padding: '3px 1px',
-                      fontSize: '8px', fontWeight: 800,
-                      fontFamily: t.fontMono,
-                      color: t.textMuted,
-                      borderLeft: `1px solid ${t.borderLight}`,
-                    }}>
-                      {n}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
               <tbody>
                 {teamData.pitchers.map(p => {
                   const hasPitches = Object.keys(p.pitchesByInning || {}).length > 0;
@@ -872,15 +852,15 @@ export default function ScorecardGraphic({
                   return (
                     <tr key={`p_breakdown_${p.id}`} style={{ borderBottom: `1px solid ${t.borderLight}` }}>
                       <td style={{
-                        padding: '3px 8px', fontSize: '9.5px', fontWeight: 700,
+                        padding: '3px 8px', fontSize: '9px', fontWeight: 700,
                         color: t.textPrimary, fontFamily: t.fontHeader,
                         borderRight: `1.5px solid ${t.borderStrong}`,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span>{p.name}</span>
+                          <span>{p.name} <span style={{ fontSize: '7.5px', opacity: 0.6, fontWeight: 600 }}>(PITCHES)</span></span>
                           {(p.totalPitches > 0 || p.totalStrikes > 0) && (
-                            <span style={{ fontSize: '8px', fontFamily: t.fontMono, color: t.textMuted, fontWeight: 600 }}>
+                            <span style={{ fontSize: '7.5px', fontFamily: t.fontMono, color: t.textMuted, fontWeight: 600 }}>
                               {p.totalPitches}P ({p.totalStrikes}S/{p.totalBalls}B)
                             </span>
                           )}
@@ -899,10 +879,10 @@ export default function ScorecardGraphic({
                           }}>
                             {cnt > 0 ? (
                               <div style={{ lineHeight: 1 }}>
-                                <span style={{ fontFamily: t.fontMono, fontSize: '9px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
+                                <span style={{ fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
                                   {cnt}
                                 </span>
-                                <span style={{ fontFamily: t.fontMono, fontSize: '6.5px', fontWeight: 600, color: t.textMuted, opacity: 0.8, display: 'block', marginTop: '1px' }}>
+                                <span style={{ fontFamily: t.fontMono, fontSize: '6px', fontWeight: 600, color: t.textMuted, opacity: 0.8, display: 'block', marginTop: '1px' }}>
                                   {str}s/{bll}b
                                 </span>
                               </div>
@@ -1138,9 +1118,46 @@ export default function ScorecardGraphic({
               color: t.textSecondary,
               textAlign: 'right',
             }}>
-              {customSubtitle || `${gameInfo.venue} · ${gameInfo.headline}`}
+              {customSubtitle !== undefined ? customSubtitle : `${gameInfo.venue} · ${gameInfo.headline}`}
             </span>
           </div>
+
+          {/* Pitcher Decisions Bar (W / L / SV) */}
+          {showDecisions && (gameInfo.decisions?.winner || gameInfo.decisions?.loser) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px',
+              backgroundColor: t.tableHeaderBg, padding: '5px 12px',
+              borderBottom: `1px solid ${t.borderLight}`,
+              fontSize: '9.5px', fontWeight: 700, fontFamily: t.fontMono, color: t.textMuted,
+            }}>
+              {gameInfo.decisions.winner && (
+                <span><strong style={{ color: t.homeColor }}>WIN:</strong> {gameInfo.decisions.winner}</span>
+              )}
+              {gameInfo.decisions.loser && (
+                <span><strong style={{ color: t.awayColor }}>LOSS:</strong> {gameInfo.decisions.loser}</span>
+              )}
+              {gameInfo.decisions.save && (
+                <span><strong style={{ color: t.textPrimary }}>SAVE:</strong> {gameInfo.decisions.save}</span>
+              )}
+            </div>
+          )}
+
+          {/* Game Environment & Umpires Bar */}
+          {showEnvironmentBox && (gameInfo.weatherStr || gameInfo.attendance || gameInfo.durationStr) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              backgroundColor: t.tableHeaderBg, padding: '4px 14px',
+              borderBottom: `1px solid ${t.borderLight}`,
+              fontSize: '8.5px', fontWeight: 600, fontFamily: t.fontMono, color: t.textMuted,
+            }}>
+              <span>{gameInfo.weatherStr}</span>
+              <span>{gameInfo.attendance}</span>
+              <span>{gameInfo.durationStr}</span>
+              {gameInfo.umpires && gameInfo.umpires.length > 0 && (
+                <span>HP: {gameInfo.umpires.find(u => u.type.includes('Home'))?.name || gameInfo.umpires[0]?.name}</span>
+              )}
+            </div>
+          )}
 
           {/* SCORECARDS */}
           {isLandscape ? (
