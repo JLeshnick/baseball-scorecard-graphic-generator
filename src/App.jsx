@@ -107,7 +107,7 @@ export default function App() {
   const [customNotes, setCustomNotes] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportQuality, setExportQuality] = useState(8); // 2, 4, 6, 8 (Default 8x Ultra HD 10K Master)
+  const [exportQuality, setExportQuality] = useState(4); // 2, 4 (Default 4K High), 6, 8 (Ultra HD 10K Master)
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
