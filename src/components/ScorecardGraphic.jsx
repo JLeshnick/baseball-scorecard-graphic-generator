@@ -657,7 +657,7 @@ export default function ScorecardGraphic({
                   borderBottom: `1.5px solid ${t.borderStrong}`,
                   borderRight: `1.5px solid ${t.borderStrong}`,
                 }}>
-                  BATTING ORDER
+                  BATTING
                 </th>
                 {innings.map(n => (
                   <th key={n} style={{
@@ -675,83 +675,81 @@ export default function ScorecardGraphic({
             </thead>
 
             <tbody>
-              {teamData.batters.map((b, idx) => (
-                <tr key={b.id || idx} style={{
-                  height: '44px',
-                  backgroundColor: idx % 2 === 1 ? t.tableRowAlt : 'transparent',
-                  borderBottom: `1px solid ${t.borderLight}`,
-                }}>
-                  {/* Position */}
-                  <td style={{
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    padding: '2px',
-                    borderRight: `1px solid ${t.borderLight}`,
-                    backgroundColor: t.tableRowAlt,
+              {teamData.batters.map((b, bIdx) => {
+                const nameLen = b.name ? b.name.length : 0;
+                const batterFontSize = nameLen > 11 ? '9px' : nameLen > 8 ? '10px' : (t.isHandwritten ? '13px' : '11px');
+                return (
+                  <tr key={b.id || bIdx} style={{
+                    borderBottom: `1px solid ${t.borderLight}`,
+                    backgroundColor: bIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
                   }}>
-                    <span style={{
-                      display: 'inline-block',
-                      fontFamily: t.fontMono,
-                      fontWeight: 800,
-                      fontSize: '9px',
-                      color: accentColor,
-                      letterSpacing: '0.02em',
+                    {/* Position code (P, C, 1B, 2B, 3B, SS, LF, CF, RF, DH, PH, PR) */}
+                    <td style={{
+                      textAlign: 'center',
+                      verticalAlign: 'middle',
+                      padding: '2px 1px',
+                      borderRight: `1px solid ${t.borderLight}`,
+                      backgroundColor: t.tableRowAlt,
                     }}>
-                      {b.position}
-                    </span>
-                  </td>
-
-                  {/* Batter Name */}
-                  <td style={{
-                    verticalAlign: 'middle',
-                    padding: '4px 6px',
-                    borderRight: `1.5px solid ${t.borderStrong}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: '18px', height: '18px', borderRadius: '50%',
-                        backgroundColor: accentColor, color: accentText,
-                        fontSize: '7.5px', fontWeight: 800,
+                        display: 'inline-block',
                         fontFamily: t.fontMono,
-                        flexShrink: 0,
+                        fontWeight: 800,
+                        fontSize: '9px',
+                        color: accentColor,
+                        letterSpacing: '0.02em',
                       }}>
-                        {b.jerseyNumber}
+                        {b.position}
                       </span>
-                      <span style={{
-                        fontSize: t.isHandwritten ? '13px' : '11px', fontWeight: 700,
-                        letterSpacing: '0.02em', textTransform: 'uppercase',
-                        fontFamily: t.fontHeader,
-                        color: t.textPrimary,
-                        overflow: 'hidden', textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: '88px',
-                        paddingRight: '6px',
-                        boxSizing: 'content-box',
-                      }}>
-                        {renderHandwrittenText(b.name, 'batter_' + b.id, { paddingRight: '6px' })}
-                      </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Inning cells */}
-                  {innings.map(n => {
-                    const play = b.plays?.[n];
-                    return (
-                      <td key={n} style={{
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        padding: '2px',
-                        borderLeft: `1px solid ${t.borderLight}`,
-                        position: 'relative',
-                        height: '44px',
-                      }}>
-                        {renderPlayCell(play, isHome, `cell_${b.id}_${n}_${isHome ? 'H' : 'A'}`)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                    {/* Batter Name (Never truncates with ...) */}
+                    <td style={{
+                      verticalAlign: 'middle',
+                      padding: '4px 6px',
+                      borderRight: `1.5px solid ${t.borderStrong}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: '18px', height: '18px', borderRadius: '50%',
+                          backgroundColor: accentColor, color: accentText,
+                          fontSize: '7.5px', fontWeight: 800,
+                          fontFamily: t.fontMono,
+                          flexShrink: 0,
+                        }}>
+                          {b.jerseyNumber}
+                        </span>
+                        <span style={{
+                          fontSize: batterFontSize, fontWeight: 700,
+                          letterSpacing: '0.02em', textTransform: 'uppercase',
+                          fontFamily: t.fontHeader,
+                          color: t.textPrimary,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {renderHandwrittenText(b.name, 'batter_' + b.id)}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Inning cells */}
+                    {innings.map(n => {
+                      const play = b.plays?.[n];
+                      return (
+                        <td key={n} style={{
+                          textAlign: 'center', verticalAlign: 'middle',
+                          padding: '1px',
+                          borderLeft: `1px solid ${t.borderLight}`,
+                          backgroundColor: n % 2 === 0 ? t.tableInningAlt : 'transparent',
+                          position: 'relative',
+                        }}>
+                          {renderPlayCell(play, n, b.id)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
 
               {/* Inning Linescore row */}
               <tr style={{
@@ -794,7 +792,7 @@ export default function ScorecardGraphic({
           </table>
         </div>
 
-        {/* Unified Pitching & Per-Inning Pitch Breakdown Table */}
+        {/* Unified Pitching Table */}
         {teamData.pitchers && teamData.pitchers.length > 0 && (
           <div style={{
             backgroundColor: t.pitchingBg,
@@ -810,26 +808,14 @@ export default function ScorecardGraphic({
               </colgroup>
               <thead>
                 <tr style={{ backgroundColor: t.tableHeaderBg, borderBottom: `1.5px solid ${t.borderStrong}` }}>
-                  <th style={{
+                  <th colSpan={innings.length + 1} style={{
                     textAlign: 'left', padding: '4px 8px',
-                    fontSize: '8px', fontWeight: 800, letterSpacing: '0.08em',
+                    fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.08em',
                     color: t.textMuted, textTransform: 'uppercase',
                     fontFamily: t.fontSans,
-                    borderRight: `1.5px solid ${t.borderStrong}`,
                   }}>
                     PITCHING
                   </th>
-                  {innings.map(n => (
-                    <th key={n} style={{
-                      textAlign: 'center', padding: '4px 2px',
-                      fontSize: '8px', fontWeight: 800,
-                      fontFamily: t.fontMono,
-                      color: t.textMuted,
-                      borderLeft: `1px solid ${t.borderLight}`,
-                    }}>
-                      {showPitchBreakdown ? `${n}` : ''}
-                    </th>
-                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -861,7 +847,7 @@ export default function ScorecardGraphic({
                             </span>
                             <span style={{
                               fontFamily: t.fontHeader, fontWeight: 700,
-                              fontSize: '11px', letterSpacing: '0.02em',
+                              fontSize: p.name && p.name.length > 11 ? '9.5px' : '11px', letterSpacing: '0.02em',
                               color: t.textPrimary, whiteSpace: 'nowrap',
                             }}>
                               {p.name}
