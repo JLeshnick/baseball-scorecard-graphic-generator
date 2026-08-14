@@ -642,8 +642,12 @@ export default function App() {
     let currentScale = activeScale;
     let isPinching = false;
     let isPanning = false;
+    let rafId = null;
 
     const handleTouchStart = (e) => {
+      if (graphicWrapperRef.current) {
+        graphicWrapperRef.current.style.transition = 'none';
+      }
       if (e.touches.length === 1) {
         isPanning = true;
         isPinching = false;
@@ -668,8 +672,13 @@ export default function App() {
         const nextX = e.touches[0].clientX - touchStartPos.x;
         const nextY = e.touches[0].clientY - touchStartPos.y;
         currentPan = { x: nextX, y: nextY };
-        if (graphicWrapperRef.current) {
-          graphicWrapperRef.current.style.transform = `translate(${nextX}px, ${nextY}px) scale(${currentScale})`;
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            if (graphicWrapperRef.current) {
+              graphicWrapperRef.current.style.transform = `translate3d(${currentPan.x}px, ${currentPan.y}px, 0px) scale(${currentScale})`;
+            }
+          });
         }
       } else if (isPinching && e.touches.length === 2) {
         e.preventDefault();
@@ -681,14 +690,22 @@ export default function App() {
           const ratio = dist / touchStartDist;
           const nextScale = Math.min(3.0, Math.max(0.2, touchStartScale * ratio));
           currentScale = nextScale;
-          if (graphicWrapperRef.current) {
-            graphicWrapperRef.current.style.transform = `translate(${currentPan.x}px, ${currentPan.y}px) scale(${nextScale})`;
+          if (!rafId) {
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              if (graphicWrapperRef.current) {
+                graphicWrapperRef.current.style.transform = `translate3d(${currentPan.x}px, ${currentPan.y}px, 0px) scale(${nextScale})`;
+              }
+            });
           }
         }
       }
     };
 
     const handleTouchEnd = () => {
+      if (graphicWrapperRef.current) {
+        graphicWrapperRef.current.style.transition = 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)';
+      }
       if (isPanning) {
         isPanning = false;
         setPanOffset(currentPan);
@@ -718,7 +735,7 @@ export default function App() {
     <div style={{
       height: '100vh',
       fontFamily: "'Inter', sans-serif",
-      backgroundColor: c.bgBody,
+      backgroundColor: c.bgHeader,
       color: c.textMain,
       display: 'flex',
       flexDirection: 'column',
@@ -2077,9 +2094,13 @@ export default function App() {
                   style={{
                     width: `${posterBaseWidth}px`,
                     height: `${actualPosterHeight}px`,
-                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${activeScale})`,
+                    transform: `translate3d(${panOffset.x}px, ${panOffset.y}px, 0px) scale(${activeScale})`,
                     transformOrigin: 'top center',
                     flexShrink: 0,
+                    willChange: 'transform',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
                     transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
