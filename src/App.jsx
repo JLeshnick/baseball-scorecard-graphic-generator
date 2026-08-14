@@ -196,7 +196,7 @@ export default function App() {
   const graphicWrapperRef = useRef(null);
   const headerRef = useRef(null);
 
-  // Sync iOS meta theme-color with top header background color for Dynamic Island
+  // Sync iOS meta theme-color, html, and body background color with top header background color
   useEffect(() => {
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
@@ -205,6 +205,10 @@ export default function App() {
       document.head.appendChild(meta);
     }
     meta.content = c.bgHeader;
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.backgroundColor = c.bgHeader;
+      document.body.style.backgroundColor = c.bgHeader;
+    }
   }, [c.bgHeader]);
 
   // Block touch swipe pull-down on top header bar to prevent iOS page rubberbanding
@@ -741,6 +745,18 @@ export default function App() {
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
+
+      {/* iOS Safe Area Status Bar Background Filler */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0,
+          height: 'env(safe-area-inset-top, 24px)',
+          backgroundColor: c.bgHeader,
+          zIndex: 999,
+          pointerEvents: 'none',
+        }} />
+      )}
 
       {/* ── HEADER BAR ────────────────────────────────────────────────── */}
       <header
