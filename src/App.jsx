@@ -20,6 +20,9 @@ import {
   Check,
   Lock,
   RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -129,6 +132,8 @@ export default function App() {
   const [showEnvironmentBox, setShowEnvironmentBox] = useState(true);
   const [showHRDistances, setShowHRDistances] = useState(true);
   const [showEndInningBases, setShowEndInningBases] = useState(true); // default ON: solid lines for end of inning bases
+  const [blankMode, setBlankMode] = useState('none'); // 'none', 'prefill' (roster pre-filled), 'full' (empty slots)
+  const [userZoomScale, setUserZoomScale] = useState(null); // null = auto fit to page, number = custom scale
 
   // Advanced Stats & Visual Art Toggles (OFF by default as requested)
   const [showStatcast, setShowStatcast] = useState(false);
@@ -154,7 +159,13 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview'); // 'preview' or 'controls'
   const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
   const [posterHeight, setPosterHeight] = useState(0);
+
+  // ─── Pan & Drag State ───────────────────────────────────────────────────────
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const graphicRef = useRef(null);
   const dateInputRef = useRef(null);
@@ -172,27 +183,34 @@ export default function App() {
 
   useEffect(() => {
     if (!mainContainerRef.current) return;
-    const updateWidth = () => {
+    const updateSize = () => {
       if (mainContainerRef.current) {
         setContainerWidth(mainContainerRef.current.clientWidth);
+        setContainerHeight(mainContainerRef.current.clientHeight);
       }
     };
-    updateWidth();
-    const ro = new ResizeObserver(() => updateWidth());
+    updateSize();
+    const ro = new ResizeObserver(() => updateSize());
     ro.observe(mainContainerRef.current);
     return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
     if (!graphicWrapperRef.current) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) {
-        setPosterHeight(entry.contentRect.height);
+    const updatePosterHeight = () => {
+      const wrapper = graphicWrapperRef.current;
+      if (!wrapper) return;
+      const child = wrapper.firstElementChild;
+      const unscaledH = child ? child.offsetHeight : wrapper.offsetHeight;
+      if (unscaledH > 400) {
+        setPosterHeight(unscaledH);
       }
-    });
+    };
+    updatePosterHeight();
+    const ro = new ResizeObserver(() => updatePosterHeight());
     ro.observe(graphicWrapperRef.current);
     return () => ro.disconnect();
-  }, [scorecardData, orientation, theme, fontStyle]);
+  }, [scorecardData, orientation, theme, fontStyle, activeTab, blankMode]);
 
   useEffect(() => {
     fetchGamesForDate(selectedDate);
@@ -232,6 +250,10 @@ export default function App() {
     if (params.has('extra')) setShowExtraEvents(params.get('extra') === '1');
     if (params.has('endinning')) setShowEndInningBases(params.get('endinning') === '1');
     if (params.has('watermark')) setShowTeamWatermarks(params.get('watermark') === '1');
+    if (params.has('blank')) {
+      const bVal = params.get('blank');
+      setBlankMode(bVal === 'full' ? 'full' : bVal === 'prefill' || bVal === '1' ? 'prefill' : 'none');
+    }
   }, []);
 
   const handleCopyShareLink = () => {
@@ -251,6 +273,7 @@ export default function App() {
       url.searchParams.set('extra', showExtraEvents ? '1' : '0');
       url.searchParams.set('endinning', showEndInningBases ? '1' : '0');
       url.searchParams.set('watermark', showTeamWatermarks ? '1' : '0');
+      if (blankMode !== 'none') url.searchParams.set('blank', blankMode);
 
       navigator.clipboard.writeText(url.toString());
       setToastMessage('Shareable link copied to clipboard!');
@@ -271,6 +294,8 @@ export default function App() {
     setShowEnvironmentBox(true);
     setShowHRDistances(true);
     setShowEndInningBases(true);
+    setBlankMode('none');
+    setUserZoomScale(null);
     setShowStatcast(false);
     setShowMomentum(false);
     setShowMvp(false);
@@ -542,27 +567,60 @@ export default function App() {
     textAlign: 'center',
   });
 
-  // Calculate poster base width & auto scale for mobile
   const isLandscape = orientation === 'landscape';
   const totalInningsCount = Math.max(9, scorecardData?.gameInfo?.totalInnings || 9);
   const posterBaseWidth = isLandscape
     ? Math.max(1360, 1360 + (totalInningsCount - 9) * 90) + 20
     : 940;
 
-  let activeScale = 1;
-  const paddingOffset = isMobile ? 24 : 48;
-  if (containerWidth > 0 && containerWidth < posterBaseWidth + paddingOffset) {
-    activeScale = Math.max(0.18, (containerWidth - paddingOffset) / posterBaseWidth);
-  }
+  // Calculate true Fit-to-Page scale evaluating both width and height boundaries
+  let fitScale = 1;
+  const padW = isMobile ? 16 : 48;
+  const padH = isMobile ? 16 : 48;
+  const availW = containerWidth > 0 ? Math.max(200, containerWidth - padW) : posterBaseWidth;
+  const availH = containerHeight > 0 ? Math.max(200, containerHeight - padH) : 800;
+
+  const defaultPosterH = isLandscape ? 940 : 1680;
+  const actualPosterHeight = posterHeight > 500 ? posterHeight : defaultPosterH;
+
+  const scaleX = availW / posterBaseWidth;
+  const scaleY = availH / actualPosterHeight;
+
+  fitScale = Math.min(1, scaleX, scaleY);
+  if (fitScale < 0.15) fitScale = 0.15;
+
+  const activeScale = userZoomScale !== null ? userZoomScale : fitScale;
+
+  // Native Mac Trackpad Pinch-to-Zoom handling (Ctrl + Wheel)
+  useEffect(() => {
+    const el = mainContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomDelta = -e.deltaY * 0.005;
+        setUserZoomScale(prev => {
+          const base = prev !== null ? prev : fitScale;
+          const next = Math.min(3.0, Math.max(0.2, base + zoomDelta));
+          return Math.round(next * 100) / 100;
+        });
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [fitScale]);
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
       fontFamily: "'Inter', sans-serif",
       backgroundColor: c.bgBody,
       color: c.textMain,
       display: 'flex',
       flexDirection: 'column',
+      overflow: 'hidden',
     }}>
 
       {/* ── HEADER BAR ────────────────────────────────────────────────── */}
@@ -729,6 +787,58 @@ export default function App() {
             {!isMobile && 'Share'}
           </button>
 
+          {/* Zoom & Fit Controls in Header Bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '2px',
+            height: '34px',
+            backgroundColor: c.bgCard,
+            padding: '2px 4px', borderRadius: '6px',
+            border: `1px solid ${c.border}`,
+          }}>
+            <button
+              onClick={() => setUserZoomScale(prev => Math.max(0.2, Math.round(((prev !== null ? prev : fitScale) - 0.1) * 100) / 100))}
+              title="Zoom Out (-)"
+              style={{
+                width: '26px', height: '26px', border: 'none', background: 'none',
+                color: c.textHead, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '4px', opacity: 0.85,
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <ZoomOut style={{ width: '13px', height: '13px' }} />
+            </button>
+            <button
+              onClick={() => { setUserZoomScale(null); setPanOffset({ x: 0, y: 0 }); }}
+              title="Click to Reset Fit to Screen"
+              style={{
+                height: '26px', padding: '0 6px', border: 'none', background: 'none',
+                color: userZoomScale === null ? c.accent : c.textHead,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                borderRadius: '4px', fontSize: '11px', fontWeight: 700,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Maximize2 style={{ width: '11px', height: '11px', opacity: 0.8 }} />
+              <span>{Math.round(activeScale * 100)}%</span>
+            </button>
+            <button
+              onClick={() => setUserZoomScale(prev => Math.min(3.0, Math.round(((prev !== null ? prev : fitScale) + 0.1) * 100) / 100))}
+              title="Zoom In (+)"
+              style={{
+                width: '26px', height: '26px', border: 'none', background: 'none',
+                color: c.textHead, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '4px', opacity: 0.85,
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <ZoomIn style={{ width: '13px', height: '13px' }} />
+            </button>
+          </div>
+
           {/* Reset Defaults Button */}
           <button
             onClick={handleGlobalReset}
@@ -790,20 +900,26 @@ export default function App() {
       {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
       <div style={{
         flex: 1,
+        height: 'calc(100vh - 54px)',
+        maxHeight: 'calc(100vh - 54px)',
         display: 'flex',
-        overflow: isMobile ? 'hidden' : 'visible',
+        overflow: 'hidden',
+        position: 'relative',
       }}>
 
         {/* ── SIDEBAR CONTROLS ──────────────────────────────────────────── */}
         {(!isMobile || mobileView === 'controls') && (
           <aside style={{
             width: isMobile ? '100%' : '280px',
+            height: '100%',
+            maxHeight: '100%',
             flexShrink: 0,
             backgroundColor: c.bgSidebar,
             borderRight: isMobile ? 'none' : `1px solid ${c.border}`,
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
           }}>
 
             {/* Tab Nav */}
@@ -978,6 +1094,50 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* 3-Way Segmented Control: Scorecard Data Mode */}
+                  <div>
+                    <label style={{
+                      display: 'block', marginBottom: '6px',
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: c.textMuted,
+                    }}>
+                      Scorecard Mode
+                    </label>
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                      padding: '3px', borderRadius: '8px', border: `1px solid ${c.border}`,
+                    }}>
+                      {[
+                        { id: 'none', label: 'Live Game', sub: 'MLB Plays' },
+                        { id: 'prefill', label: 'Partially Filled', sub: 'Blank Sheet' },
+                        { id: 'full', label: 'Full Blank', sub: 'Empty Sheet' },
+                      ].map(mode => {
+                        const active = blankMode === mode.id;
+                        return (
+                          <button
+                            key={mode.id}
+                            onClick={() => setBlankMode(mode.id)}
+                            style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              padding: '6px 2px', borderRadius: '6px', cursor: 'pointer',
+                              border: active ? `1px solid ${c.border}` : '1px solid transparent',
+                              backgroundColor: active ? c.bgCard : 'transparent',
+                              color: active ? c.textHead : c.textMuted,
+                              fontWeight: active ? 700 : 500,
+                              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <span style={{ fontSize: '10px', lineHeight: 1.2 }}>{mode.label}</span>
+                            <span style={{ fontSize: '8.5px', opacity: 0.7, marginTop: '2px', fontFamily: "'Inter', sans-serif" }}>{mode.sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Game summary badge */}
                   {scorecardData && !loading && (
                     <div style={{
@@ -996,7 +1156,7 @@ export default function App() {
                             {scorecardData.gameInfo.awayTeam.abbreviation}
                           </div>
                           <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                            {scorecardData.gameInfo.awayTeam.hits}H • {scorecardData.gameInfo.awayTeam.errors}E
+                            {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
                           </div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
@@ -1006,10 +1166,10 @@ export default function App() {
                             color: c.textHead, letterSpacing: '-0.02em',
                             lineHeight: 1,
                           }}>
-                            {scorecardData.gameInfo.awayTeam.score}–{scorecardData.gameInfo.homeTeam.score}
+                            {blankMode !== 'none' ? '— vs —' : `${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
                           </div>
                           <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '2px', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
-                            Final
+                            {blankMode !== 'none' ? (blankMode === 'full' ? 'Full Blank Sheet' : 'Partially Filled Blank') : 'Final'}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -1017,7 +1177,7 @@ export default function App() {
                             {scorecardData.gameInfo.homeTeam.abbreviation}
                           </div>
                           <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                            {scorecardData.gameInfo.homeTeam.hits}H • {scorecardData.gameInfo.homeTeam.errors}E
+                            {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
                           </div>
                         </div>
                       </div>
@@ -1689,17 +1849,44 @@ export default function App() {
         {(!isMobile || mobileView === 'preview') && (
           <main
             ref={mainContainerRef}
+            onMouseDown={(e) => {
+              if (e.button !== 0) return;
+              setIsDragging(true);
+              dragStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+            }}
+            onMouseMove={(e) => {
+              if (!isDragging) return;
+              setPanOffset({ x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y });
+            }}
+            onMouseUp={() => setIsDragging(false)}
+            onMouseLeave={() => setIsDragging(false)}
+            onTouchStart={(e) => {
+              if (e.touches.length === 1) {
+                setIsDragging(true);
+                dragStartRef.current = { x: e.touches[0].clientX - panOffset.x, y: e.touches[0].clientY - panOffset.y };
+              }
+            }}
+            onTouchMove={(e) => {
+              if (isDragging && e.touches.length === 1) {
+                setPanOffset({ x: e.touches[0].clientX - dragStartRef.current.x, y: e.touches[0].clientY - dragStartRef.current.y });
+              }
+            }}
+            onTouchEnd={() => setIsDragging(false)}
             style={{
               flex: 1,
+              height: '100%',
               overflowY: 'auto',
-              WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
               backgroundColor: c.bgCanvas,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: isMobile ? 'center' : 'flex-start',
-              justifyContent: isMobile ? 'flex-start' : 'flex-start',
-              padding: isMobile ? '12px 12px 100px 12px' : '32px 24px 60px 24px',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              padding: isMobile ? '12px 12px 100px 12px' : '24px 24px 60px 24px',
               position: 'relative',
+              cursor: isDragging ? 'grabbing' : (userZoomScale !== null || activeScale !== fitScale ? 'grab' : 'default'),
+              userSelect: isDragging ? 'none' : 'auto',
             }}
           >
             {loading && !scorecardData ? (
@@ -1721,19 +1908,21 @@ export default function App() {
               }}>
                 {error}
               </div>
-            ) : isMobile ? (
-              /* Mobile Scaled Container */
+            ) : (
               <div style={{
                 width: '100%',
                 display: 'flex',
                 justifyContent: 'center',
-                height: activeScale < 1 && posterHeight > 0 ? `${posterHeight * activeScale + 32}px` : 'auto',
+                alignItems: 'flex-start',
                 overflow: 'visible',
-                transition: 'height 0.2s ease',
+                minHeight: `${actualPosterHeight * activeScale + 40}px`,
+                paddingBottom: '60px',
+                transition: 'opacity 0.25s ease',
+                opacity: loading ? 0.65 : 1,
               }}>
                 {loading && (
                   <div style={{
-                    position: 'fixed', top: '72px', right: '16px', zIndex: 100,
+                    position: 'fixed', top: '72px', right: '32px', zIndex: 100,
                     display: 'flex', alignItems: 'center', gap: '8px',
                     backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
                     backdropFilter: 'blur(8px)',
@@ -1750,10 +1939,11 @@ export default function App() {
                   ref={graphicWrapperRef}
                   style={{
                     width: `${posterBaseWidth}px`,
-                    transform: activeScale !== 1 ? `scale(${activeScale})` : 'none',
+                    height: `${actualPosterHeight}px`,
+                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${activeScale})`,
                     transformOrigin: 'top center',
                     flexShrink: 0,
-                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
                   <ScorecardGraphic
@@ -1778,59 +1968,11 @@ export default function App() {
                     showMvp={showMvp}
                     showExtraEvents={showExtraEvents}
                     showTeamWatermarks={showTeamWatermarks}
+                    isBlankScorecard={blankMode}
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
                   />
                 </div>
-              </div>
-            ) : (
-              /* Original PC Untouched Container */
-              <div style={{
-                position: 'relative', width: '100%',
-                display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
-                transition: 'opacity 0.25s ease',
-                opacity: loading ? 0.65 : 1,
-              }}>
-                {loading && (
-                  <div style={{
-                    position: 'fixed', top: '72px', right: '32px', zIndex: 100,
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    backgroundColor: isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)',
-                    backdropFilter: 'blur(8px)',
-                    padding: '7px 14px', borderRadius: '20px',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-                    border: `1px solid ${c.border}`,
-                    fontSize: '11.5px', fontWeight: 600, color: c.textHead,
-                  }}>
-                    <RefreshCw style={{ width: '13px', height: '13px', animation: 'spin 1s linear infinite' }} />
-                    Updating Scorecard…
-                  </div>
-                )}
-                <ScorecardGraphic
-                  data={scorecardData}
-                  theme={theme}
-                  fontStyle={fontStyle}
-                  showEraserMarks={showEraserMarks}
-                  eraserSeed={eraserSeed}
-                  customHeadline={customHeadline}
-                  customSubtitle={customSubtitle}
-                  customFooter={customFooter}
-                  customNotes={customNotes}
-                  graphicRef={graphicRef}
-                  orientation={orientation}
-                  showPitchBreakdown={showPitchBreakdown}
-                  showDecisions={showDecisions}
-                  showEnvironmentBox={showEnvironmentBox}
-                  showHRDistances={showHRDistances}
-                  showEndInningBases={showEndInningBases}
-                  showStatcast={showStatcast}
-                  showMomentum={showMomentum}
-                  showMvp={showMvp}
-                  showExtraEvents={showExtraEvents}
-                  showTeamWatermarks={showTeamWatermarks}
-                  customAwayColor={customAwayColor}
-                  customHomeColor={customHomeColor}
-                />
               </div>
             )}
           </main>

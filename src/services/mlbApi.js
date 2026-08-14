@@ -331,6 +331,9 @@ export function processMLBData(data, gamePkOverride) {
         if (!batterInningPlays[batterId]) {
           batterInningPlays[batterId] = {};
         }
+        if (!batterInningPlays[batterId][inn]) {
+          batterInningPlays[batterId][inn] = [];
+        }
 
         const parsed = parsePlayNotation(play);
 
@@ -368,7 +371,7 @@ export function processMLBData(data, gamePkOverride) {
         parsed.atBatBases = atBatBases;
         parsed.bases = Math.max(parsed.bases || 0, endInningBases);
 
-        batterInningPlays[batterId][inn] = parsed;
+        batterInningPlays[batterId][inn].push(parsed);
       });
     });
 
@@ -440,6 +443,10 @@ export function processMLBData(data, gamePkOverride) {
       return parts[parts.length - 1].toUpperCase();
     };
 
+    let teamTotalPitches = 0;
+    let teamTotalStrikes = 0;
+    let teamTotalBalls = 0;
+
     const pitchersList = pitcherIds.slice(0, 7).map(id => {
       const p = playerMap[`ID${id}`] || {};
       const name = extractLastName(p.person?.fullName);
@@ -457,6 +464,11 @@ export function processMLBData(data, gamePkOverride) {
         totalBalls += inn.balls || 0;
       });
 
+      const calcTotalPitches = totalPitches || (gp.numberOfPitches ?? null);
+      if (calcTotalPitches) teamTotalPitches += calcTotalPitches;
+      teamTotalStrikes += totalStrikes;
+      teamTotalBalls += totalBalls;
+
       return {
         id,
         number,
@@ -468,7 +480,7 @@ export function processMLBData(data, gamePkOverride) {
         earnedRuns: gp.earnedRuns ?? null,
         walks: gp.baseOnBalls ?? null,
         pitchesByInning,
-        totalPitches: totalPitches || (gp.numberOfPitches ?? null),
+        totalPitches: calcTotalPitches,
         totalStrikes,
         totalBalls,
       };
@@ -500,15 +512,14 @@ export function processMLBData(data, gamePkOverride) {
       const player = playerMap[`ID${id}`];
       if (!player) return;
 
-      // player.position is the game-specific position; primaryPosition is career default
       const pos = player.position?.abbreviation || player.primaryPosition?.abbreviation || '—';
       const jerseyNumber = player.jerseyNumber || '—';
       const fullName = player.person?.fullName || '';
       const lastName = extractBatterLastName(fullName);
       const battingOrderNum = player.battingOrder ? parseInt(player.battingOrder) : null;
 
-      // A starter has a battingOrder ending in 00 (100, 200 … 900)
       const isStarter = battingOrderNum !== null && battingOrderNum % 100 === 0;
+      const playerPlaysMap = batterInningPlays[id] || {};
 
       if (isStarter && starters.length < 9) {
         starters.push({
@@ -518,11 +529,9 @@ export function processMLBData(data, gamePkOverride) {
           name: lastName,
           fullName,
           subNotes: [],
-          plays: batterInningPlays[id] || {}
+          plays: playerPlaysMap
         });
       } else if (!isStarter && battingOrderNum !== null && !pitcherIdSet.has(id)) {
-        // Substitute — link to the correct batting order slot
-        // battingOrder 301 → slot index 2 (3rd spot, 0-indexed)
         const slotIndex = Math.floor(battingOrderNum / 100) - 1;
         const subLetter = subLetters[subCharIndex % subLetters.length];
         subCharIndex++;
@@ -532,9 +541,16 @@ export function processMLBData(data, gamePkOverride) {
         const targetStarter = starters[slotIndex];
         if (targetStarter) {
           targetStarter.subNotes.push(subLetter);
-          const subPlays = batterInningPlays[id] || {};
-          Object.keys(subPlays).forEach(inn => {
-            targetStarter.plays[inn] = subPlays[inn];
+          Object.keys(playerPlaysMap).forEach(inn => {
+            const existing = targetStarter.plays[inn];
+            const subPlayList = playerPlaysMap[inn];
+            if (!existing) {
+              targetStarter.plays[inn] = subPlayList;
+            } else {
+              const existingArr = Array.isArray(existing) ? existing : [existing];
+              const subArr = Array.isArray(subPlayList) ? subPlayList : [subPlayList];
+              targetStarter.plays[inn] = [...existingArr, ...subArr];
+            }
           });
         }
       }
@@ -555,7 +571,10 @@ export function processMLBData(data, gamePkOverride) {
     return {
       batters: starters,
       pitchers: pitchersList,
-      subsList
+      subsList,
+      teamTotalPitches,
+      teamTotalStrikes,
+      teamTotalBalls,
     };
   }
 

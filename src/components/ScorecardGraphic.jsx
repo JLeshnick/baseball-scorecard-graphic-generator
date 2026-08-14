@@ -28,6 +28,7 @@ export default function ScorecardGraphic({
   showMvp = false, // default OFF as requested
   showExtraEvents = true,
   showTeamWatermarks = true,
+  isBlankScorecard = false,
   customAwayColor,
   customAwaySecondary,
   customHomeColor,
@@ -388,6 +389,9 @@ export default function ScorecardGraphic({
         display: 'inline-flex', alignItems: 'baseline',
         fontFamily: "'Caveat', cursive",
         fontFeatureSettings: '"calt" 1, "liga" 1, "clig" 1',
+        paddingRight: '6px',
+        marginRight: '2px',
+        overflow: 'visible',
         ...extraStyle
       }}>
         {text.split('').map((char, charIdx) => {
@@ -397,8 +401,8 @@ export default function ScorecardGraphic({
           for (let i = 0; i < seed.length; i++) {
             hash = (hash << 5) - hash + seed.charCodeAt(i);
           }
-          const deg = (((hash % 15) - 7) * 0.1).toFixed(2); // -0.7deg to +0.7deg (subtle & clean!)
-          const yShift = (((hash % 7) - 3) * 0.1).toFixed(2); // -0.3px to +0.3px
+          const deg = (((hash % 15) - 7) * 0.08).toFixed(2); // -0.56deg to +0.56deg (subtle & clean!)
+          const yShift = (((hash % 7) - 3) * 0.08).toFixed(2); // -0.24px to +0.24px
 
           return (
             <span
@@ -406,6 +410,7 @@ export default function ScorecardGraphic({
               style={{
                 display: 'inline-block',
                 transform: `rotate(${deg}deg) translateY(${yShift}px)`,
+                paddingRight: charIdx === text.length - 1 ? '4px' : '0px',
               }}
             >
               {char}
@@ -504,8 +509,8 @@ export default function ScorecardGraphic({
   });
 
   // ─── Play Cell Renderer ───────────────────────────────────────────────────────
-  const renderPlayCell = (play, isHome = false, cellKey = '') => {
-    if (!play || !play.code) {
+  const renderSinglePlayCell = (play, isHome = false, cellKey = '') => {
+    if (!play || !play.code || isBlankMode) {
       return (
         <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {renderEraserOverlay(cellKey)}
@@ -556,7 +561,6 @@ export default function ScorecardGraphic({
       const b4Dash = !isHR && atBatReach >= 4;
 
       // Subsequent end-of-inning segments (atBatReach+1 to endInningReach): drawn as SOLID
-      // ONLY if showEndInningBases is true!
       const b1Solid = isHR || (showEndInningBases && endInningReach >= 1 && 1 > atBatReach);
       const b2Solid = isHR || (showEndInningBases && endInningReach >= 2 && 2 > atBatReach);
       const b3Solid = isHR || (showEndInningBases && endInningReach >= 3 && 3 > atBatReach);
@@ -567,7 +571,6 @@ export default function ScorecardGraphic({
           {renderEraserOverlay(cellKey)}
           {extraEventBadge}
           <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
-            {/* Diamond outline */}
             <polygon
               points="20,37 37,20 20,3 3,20"
               fill={isHR ? hitColor : 'none'}
@@ -575,23 +578,18 @@ export default function ScorecardGraphic({
               stroke={t.cellDiamondStroke}
               strokeWidth="1.0"
             />
-            {/* Base 1 (Home to 1B) */}
             {b1Solid && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b1Dash && <line x1="20" y1="37" x2="37" y2="20" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
 
-            {/* Base 2 (1B to 2B) */}
             {b2Solid && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b2Dash && <line x1="37" y1="20" x2="20" y2="3" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
 
-            {/* Base 3 (2B to 3B) */}
             {b3Solid && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b3Dash && <line x1="20" y1="3" x2="3" y2="20" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
 
-            {/* Base 4 (3B to Home) */}
             {b4Solid && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b4Dash && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
           </svg>
-          {/* Code badge */}
           <span style={{
             position: 'absolute',
             bottom: '2px',
@@ -668,6 +666,37 @@ export default function ScorecardGraphic({
     );
   };
 
+  const renderPlayCell = (playOrArray, isHome = false, cellKey = '') => {
+    if (isBlankMode) {
+      return renderSinglePlayCell(null, isHome, cellKey);
+    }
+    if (Array.isArray(playOrArray)) {
+      if (playOrArray.length === 0) return renderSinglePlayCell(null, isHome, cellKey);
+      if (playOrArray.length === 1) return renderSinglePlayCell(playOrArray[0], isHome, cellKey);
+
+      // Multiple plate appearances in the same inning (batting through the order)
+      return (
+        <div style={{
+          display: 'flex', width: '100%', height: '100%',
+          alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden'
+        }}>
+          {playOrArray.map((p, idx) => (
+            <div
+              key={idx}
+              style={{
+                flex: 1, height: '100%', minWidth: 0,
+                borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderLight}` : 'none'
+              }}
+            >
+              {renderSinglePlayCell(p, isHome, `${cellKey}_multi_${idx}`)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return renderSinglePlayCell(playOrArray, isHome, cellKey);
+  };
+
   // ─── Pitcher row stats renderer ───────────────────────────────────────────────
   const renderPitcherRow = (p, isHome) => {
     const ks = p.strikeouts?.length || 0;
@@ -723,6 +752,9 @@ export default function ScorecardGraphic({
     );
   };
 
+  const isBlankMode = isBlankScorecard === 'prefill' || isBlankScorecard === 'full' || isBlankScorecard === true;
+  const isFullyBlank = isBlankScorecard === 'full';
+
   // ─── Scorecard table for one team ────────────────────────────────────────────
   const renderTeamScorecard = (teamData, isHome) => {
     const teamInfo = isHome ? gameInfo.homeTeam : gameInfo.awayTeam;
@@ -731,8 +763,34 @@ export default function ScorecardGraphic({
     const accentSecondary = isHome ? t.homeSecondary : t.awaySecondary;
     const inningRuns = isHome ? homeInningRuns : awayInningRuns;
 
+    const battersToRender = isFullyBlank
+      ? Array.from({ length: 9 }, (_, i) => ({
+          id: `blank-b-${i}`,
+          jerseyNumber: ' ',
+          position: ' ',
+          name: ' ',
+          plays: {}
+        }))
+      : teamData.batters;
+
+    const pitchersToRender = isFullyBlank
+      ? Array.from({ length: 4 }, (_, i) => ({
+          id: `blank-p-${i}`,
+          number: ' ',
+          name: ' ',
+          ip: ' ',
+          hits: null,
+          runs: null,
+          earnedRuns: null,
+          walks: null,
+          strikeouts: [],
+          totalPitches: null,
+          pitchesByInning: {}
+        }))
+      : teamData.pitchers;
+
     const POS_COL_W = 32;
-    const NAME_COL_W = 116;
+    const NAME_COL_W = 126;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 42;
 
@@ -770,9 +828,9 @@ export default function ScorecardGraphic({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {/* R H E */}
             {[
-              { label: 'R', val: teamInfo.score },
-              { label: 'H', val: teamInfo.hits },
-              { label: 'E', val: teamInfo.errors },
+              { label: 'R', val: isBlankMode ? '—' : teamInfo.score },
+              { label: 'H', val: isBlankMode ? '—' : teamInfo.hits },
+              { label: 'E', val: isBlankMode ? '—' : teamInfo.errors },
             ].map(stat => (
               <div key={stat.label} style={{ textAlign: 'center', minWidth: '26px' }}>
                 <div style={{ fontSize: '7px', fontWeight: 700, color: accentText, opacity: 0.6, letterSpacing: '0.08em', fontFamily: t.fontSans }}>
@@ -786,7 +844,7 @@ export default function ScorecardGraphic({
           </div>
         </div>
 
-        {/* Scorecard grid — no overflow clipping so export captures full width */}
+        {/* Scorecard grid */}
         <div>
           <table style={{
             width: '100%', borderCollapse: 'collapse',
@@ -824,9 +882,27 @@ export default function ScorecardGraphic({
             </thead>
 
             <tbody>
-              {teamData.batters.map((b, bIdx) => {
-                const nameLen = b.name ? b.name.length : 0;
-                const batterFontSize = nameLen > 11 ? '9px' : nameLen > 8 ? '10px' : (t.isHandwritten ? '13px' : '11px');
+              {battersToRender.map((b, bIdx) => {
+                const nameStr = b.name || '';
+                const nameLen = nameStr.length;
+                let batterFontSize = '11px';
+                let letterSpacing = '0.01em';
+                if (nameLen > 16) {
+                  batterFontSize = '7.5px';
+                  letterSpacing = '-0.03em';
+                } else if (nameLen > 13) {
+                  batterFontSize = '8px';
+                  letterSpacing = '-0.02em';
+                } else if (nameLen > 10) {
+                  batterFontSize = '9px';
+                  letterSpacing = '-0.01em';
+                } else if (nameLen > 7) {
+                  batterFontSize = '10px';
+                }
+                if (t.isHandwritten) {
+                  batterFontSize = nameLen > 14 ? '9px' : nameLen > 10 ? '11px' : '12.5px';
+                }
+
                 return (
                   <tr key={b.id || bIdx} style={{
                     borderBottom: `1px solid ${t.borderLight}`,
@@ -834,7 +910,7 @@ export default function ScorecardGraphic({
                   }}>
                     {/* Vertical 90-degree rotated BATTING Sidebar (spans all batter rows) */}
                     {bIdx === 0 && (
-                      <td rowSpan={teamData.batters.length} style={{
+                      <td rowSpan={battersToRender.length} style={{
                         width: '22px', backgroundColor: t.tableHeaderBg,
                         borderRight: `1.5px solid ${t.borderStrong}`,
                         textAlign: 'center', verticalAlign: 'middle',
@@ -855,7 +931,7 @@ export default function ScorecardGraphic({
                       </td>
                     )}
 
-                    {/* Position code (P, C, 1B, 2B, 3B, SS, LF, CF, RF, DH, PH, PR) */}
+                    {/* Position code */}
                     <td style={{
                       textAlign: 'center',
                       verticalAlign: 'middle',
@@ -875,18 +951,21 @@ export default function ScorecardGraphic({
                       </span>
                     </td>
 
-                    {/* Batter Name (Never truncates with ...) */}
+                    {/* Batter Name (Safely contained without spilling out into grid) */}
                     <td style={{
                       verticalAlign: 'middle',
-                      padding: '4px 6px',
+                      padding: '3px 4px 3px 6px',
                       borderRight: `1.5px solid ${t.borderStrong}`,
+                      overflow: 'visible',
+                      maxWidth: `${NAME_COL_W - 22}px`,
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: '18px', height: '18px', borderRadius: '50%',
-                          backgroundColor: accentColor, color: accentText,
-                          fontSize: '7.5px', fontWeight: 800,
+                          width: '16px', height: '16px', borderRadius: '50%',
+                          backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
+                          color: accentText,
+                          fontSize: '7px', fontWeight: 800,
                           fontFamily: t.fontMono,
                           flexShrink: 0,
                         }}>
@@ -894,10 +973,14 @@ export default function ScorecardGraphic({
                         </span>
                         <span style={{
                           fontSize: batterFontSize, fontWeight: 700,
-                          letterSpacing: '0.02em', textTransform: 'uppercase',
+                          letterSpacing: letterSpacing, textTransform: 'uppercase',
                           fontFamily: t.fontHeader,
                           color: t.textPrimary,
                           whiteSpace: 'nowrap',
+                          overflow: 'visible',
+                          paddingRight: '6px',
+                          display: 'inline-block',
+                          lineHeight: 1.1,
                         }}>
                           {renderHandwrittenText(b.name, 'batter_' + b.id)}
                         </span>
@@ -906,7 +989,7 @@ export default function ScorecardGraphic({
 
                     {/* Inning cells */}
                     {innings.map(n => {
-                      const play = b.plays?.[n];
+                      const play = isBlankMode ? null : b.plays?.[n];
                       return (
                         <td key={n} style={{
                           textAlign: 'center', verticalAlign: 'middle',
@@ -938,7 +1021,7 @@ export default function ScorecardGraphic({
                   RUNS
                 </td>
                 {innings.map(n => {
-                  const runs = inningRuns[n];
+                  const runs = isBlankMode ? '—' : inningRuns[n];
                   const hasRuns = runs !== undefined && runs !== '-' && runs !== 'x' && parseInt(runs) > 0;
                   return (
                     <td key={n} style={{
@@ -964,8 +1047,8 @@ export default function ScorecardGraphic({
           </table>
         </div>
 
-        {/* Unified Pitching Table */}
-        {teamData.pitchers && teamData.pitchers.length > 0 && (
+        {/* Pitching Table */}
+        {pitchersToRender && pitchersToRender.length > 0 && (
           <div style={{
             backgroundColor: t.pitchingBg,
             borderTop: `2px solid ${t.borderStrong}`,
@@ -980,18 +1063,18 @@ export default function ScorecardGraphic({
                 {innings.map(n => <col key={n} style={{ width: `${INNING_COL_W}px` }} />)}
               </colgroup>
               <tbody>
-                {teamData.pitchers.map((p, pIdx) => {
+                {pitchersToRender.map((p, pIdx) => {
                   const ks = p.strikeouts?.length || 0;
                   const color = isHome ? t.homeColor : t.awayColor;
                   const text = isHome ? t.homeText : t.awayText;
                   return (
-                    <tr key={p.id} style={{
+                    <tr key={p.id || pIdx} style={{
                       borderBottom: `1px solid ${t.borderLight}`,
                       backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
                     }}>
-                      {/* Vertical 90-degree rotated PITCHING Sidebar (spans all pitcher rows) */}
+                      {/* Vertical 90-degree rotated PITCHING Sidebar */}
                       {pIdx === 0 && (
-                        <td rowSpan={teamData.pitchers.length} style={{
+                        <td rowSpan={pitchersToRender.length + 1} style={{
                           width: '22px', backgroundColor: t.tableHeaderBg,
                           borderRight: `1.5px solid ${t.borderStrong}`,
                           textAlign: 'center', verticalAlign: 'middle',
@@ -1011,7 +1094,7 @@ export default function ScorecardGraphic({
                           </div>
                         </td>
                       )}
-                      {/* Name & Core Pitching Stats (Stacked so names never truncate to ...) */}
+                      {/* Name & Core Pitching Stats including Total Pitch Count */}
                       <td style={{
                         padding: '3px 6px',
                         borderRight: `1.5px solid ${t.borderStrong}`,
@@ -1022,7 +1105,8 @@ export default function ScorecardGraphic({
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                               width: '15px', height: '15px', borderRadius: '50%',
-                              backgroundColor: color, color: text,
+                              backgroundColor: p.number && p.number.trim() ? color : 'transparent',
+                              color: text,
                               fontSize: '7px', fontWeight: 800,
                               fontFamily: t.fontMono, flexShrink: 0,
                             }}>
@@ -1036,23 +1120,37 @@ export default function ScorecardGraphic({
                               {p.name}
                             </span>
                           </div>
-                          {/* Stats summary row: IP H R ER BB K */}
+                          {/* Stats summary row: IP H R ER BB K and Total Pitches (P) */}
                           <div style={{
                             fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
                             color: t.textMuted, whiteSpace: 'nowrap',
-                            display: 'flex', gap: '4px', opacity: 0.9,
+                            display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.95, flexWrap: 'nowrap',
+                            marginTop: '2px',
                           }}>
-                            <span>{p.ip || '—'}IP</span>
-                            <span>{p.hits ?? 0}H</span>
-                            <span>{p.runs ?? 0}R</span>
-                            <span>{p.earnedRuns ?? 0}ER</span>
-                            <span>{p.walks ?? 0}BB</span>
-                            <span style={{ color: t.textPrimary, fontWeight: 800 }}>{ks}K</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong> H</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong> R</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong> ER</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong> BB</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong> K</span>
+                            <span style={{ opacity: 0.35 }}>•</span>
+                            <span style={{
+                              color: t.textPrimary, fontWeight: 900,
+                              backgroundColor: t.borderLight, padding: '1px 5px', borderRadius: '3px',
+                              display: 'inline-flex', alignItems: 'center', gap: '2px',
+                            }}>
+                              {isBlankMode ? '—' : (p.totalPitches != null ? <><span>{p.totalPitches}</span><span style={{ opacity: 0.75 }}>P</span></> : '—')}
+                            </span>
                           </div>
                         </div>
                       </td>
 
-                      {/* Inning Pitch Breakdown Cells (or blank space if disabled) */}
+                      {/* Inning Pitch Breakdown Cells with Uppercase S / B and Clear Spacing */}
                       {innings.map(n => {
                         if (!showPitchBreakdown) {
                           return (
@@ -1069,13 +1167,17 @@ export default function ScorecardGraphic({
                             borderLeft: `1px solid ${t.borderLight}`,
                             verticalAlign: 'middle',
                           }}>
-                            {cnt > 0 ? (
+                            {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
                                 <span style={{ fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
                                   {cnt}
                                 </span>
-                                <span style={{ fontFamily: t.fontMono, fontSize: '6px', fontWeight: 600, color: t.textMuted, opacity: 0.8, display: 'block', marginTop: '1px' }}>
-                                  {str}s/{bll}b
+                                <span style={{ fontFamily: t.fontMono, fontSize: '6.5px', fontWeight: 800, color: t.textMuted, opacity: 0.85, display: 'block', marginTop: '1.5px', letterSpacing: '0.04em' }}>
+                                  <span style={{ color: t.textPrimary, fontWeight: 900 }}>{str}</span>
+                                  <span style={{ color: t.textMuted, fontWeight: 800, marginLeft: '2px', marginRight: '4px' }}>S</span>
+                                  <span style={{ color: t.textMuted, opacity: 0.4 }}>•</span>
+                                  <span style={{ color: t.textPrimary, fontWeight: 900, marginLeft: '4px' }}>{bll}</span>
+                                  <span style={{ color: t.textMuted, fontWeight: 800, marginLeft: '2px' }}>B</span>
                                 </span>
                               </div>
                             ) : (
@@ -1087,11 +1189,36 @@ export default function ScorecardGraphic({
                     </tr>
                   );
                 })}
+                {/* Total Pitch Count Summary Row */}
+                <tr style={{ backgroundColor: t.tableHeaderBg, borderTop: `1.5px solid ${t.borderStrong}` }}>
+                  <td style={{
+                    padding: '3px 6px', fontSize: '8px', fontWeight: 800, fontFamily: t.fontMono,
+                    color: t.textMuted, textTransform: 'uppercase', whiteSpace: 'nowrap'
+                  }}>
+                    <span>TOTAL PITCHES: </span>
+                    {isBlankMode ? (
+                      '—'
+                    ) : (
+                      <>
+                        <strong style={{ color: t.textPrimary, fontWeight: 900 }}>{teamData.teamTotalPitches || 0}</strong>
+                        <span style={{ marginLeft: '6px', opacity: 0.7 }}>(</span>
+                        <strong style={{ color: t.textPrimary, fontWeight: 900 }}>{teamData.teamTotalStrikes || 0}</strong>
+                        <span style={{ marginLeft: '2px', marginRight: '6px', fontWeight: 800 }}>S</span>
+                        <span style={{ opacity: 0.4 }}>•</span>
+                        <strong style={{ color: t.textPrimary, fontWeight: 900, marginLeft: '6px' }}>{teamData.teamTotalBalls || 0}</strong>
+                        <span style={{ marginLeft: '2px', fontWeight: 800 }}>B</span>
+                        <span style={{ marginLeft: '1px', opacity: 0.7 }}>)</span>
+                      </>
+                    )}
+                  </td>
+                  {innings.map(n => (
+                    <td key={n} style={{ borderLeft: `1px solid ${t.borderLight}` }} />
+                  ))}
+                </tr>
               </tbody>
             </table>
           </div>
         )}
-
 
       </div>
     );
@@ -1163,40 +1290,31 @@ export default function ScorecardGraphic({
             borderBottom: `2px solid ${t.borderStrong}`,
             position: 'relative', overflow: 'hidden',
           }}>
-            {/* Team Watermarks behind headers */}
-            {showTeamWatermarks && (
-              <>
-                <div style={{
-                  position: 'absolute', left: '10px', top: '-10px',
-                  fontSize: '90px', fontWeight: 900, fontFamily: t.fontHeader,
-                  color: t.awayColor, opacity: 0.05, pointerEvents: 'none', zIndex: 0,
-                  userSelect: 'none', lineHeight: 1,
-                }}>
-                  {away.abbreviation}
-                </div>
-                <div style={{
-                  position: 'absolute', right: '10px', top: '-10px',
-                  fontSize: '90px', fontWeight: 900, fontFamily: t.fontHeader,
-                  color: t.homeColor, opacity: 0.05, pointerEvents: 'none', zIndex: 0,
-                  userSelect: 'none', lineHeight: 1,
-                }}>
-                  {home.abbreviation}
-                </div>
-              </>
-            )}
-
             {/* Away team */}
             <div style={{
               flex: 1, padding: '18px 20px 14px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
               borderRight: `1px solid ${t.borderLight}`, position: 'relative', zIndex: 1,
+              overflow: 'hidden',
             }}>
+              {/* Team Watermark behind away header */}
+              {showTeamWatermarks && (
+                <div style={{
+                  position: 'absolute', left: '10px', top: '-5px',
+                  fontSize: '65px', fontWeight: 900, fontFamily: "'Bebas Neue', 'Oswald', sans-serif",
+                  color: t.awayColor, opacity: 0.07, pointerEvents: 'none', zIndex: 0,
+                  userSelect: 'none', lineHeight: 1, whiteSpace: 'nowrap',
+                  maxWidth: 'calc(100% - 20px)', overflow: 'hidden',
+                }}>
+                  {away.abbreviation}
+                </div>
+              )}
               <div style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: t.awayColor,
                 fontFamily: t.fontSans,
-                marginBottom: '2px',
+                marginBottom: '2px', position: 'relative', zIndex: 1,
               }}>
                 VISITING TEAM
               </div>
@@ -1206,25 +1324,25 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: awayWon ? t.awayColor : t.textPrimary,
-                lineHeight: 1,
+                color: awayWon && !isBlankMode ? t.awayColor : t.textPrimary,
+                lineHeight: 1, position: 'relative', zIndex: 1,
               }}>
                 {away.name}
               </div>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                marginTop: '6px',
+                marginTop: '6px', position: 'relative', zIndex: 1,
               }}>
                 <span style={{
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: awayWon ? t.awayColor : t.textSecondary,
+                  color: awayWon && !isBlankMode ? t.awayColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
-                  {away.score}
+                  {isBlankMode ? '—' : away.score}
                 </span>
-                {awayWon && (
+                {awayWon && !isBlankMode && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.awayColor, fontFamily: t.fontSans,
@@ -1261,8 +1379,9 @@ export default function ScorecardGraphic({
                 fontSize: '8px', fontWeight: 700,
                 color: t.textMuted,
                 letterSpacing: '0.04em',
+                textTransform: 'uppercase',
               }}>
-                {gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL'}
+                {isBlankMode ? 'GAME DAY' : (gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL')}
               </div>
             </div>
 
@@ -1271,13 +1390,26 @@ export default function ScorecardGraphic({
               flex: 1, padding: '18px 20px 14px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end',
               borderLeft: `1px solid ${t.borderLight}`, position: 'relative', zIndex: 1,
+              overflow: 'hidden',
             }}>
+              {/* Team Watermark behind home header */}
+              {showTeamWatermarks && (
+                <div style={{
+                  position: 'absolute', right: '10px', top: '-5px',
+                  fontSize: '65px', fontWeight: 900, fontFamily: "'Bebas Neue', 'Oswald', sans-serif",
+                  color: t.homeColor, opacity: 0.07, pointerEvents: 'none', zIndex: 0,
+                  userSelect: 'none', lineHeight: 1, whiteSpace: 'nowrap',
+                  maxWidth: 'calc(100% - 20px)', overflow: 'hidden', textAlign: 'right',
+                }}>
+                  {home.abbreviation}
+                </div>
+              )}
               <div style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: t.homeColor,
                 fontFamily: t.fontSans,
-                marginBottom: '2px',
+                marginBottom: '2px', position: 'relative', zIndex: 1,
               }}>
                 HOME TEAM
               </div>
@@ -1287,27 +1419,27 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: homeWon ? t.homeColor : t.textPrimary,
+                color: homeWon && !isBlankMode ? t.homeColor : t.textPrimary,
                 lineHeight: 1,
-                textAlign: 'right',
+                textAlign: 'right', position: 'relative', zIndex: 1,
               }}>
                 {home.name}
               </div>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 marginTop: '6px',
-                flexDirection: 'row-reverse',
+                flexDirection: 'row-reverse', position: 'relative', zIndex: 1,
               }}>
                 <span style={{
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: homeWon ? t.homeColor : t.textSecondary,
+                  color: homeWon && !isBlankMode ? t.homeColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
-                  {home.score}
+                  {isBlankMode ? '—' : home.score}
                 </span>
-                {homeWon && (
+                {homeWon && !isBlankMode && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.homeColor, fontFamily: t.fontSans,
