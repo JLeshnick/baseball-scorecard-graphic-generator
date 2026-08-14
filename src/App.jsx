@@ -198,13 +198,10 @@ export default function App() {
 
   // Sync iOS meta theme-color, html, and body background color with top header background color
   useEffect(() => {
-    let meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.name = 'theme-color';
-      document.head.appendChild(meta);
-    }
-    meta.content = c.bgHeader;
+    const lightMeta = document.querySelector('#theme-color-meta-light');
+    if (lightMeta) lightMeta.content = c.bgHeader;
+    const darkMeta = document.querySelector('#theme-color-meta-dark');
+    if (darkMeta) darkMeta.content = c.bgHeader;
     if (typeof document !== 'undefined') {
       document.documentElement.style.backgroundColor = c.bgHeader;
       document.body.style.backgroundColor = c.bgHeader;
@@ -737,7 +734,7 @@ export default function App() {
 
   return (
     <div style={{
-      height: '100vh',
+      height: '100dvh',
       fontFamily: "'Inter', sans-serif",
       backgroundColor: c.bgHeader,
       color: c.textMain,
@@ -1051,8 +1048,8 @@ export default function App() {
       {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
       <div style={{
         flex: 1,
-        height: isMobile ? 'calc(100vh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100vh - 54px)',
-        maxHeight: isMobile ? 'calc(100vh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100vh - 54px)',
+        height: isMobile ? 'calc(100dvh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100dvh - 54px)',
+        maxHeight: isMobile ? 'calc(100dvh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100dvh - 54px)',
         display: 'flex',
         overflow: 'hidden',
         position: 'relative',
