@@ -593,11 +593,12 @@ export default function App() {
 
   const activeScale = userZoomScale !== null ? userZoomScale : fitScale;
 
-  // Native Mac Trackpad Pinch-to-Zoom handling (Ctrl + Wheel)
+  // Native Non-Passive Touch & Wheel Controller for 60FPS Mobile Pan & Pinch Zoom
   useEffect(() => {
-    const el = mainContainerRef.current;
-    if (!el) return;
+    const mainEl = mainContainerRef.current;
+    if (!mainEl) return;
 
+    // Trackpad Wheel Pinch Zoom (Desktop / Mac)
     const handleWheel = (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -610,9 +611,85 @@ export default function App() {
       }
     };
 
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [fitScale]);
+    // Touch Pinch & Pan (Mobile / Tablet)
+    let touchStartDist = 0;
+    let touchStartScale = 1;
+    let touchStartPos = { x: 0, y: 0 };
+    let currentPan = { ...panOffset };
+    let currentScale = activeScale;
+    let isPinching = false;
+    let isPanning = false;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        isPanning = true;
+        isPinching = false;
+        touchStartPos = {
+          x: e.touches[0].clientX - currentPan.x,
+          y: e.touches[0].clientY - currentPan.y,
+        };
+      } else if (e.touches.length === 2) {
+        isPanning = false;
+        isPinching = true;
+        touchStartDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        touchStartScale = userZoomScale !== null ? userZoomScale : fitScale;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (isPanning && e.touches.length === 1) {
+        e.preventDefault();
+        const nextX = e.touches[0].clientX - touchStartPos.x;
+        const nextY = e.touches[0].clientY - touchStartPos.y;
+        currentPan = { x: nextX, y: nextY };
+        if (graphicWrapperRef.current) {
+          graphicWrapperRef.current.style.transform = `translate(${nextX}px, ${nextY}px) scale(${currentScale})`;
+        }
+      } else if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (touchStartDist > 0) {
+          const ratio = dist / touchStartDist;
+          const nextScale = Math.min(3.0, Math.max(0.2, touchStartScale * ratio));
+          currentScale = nextScale;
+          if (graphicWrapperRef.current) {
+            graphicWrapperRef.current.style.transform = `translate(${currentPan.x}px, ${currentPan.y}px) scale(${nextScale})`;
+          }
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isPanning) {
+        isPanning = false;
+        setPanOffset(currentPan);
+      }
+      if (isPinching) {
+        isPinching = false;
+        setUserZoomScale(Math.round(currentScale * 100) / 100);
+      }
+    };
+
+    mainEl.addEventListener('wheel', handleWheel, { passive: false });
+    mainEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+    mainEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    mainEl.addEventListener('touchend', handleTouchEnd);
+    mainEl.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      mainEl.removeEventListener('wheel', handleWheel);
+      mainEl.removeEventListener('touchstart', handleTouchStart);
+      mainEl.removeEventListener('touchmove', handleTouchMove);
+      mainEl.removeEventListener('touchend', handleTouchEnd);
+      mainEl.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [fitScale, activeScale, panOffset, userZoomScale]);
 
   return (
     <div style={{
@@ -629,7 +706,7 @@ export default function App() {
       <header style={{
         borderBottom: `1px solid ${c.border}`,
         backgroundColor: c.bgHeader,
-        padding: isMobile ? '0 16px' : '0 24px',
+        padding: isMobile ? '0 12px' : '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -637,19 +714,17 @@ export default function App() {
         flexShrink: 0,
       }}>
         {/* Logo / Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div>
             <div style={{
-              fontWeight: 800, fontSize: isMobile ? '13px' : '14px', letterSpacing: '-0.02em',
+              fontWeight: 800, fontSize: isMobile ? '12.5px' : '14px', letterSpacing: '-0.02em',
               color: c.textHead, lineHeight: 1.1, whiteSpace: 'nowrap',
             }}>
               MLB Scorecard Studio
             </div>
-            {!isMobile && (
-              <div style={{ fontSize: '10px', color: c.textMuted, letterSpacing: '0.02em' }}>
-                Scorecard Graphic Art Generator
-              </div>
-            )}
+            <div style={{ fontSize: isMobile ? '8.5px' : '10px', color: c.textMuted, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+              Scorecard Graphic Art Generator
+            </div>
           </div>
         </div>
 
@@ -881,27 +956,27 @@ export default function App() {
             </button>
           )}
 
-          {/* Desktop-Only GitHub Link */}
-          {!isMobile && (
-            <a
-              href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                width: '34px', height: '34px', borderRadius: '6px',
-                border: `1px solid ${c.border}`,
-                backgroundColor: c.bgCard, color: c.textMuted,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', textDecoration: 'none',
-                transition: 'color 0.15s',
-              }}
-              title="View on GitHub"
-              onMouseEnter={e => e.currentTarget.style.color = c.textHead}
-              onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
-            >
-              <GithubIcon style={{ width: '15px', height: '15px' }} />
-            </a>
-          )}
+          {/* GitHub Link (Visible on Desktop and Mobile) */}
+          <a
+            href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              width: isMobile ? '32px' : '34px',
+              height: isMobile ? '32px' : '34px',
+              borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
+            title="View on GitHub"
+            onMouseEnter={e => e.currentTarget.style.color = c.textHead}
+            onMouseLeave={e => e.currentTarget.style.color = c.textMuted}
+          >
+            <GithubIcon style={{ width: '14px', height: '14px' }} />
+          </a>
 
           {/* Light / Dark Mode Toggle */}
           <button
