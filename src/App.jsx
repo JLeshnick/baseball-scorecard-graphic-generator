@@ -173,6 +173,29 @@ export default function App() {
   const dateInputRef = useRef(null);
   const mainContainerRef = useRef(null);
   const graphicWrapperRef = useRef(null);
+  const headerRef = useRef(null);
+
+  // Sync iOS meta theme-color with top header background color for Dynamic Island
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = c.bgHeader;
+  }, [c.bgHeader]);
+
+  // Block touch swipe pull-down on top header bar to prevent iOS page rubberbanding
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const preventSwipe = (e) => {
+      e.preventDefault();
+    };
+    el.addEventListener('touchmove', preventSwipe, { passive: false });
+    return () => el.removeEventListener('touchmove', preventSwipe);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -703,16 +726,25 @@ export default function App() {
     }}>
 
       {/* ── HEADER BAR ────────────────────────────────────────────────── */}
-      <header style={{
-        borderBottom: `1px solid ${c.border}`,
-        backgroundColor: c.bgHeader,
-        padding: isMobile ? '0 12px' : '0 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: '54px',
-        flexShrink: 0,
-      }}>
+      <header
+        ref={headerRef}
+        style={{
+          borderBottom: `1px solid ${c.border}`,
+          backgroundColor: c.bgHeader,
+          paddingLeft: isMobile ? '12px' : '24px',
+          paddingRight: isMobile ? '12px' : '24px',
+          paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : '0px',
+          height: isMobile ? 'calc(54px + env(safe-area-inset-top, 0px))' : '54px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          boxSizing: 'border-box',
+          width: '100%',
+          position: 'relative',
+          zIndex: 50,
+        }}
+      >
         {/* Logo / Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div>
@@ -729,24 +761,10 @@ export default function App() {
         </div>
 
         {/* Header Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '5px' : '8px' }}>
 
-          {/* Export Button (Mobile Quick PNG Export / Desktop Dropdown) */}
-          {isMobile ? (
-            <button
-              onClick={handleExportPNG}
-              disabled={exporting || loading}
-              style={{
-                width: '32px', height: '32px', borderRadius: '6px', border: `1px solid ${c.border}`,
-                backgroundColor: c.btnPrimary, color: c.btnPrimaryText,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                opacity: (exporting || loading) ? 0.5 : 1,
-              }}
-              title="Quick Export PNG"
-            >
-              <Download style={{ width: '14px', height: '14px' }} />
-            </button>
-          ) : (
+          {/* Desktop-Only Export Dropdown */}
+          {!isMobile && (
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setExportOpen(o => !o)}
@@ -1000,8 +1018,8 @@ export default function App() {
       {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
       <div style={{
         flex: 1,
-        height: 'calc(100vh - 54px)',
-        maxHeight: 'calc(100vh - 54px)',
+        height: isMobile ? 'calc(100vh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100vh - 54px)',
+        maxHeight: isMobile ? 'calc(100vh - 54px - env(safe-area-inset-top, 0px))' : 'calc(100vh - 54px)',
         display: 'flex',
         overflow: 'hidden',
         position: 'relative',

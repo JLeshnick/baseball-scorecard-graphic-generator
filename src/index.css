@@ -12,7 +12,10 @@ html, body, #root {
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 
