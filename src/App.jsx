@@ -743,17 +743,17 @@ export default function App() {
       overflow: 'hidden',
     }}>
 
-      {/* iOS Safe Area Status Bar Background Filler */}
-      {isMobile && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0,
-          height: 'env(safe-area-inset-top, 24px)',
-          backgroundColor: c.bgHeader,
-          zIndex: 999,
-          pointerEvents: 'none',
-        }} />
-      )}
+      {/* Safari Website Tinting Trick - Force Safari to sample the header color for the status bar */}
+      <div style={{
+        position: 'fixed',
+        top: '-100px',
+        left: 0,
+        right: 0,
+        height: '100px',
+        backgroundColor: c.bgHeader,
+        zIndex: 999,
+        pointerEvents: 'none',
+      }} />
 
       {/* ── HEADER BAR ────────────────────────────────────────────────── */}
       <header
@@ -1004,11 +1004,33 @@ export default function App() {
             </button>
           )}
 
+          {/* Light / Dark Mode Toggle */}
+          <button
+            onClick={() => setAppTheme(isDark ? 'light' : 'dark')}
+            style={{
+              width: isMobile ? '32px' : '34px',
+              height: isMobile ? '32px' : '34px',
+              borderRadius: '6px',
+              border: `1px solid ${c.border}`,
+              backgroundColor: c.bgCard, color: c.textMuted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+            title="Toggle Dark/Light Mode"
+          >
+            {isDark ? <Sun style={{ width: '14px', height: '14px' }} /> : <Moon style={{ width: '14px', height: '14px' }} />}
+          </button>
+
           {/* GitHub Link (Visible on Desktop and Mobile) */}
           <a
             href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => {
+              if (isMobile) {
+                e.preventDefault();
+                window.open("https://github.com/JLeshnick/baseball-scorecard-graphic-generator", "_blank");
+              }
+            }}
             style={{
               width: isMobile ? '32px' : '34px',
               height: isMobile ? '32px' : '34px',
@@ -1025,22 +1047,6 @@ export default function App() {
           >
             <GithubIcon style={{ width: '14px', height: '14px' }} />
           </a>
-
-          {/* Light / Dark Mode Toggle */}
-          <button
-            onClick={() => setAppTheme(isDark ? 'light' : 'dark')}
-            style={{
-              width: isMobile ? '32px' : '34px',
-              height: isMobile ? '32px' : '34px',
-              borderRadius: '6px',
-              border: `1px solid ${c.border}`,
-              backgroundColor: c.bgCard, color: c.textMuted,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}
-            title="Toggle Dark/Light Mode"
-          >
-            {isDark ? <Sun style={{ width: '14px', height: '14px' }} /> : <Moon style={{ width: '14px', height: '14px' }} />}
-          </button>
         </div>
       </header>
 
