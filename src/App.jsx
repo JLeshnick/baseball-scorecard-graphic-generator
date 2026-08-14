@@ -113,6 +113,27 @@ const POSTER_THEMES = [
 export default function App() {
   const [appTheme, setAppTheme] = useState('light'); // 'dark' or 'light'
   const isDark = appTheme === 'dark';
+
+  // Theme colors (defined at top so all hooks, effects & helpers access c safely)
+  const c = {
+    bgBody:           isDark ? '#09090b' : '#f0ede8',
+    bgHeader:         isDark ? '#111113' : '#ffffff',
+    bgSidebar:        isDark ? '#111113' : '#ffffff',
+    bgCanvas:         isDark ? '#1a1a1e' : '#e8e3dc',
+    bgInput:          isDark ? '#09090b' : '#f8f8f8',
+    bgCard:           isDark ? '#18181c' : '#ffffff',
+    border:           isDark ? '#27272a' : '#e4e0da',
+    borderFocus:      isDark ? '#52525b' : '#b0a898',
+    textMain:         isDark ? '#e4e4e7' : '#1c1917',
+    textHead:         isDark ? '#fafafa' : '#0c0a09',
+    textMuted:        isDark ? '#71717a' : '#78716c',
+    btnPrimary:       isDark ? '#fafafa' : '#1c1917',
+    btnPrimaryText:   isDark ? '#09090b' : '#fafafa',
+    btnSecondary:     isDark ? '#27272a' : '#e4e0da',
+    btnSecondaryText: isDark ? '#e4e4e7' : '#1c1917',
+    accent:           isDark ? '#6366f1' : '#4f46e5',
+    accentBg:         isDark ? 'rgba(99,102,241,0.15)' : 'rgba(79,70,229,0.08)',
+  };
   const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
   const [availableGames, setAvailableGames] = useState([]);
   const [selectedGamePk, setSelectedGamePk] = useState('');
@@ -552,27 +573,6 @@ export default function App() {
     if (dateInputRef.current?.showPicker) {
       dateInputRef.current.showPicker();
     }
-  };
-
-  // Theme colors
-  const c = {
-    bgBody:    isDark ? '#09090b' : '#f0ede8',
-    bgHeader:  isDark ? '#111113' : '#ffffff',
-    bgSidebar: isDark ? '#111113' : '#ffffff',
-    bgCanvas:  isDark ? '#1a1a1e' : '#e8e3dc',
-    bgInput:   isDark ? '#09090b' : '#f8f8f8',
-    bgCard:    isDark ? '#18181c' : '#ffffff',
-    border:    isDark ? '#27272a' : '#e4e0da',
-    borderFocus: isDark ? '#52525b' : '#b0a898',
-    textMain:  isDark ? '#e4e4e7' : '#1c1917',
-    textHead:  isDark ? '#fafafa' : '#0c0a09',
-    textMuted: isDark ? '#71717a' : '#78716c',
-    btnPrimary:    isDark ? '#fafafa' : '#1c1917',
-    btnPrimaryText: isDark ? '#09090b' : '#fafafa',
-    btnSecondary:  isDark ? '#27272a' : '#e4e0da',
-    btnSecondaryText: isDark ? '#e4e4e7' : '#1c1917',
-    accent: isDark ? '#6366f1' : '#4f46e5',
-    accentBg: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(79,70,229,0.08)',
   };
 
   const tabStyle = (id) => ({
