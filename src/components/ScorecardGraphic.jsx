@@ -1264,8 +1264,9 @@ export default function ScorecardGraphic({
   // ─── Main Render ──────────────────────────────────────────────────────────────
   const away = gameInfo.awayTeam;
   const home = gameInfo.homeTeam;
-  const awayWon = away.score > home.score;
-  const homeWon = home.score > away.score;
+  const isFinal = gameInfo.isFinal !== undefined ? gameInfo.isFinal : true;
+  const awayWon = isFinal && !isBlankMode && away.score > home.score;
+  const homeWon = isFinal && !isBlankMode && home.score > away.score;
 
   const isLandscape = orientation === 'landscape';
   const totalInningsCount = Math.max(9, gameInfo.totalInnings || 9);
@@ -1361,7 +1362,7 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: awayWon && !isBlankMode ? t.awayColor : t.textPrimary,
+                color: awayWon ? t.awayColor : t.textPrimary,
                 lineHeight: 1, position: 'relative', zIndex: 1,
               }}>
                 {away.name}
@@ -1374,12 +1375,12 @@ export default function ScorecardGraphic({
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: awayWon && !isBlankMode ? t.awayColor : t.textSecondary,
+                  color: awayWon ? t.awayColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
                   {isBlankMode ? '—' : away.score}
                 </span>
-                {awayWon && !isBlankMode && (
+                {awayWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.awayColor, fontFamily: t.fontSans,
@@ -1413,12 +1414,14 @@ export default function ScorecardGraphic({
               }} />
               <div style={{
                 fontFamily: t.fontMono,
-                fontSize: '8px', fontWeight: 700,
-                color: t.textMuted,
+                fontSize: '8.5px', fontWeight: 800,
+                color: gameInfo.isLive ? '#ef4444' : t.textMuted,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
               }}>
-                {isBlankMode ? 'GAME DAY' : (gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL')}
+                {isBlankMode ? 'GAME DAY' : (gameInfo.statusDisplay || (gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL'))}
               </div>
             </div>
 
@@ -1456,7 +1459,7 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: homeWon && !isBlankMode ? t.homeColor : t.textPrimary,
+                color: homeWon ? t.homeColor : t.textPrimary,
                 lineHeight: 1,
                 textAlign: 'right', position: 'relative', zIndex: 1,
               }}>
@@ -1471,12 +1474,12 @@ export default function ScorecardGraphic({
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: homeWon && !isBlankMode ? t.homeColor : t.textSecondary,
+                  color: homeWon ? t.homeColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
                   {isBlankMode ? '—' : home.score}
                 </span>
-                {homeWon && !isBlankMode && (
+                {homeWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.homeColor, fontFamily: t.fontSans,

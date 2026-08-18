@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   searchGamesByDate,
-  fetchGameScorecardData
+  fetchGameScorecardData,
+  findMostRecentRaysGame
 } from './services/mlbApi';
 import ScorecardGraphic from './components/ScorecardGraphic';
 import PlayEntryModal from './components/PlayEntryModal';
@@ -336,6 +337,16 @@ export default function App() {
       const bVal = params.get('blank');
       setBlankMode(bVal === 'full' ? 'full' : bVal === 'prefill' || bVal === '1' ? 'prefill' : 'none');
     }
+
+    // Auto-detect most recently completed/live Rays game if no query params provided
+    if (!pDate && !pGame) {
+      findMostRecentRaysGame().then((recent) => {
+        if (recent && recent.date && recent.gamePk) {
+          setSelectedDate(recent.date);
+          setSelectedGamePk(recent.gamePk);
+        }
+      }).catch(err => console.warn('Could not auto-select recent Rays game:', err));
+    }
   }, []);
 
   const handleCopyShareLink = () => {
@@ -418,11 +429,18 @@ export default function App() {
       const games = await searchGamesByDate(dateStr);
       setAvailableGames(games);
       if (games.length > 0) {
-        const TB_NAMES = ['Tampa Bay Rays', 'Tampa Bay'];
-        const tbGame = games.find(g =>
-          TB_NAMES.some(n => g.awayTeam.includes(n) || g.homeTeam.includes(n))
-        );
-        setSelectedGamePk((tbGame || games[0]).gamePk);
+        // Keep current selected game if it exists on this date
+        const currentExists = games.find(g => String(g.gamePk) === String(selectedGamePk));
+        if (currentExists) {
+          // keep existing selection
+        } else {
+          const TB_NAMES = ['Tampa Bay Rays', 'Tampa Bay', 'Rays'];
+          const tbGame = games.find(g =>
+            TB_NAMES.some(n => g.awayTeam.includes(n) || g.homeTeam.includes(n))
+          );
+          const firstCompletedOrLive = games.find(g => g.isFinal || g.isLive);
+          setSelectedGamePk(String((tbGame || firstCompletedOrLive || games[0]).gamePk));
+        }
       } else {
         setError(`No games found for ${dateStr}. Try another date.`);
         setSelectedGamePk('813049');
@@ -1300,7 +1318,7 @@ export default function App() {
               {activeTab === 'game' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                  {/* Top Mode Segmented Switch: MLB Matchup vs Live Scorebook */}
+                  {/* Top Mode Segmented Switch: MLB Games vs Custom Scorebook */}
                   <div>
                     <label style={{
                       display: 'block', marginBottom: '6px',
@@ -1308,7 +1326,7 @@ export default function App() {
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       color: c.textMuted,
                     }}>
-                      Scoring Mode
+                      Mode
                     </label>
                     <div style={{
                       display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px',
@@ -1318,6 +1336,7 @@ export default function App() {
                       <button
                         onClick={() => {
                           setScoringMode('mlb');
+                          setBlankMode('none');
                           if (selectedGamePk) loadGameData(selectedGamePk);
                         }}
                         style={{
@@ -1333,7 +1352,7 @@ export default function App() {
                         }}
                       >
                         <Calendar style={{ width: '13px', height: '13px' }} />
-                        MLB Schedule
+                        Official MLB Games
                       </button>
 
                       <button
@@ -1357,12 +1376,12 @@ export default function App() {
                         }}
                       >
                         <BookOpen style={{ width: '13px', height: '13px', color: '#3b82f6' }} />
-                        Live Scorebook
+                        Custom Scorebook
                       </button>
                     </div>
                   </div>
 
-                  {/* ── MODE 1: MLB SCHEDULE (AUTO) ─────────────────────────── */}
+                  {/* ── MODE 1: OFFICIAL MLB GAMES (AUTO) ────────────────────── */}
                   {scoringMode === 'mlb' && (
                     <>
                       <div>
@@ -1401,7 +1420,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* MLB Game selector dropdown */}
+                      {/* Grouped MLB Game selector dropdown */}
                       <div>
                         <label style={{
                           display: 'block', marginBottom: '6px',
@@ -1450,109 +1469,114 @@ export default function App() {
                               <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setGameSelectOpen(false)} />
                               <div style={{
                                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                                maxHeight: '240px', overflowY: 'auto',
+                                maxHeight: '280px', overflowY: 'auto',
                                 backgroundColor: c.bgCard,
                                 border: `1px solid ${c.border}`,
                                 borderRadius: '8px',
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
                                 zIndex: 100,
-                                padding: '4px',
+                                padding: '6px 4px',
                               }}>
-                                {availableGames.map((g) => {
-                                  const isSelected = String(g.gamePk) === String(selectedGamePk);
+                                {(() => {
+                                  const liveGames = availableGames.filter(g => g.isLive);
+                                  const finalGames = availableGames.filter(g => g.isFinal);
+                                  const upcomingGames = availableGames.filter(g => !g.isLive && !g.isFinal);
+
+                                  const renderGameItem = (g) => {
+                                    const isSelected = String(g.gamePk) === String(selectedGamePk);
+                                    return (
+                                      <button
+                                        key={g.gamePk}
+                                        onClick={() => {
+                                          setSelectedGamePk(String(g.gamePk));
+                                          setGameSelectOpen(false);
+                                        }}
+                                        style={{
+                                          display: 'block', width: '100%', padding: '7px 9px',
+                                          borderRadius: '5px', border: 'none',
+                                          backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
+                                          textAlign: 'left', cursor: 'pointer',
+                                          transition: 'background 0.1s',
+                                          marginBottom: '2px',
+                                        }}
+                                        onMouseEnter={e => {
+                                          if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                                        }}
+                                        onMouseLeave={e => {
+                                          if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                        }}
+                                      >
+                                        <div style={{
+                                          fontSize: '11.5px', fontWeight: 700,
+                                          color: isSelected ? c.textHead : c.textMain,
+                                          lineHeight: 1.3, wordBreak: 'break-word',
+                                        }}>
+                                          {g.awayTeam} @ {g.homeTeam}
+                                        </div>
+                                        <div style={{
+                                          fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
+                                          display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                                        }}>
+                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
+                                            {g.awayScore ?? '?'} – {g.homeScore ?? '?'}
+                                          </span>
+                                          <span style={{
+                                            fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700,
+                                            color: g.isLive ? '#ef4444' : c.textMuted,
+                                          }}>
+                                            {g.isLive ? `🔴 ${g.inningText || 'Live'}` : (g.inningText || g.status || 'Final')}
+                                          </span>
+                                        </div>
+                                        <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
+                                          {g.venue}
+                                        </div>
+                                      </button>
+                                    );
+                                  };
+
                                   return (
-                                    <button
-                                      key={g.gamePk}
-                                      onClick={() => {
-                                        setSelectedGamePk(String(g.gamePk));
-                                        setGameSelectOpen(false);
-                                      }}
-                                      style={{
-                                        display: 'block', width: '100%', padding: '7px 9px',
-                                        borderRadius: '5px', border: 'none',
-                                        backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
-                                        textAlign: 'left', cursor: 'pointer',
-                                        transition: 'background 0.1s',
-                                        marginBottom: '2px',
-                                      }}
-                                      onMouseEnter={e => {
-                                        if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-                                      }}
-                                      onMouseLeave={e => {
-                                        if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                                      }}
-                                    >
-                                      <div style={{
-                                        fontSize: '11.5px', fontWeight: 700,
-                                        color: isSelected ? c.textHead : c.textMain,
-                                        lineHeight: 1.3, wordBreak: 'break-word',
-                                      }}>
-                                        {g.awayTeam} @ {g.homeTeam}
-                                      </div>
-                                      <div style={{
-                                        fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
-                                        display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
-                                      }}>
-                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
-                                          {g.awayScore ?? '?'} – {g.homeScore ?? '?'}
-                                        </span>
-                                        <span style={{ fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-                                          {g.status || 'Final'}
-                                        </span>
-                                      </div>
-                                      <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
-                                        {g.venue}
-                                      </div>
-                                    </button>
+                                    <>
+                                      {liveGames.length > 0 && (
+                                        <div style={{ marginBottom: '8px' }}>
+                                          <div style={{
+                                            fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                            color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px',
+                                          }}>
+                                            <span>🔴 Live & In Progress ({liveGames.length})</span>
+                                          </div>
+                                          {liveGames.map(renderGameItem)}
+                                        </div>
+                                      )}
+
+                                      {finalGames.length > 0 && (
+                                        <div style={{ marginBottom: '8px' }}>
+                                          <div style={{
+                                            fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                            color: c.textMuted, padding: '4px 8px',
+                                          }}>
+                                            Completed Games ({finalGames.length})
+                                          </div>
+                                          {finalGames.map(renderGameItem)}
+                                        </div>
+                                      )}
+
+                                      {upcomingGames.length > 0 && (
+                                        <div>
+                                          <div style={{
+                                            fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                            color: c.textMuted, padding: '4px 8px',
+                                          }}>
+                                            Upcoming / Scheduled ({upcomingGames.length})
+                                          </div>
+                                          {upcomingGames.map(renderGameItem)}
+                                        </div>
+                                      )}
+                                    </>
                                   );
-                                })}
+                                })()}
                               </div>
                             </>
                           )}
-                        </div>
-                      </div>
-
-                      {/* 3-Way Segmented Control: Scorecard Data Mode */}
-                      <div>
-                        <label style={{
-                          display: 'block', marginBottom: '6px',
-                          fontSize: '11px', fontWeight: 600,
-                          letterSpacing: '0.06em', textTransform: 'uppercase',
-                          color: c.textMuted,
-                        }}>
-                          Sheet Format
-                        </label>
-                        <div style={{
-                          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px',
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                          padding: '3px', borderRadius: '8px', border: `1px solid ${c.border}`,
-                        }}>
-                          {[
-                            { id: 'none', label: 'Completed', sub: 'MLB Plays' },
-                            { id: 'prefill', label: 'Roster Sheet', sub: 'Empty Plays' },
-                            { id: 'full', label: 'Full Blank', sub: 'Empty Sheet' },
-                          ].map(mode => {
-                            const active = blankMode === mode.id;
-                            return (
-                              <button
-                                key={mode.id}
-                                onClick={() => setBlankMode(mode.id)}
-                                style={{
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                  padding: '6px 2px', borderRadius: '6px', cursor: 'pointer',
-                                  border: active ? `1px solid ${c.border}` : '1px solid transparent',
-                                  backgroundColor: active ? c.bgCard : 'transparent',
-                                  color: active ? c.textHead : c.textMuted,
-                                  fontWeight: active ? 700 : 500,
-                                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                                  transition: 'all 0.15s ease',
-                                }}
-                              >
-                                <span style={{ fontSize: '10px', lineHeight: 1.2 }}>{mode.label}</span>
-                                <span style={{ fontSize: '8.5px', opacity: 0.7, marginTop: '2px', fontFamily: "'Inter', sans-serif" }}>{mode.sub}</span>
-                              </button>
-                            );
-                          })}
                         </div>
                       </div>
 
@@ -1574,7 +1598,7 @@ export default function App() {
                                 {scorecardData.gameInfo.awayTeam.abbreviation}
                               </div>
                               <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                                {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
+                                {`${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
                               </div>
                             </div>
                             <div style={{ textAlign: 'center' }}>
@@ -1584,10 +1608,13 @@ export default function App() {
                                 color: c.textHead, letterSpacing: '-0.02em',
                                 lineHeight: 1,
                               }}>
-                                {blankMode !== 'none' ? '— vs —' : `${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
+                                {`${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
                               </div>
-                              <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '2px', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
-                                {blankMode !== 'none' ? (blankMode === 'full' ? 'Full Blank Sheet' : 'Partially Filled Blank') : 'Final'}
+                              <div style={{
+                                fontSize: '9px', marginTop: '2px', letterSpacing: '0.06em', fontWeight: 700, textTransform: 'uppercase',
+                                color: scorecardData.gameInfo.isLive ? '#ef4444' : c.textMuted,
+                              }}>
+                                {scorecardData.gameInfo.statusDisplay || 'Final'}
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
@@ -1595,27 +1622,10 @@ export default function App() {
                                 {scorecardData.gameInfo.homeTeam.abbreviation}
                               </div>
                               <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                                {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
+                                {`${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
                               </div>
                             </div>
                           </div>
-
-                          <button
-                            onClick={handleStartLiveFromCurrentGame}
-                            style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                              width: '100%', padding: '8px 10px',
-                              borderRadius: '6px', cursor: 'pointer',
-                              border: 'none',
-                              backgroundColor: '#3b82f6', color: '#ffffff',
-                              fontSize: '11.5px', fontWeight: 700,
-                              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <BookOpen style={{ width: '14px', height: '14px' }} />
-                            Score This Matchup Live ➔
-                          </button>
 
                           <button
                             onClick={handleCopyShareLink}
@@ -1637,7 +1647,7 @@ export default function App() {
                     </>
                   )}
 
-                  {/* ── MODE 2: INTERACTIVE LIVE SCOREBOOK ────────────────────── */}
+                  {/* ── MODE 2: CUSTOM / LIVE SCOREBOOK ──────────────────────── */}
                   {scoringMode === 'live' && scorecardData && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
@@ -1784,18 +1794,34 @@ export default function App() {
                           <ChevronRight style={{ width: '12px', height: '12px', color: c.textMuted }} />
                         </button>
 
-                        <button
-                          onClick={handleStartNewBlankGame}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '8px 10px', borderRadius: '6px',
-                            border: `1px solid ${c.border}`, backgroundColor: c.bgInput, color: c.textMuted,
-                            fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
-                          }}
-                        >
-                          <Plus style={{ width: '14px', height: '14px' }} />
-                          <span>New Blank Game</span>
-                        </button>
+                        {/* Templates row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '2px' }}>
+                          <button
+                            onClick={handleStartNewBlankGame}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                              padding: '7px 8px', borderRadius: '6px',
+                              border: `1px solid ${c.border}`, backgroundColor: c.bgInput, color: c.textMain,
+                              fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            <Plus style={{ width: '13px', height: '13px' }} />
+                            <span>New Blank Sheet</span>
+                          </button>
+
+                          <button
+                            onClick={handleStartLiveFromCurrentGame}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                              padding: '7px 8px', borderRadius: '6px',
+                              border: `1px solid ${c.border}`, backgroundColor: c.bgInput, color: c.textMain,
+                              fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            <Users style={{ width: '13px', height: '13px', color: c.accent }} />
+                            <span>Pre-fill MLB Lineup</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Auto calculate stats toggle */}
