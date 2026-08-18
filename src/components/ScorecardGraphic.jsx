@@ -38,6 +38,7 @@ export default function ScorecardGraphic({
   onPitcherClick = null,
   activeCellKey = null,
   isInteractive = false,
+  isExporting = false,
 }) {
   if (!data) return null;
 
@@ -958,17 +959,17 @@ export default function ScorecardGraphic({
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
                     <td
-                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
-                      className={onBatterClick ? 'interactive-roster-cell' : ''}
+                      onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                      className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
                       style={{
                         verticalAlign: 'middle',
                         padding: '3px 4px 3px 6px',
                         borderRight: `1.5px solid ${t.borderStrong}`,
                         overflow: 'visible',
                         maxWidth: `${NAME_COL_W - 22}px`,
-                        cursor: onBatterClick ? 'pointer' : 'default',
+                        cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
                       }}
-                      title={onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
+                      title={!isExporting && onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
                         <span style={{
@@ -1002,9 +1003,9 @@ export default function ScorecardGraphic({
                     {innings.map(n => {
                       const play = isBlankMode ? null : b.plays?.[n];
                       const cellKey = `${b.id}_${n}`;
-                      const isSelected = activeCellKey === cellKey;
-                      const hasInteractiveClick = Boolean(onCellClick);
-                      const isLiveActiveCell = Boolean(
+                      const isSelected = !isExporting && activeCellKey === cellKey;
+                      const hasInteractiveClick = !isExporting && Boolean(onCellClick);
+                      const isLiveActiveCell = !isExporting && Boolean(
                         gameInfo?.isLive &&
                         gameInfo?.liveActiveCell &&
                         String(gameInfo.liveActiveCell.batterId) === String(b.id) &&
@@ -1013,8 +1014,10 @@ export default function ScorecardGraphic({
                       );
 
                       let cellClassName = '';
-                      if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
-                      else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+                      if (!isExporting) {
+                        if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
+                        else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+                      }
 
                       return (
                         <td
@@ -1165,15 +1168,15 @@ export default function ScorecardGraphic({
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
                       <td
-                        onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
-                        className={onPitcherClick ? 'interactive-roster-cell' : ''}
+                        onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                        className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
                         style={{
                           padding: '3px 6px',
                           borderRight: `1.5px solid ${t.borderStrong}`,
                           verticalAlign: 'middle',
-                          cursor: onPitcherClick ? 'pointer' : 'default',
+                          cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
                         }}
-                        title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
+                        title={!isExporting && onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -1239,15 +1242,15 @@ export default function ScorecardGraphic({
                         return (
                           <td
                             key={n}
-                            onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
-                            className={onPitcherClick ? 'interactive-diamond-cell' : ''}
+                            onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
+                            className={!isExporting && onPitcherClick ? 'interactive-diamond-cell' : ''}
                             style={{
                               textAlign: 'center', padding: '2px 1px',
                               borderLeft: `1px solid ${t.borderLight}`,
                               verticalAlign: 'middle',
-                              cursor: onPitcherClick ? 'pointer' : 'default',
+                              cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
                             }}
-                            title={onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                            title={!isExporting && onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
                           >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>

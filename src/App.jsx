@@ -670,6 +670,7 @@ export default function App() {
       setTimeout(() => setToastMessage(''), 2500);
     } else {
       setPlayModalOpen(false);
+      setActiveCellContext(null);
       setToastMessage(`Play saved: ${playObj.code}`);
       setTimeout(() => setToastMessage(''), 2500);
     }
@@ -688,6 +689,8 @@ export default function App() {
     const calculated = autoCalculateStats ? recalculateScorecardStats(nextData) : nextData;
     setScorecardData(calculated);
     autosaveLiveScorecard(calculated);
+    setPlayModalOpen(false);
+    setActiveCellContext(null);
     setToastMessage('Play cleared from scorecard');
     setTimeout(() => setToastMessage(''), 2500);
   };
@@ -779,6 +782,30 @@ export default function App() {
     clone.style.webkitFontSmoothing = 'antialiased';
     clone.style.mozOsxFontSmoothing = 'grayscale';
     clone.style.textRendering = 'optimizeLegibility';
+
+    // Strip any interactive selection highlights, focus outlines, and live indicator dots from the clone
+    const highlightedElements = clone.querySelectorAll('td, th, div, span, tr');
+    highlightedElements.forEach(elem => {
+      if (elem.style.boxShadow && (elem.style.boxShadow.includes('3b82f6') || elem.style.boxShadow.includes('ef4444') || elem.style.boxShadow.includes('inset'))) {
+        elem.style.boxShadow = 'none';
+      }
+      if (elem.style.backgroundColor && (elem.style.backgroundColor.includes('59, 130, 246') || elem.style.backgroundColor.includes('239, 68, 68'))) {
+        elem.style.backgroundColor = 'transparent';
+      }
+      elem.classList.remove('live-active-atbat-cell', 'interactive-diamond-cell', 'interactive-roster-cell');
+      elem.style.outline = 'none';
+      elem.style.animation = 'none';
+    });
+
+    const liveDots = clone.querySelectorAll('div');
+    liveDots.forEach(dot => {
+      if (
+        dot.style.borderRadius === '50%' &&
+        (dot.style.backgroundColor === 'rgb(239, 68, 68)' || dot.style.backgroundColor === '#ef4444' || (dot.style.animation && dot.style.animation.includes('liveDotPulse')))
+      ) {
+        dot.remove();
+      }
+    });
 
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
@@ -2944,11 +2971,12 @@ export default function App() {
                     isBlankScorecard={blankMode}
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
-                    onCellClick={scoringMode === 'live' ? handleCellClick : null}
-                    onBatterClick={scoringMode === 'live' ? handleBatterClick : null}
-                    onPitcherClick={scoringMode === 'live' ? handlePitcherClick : null}
-                    activeCellKey={scoringMode === 'live' ? activeCellContext?.cellKey : null}
-                    isInteractive={scoringMode === 'live'}
+                    onCellClick={!exporting && scoringMode === 'live' ? handleCellClick : null}
+                    onBatterClick={!exporting && scoringMode === 'live' ? handleBatterClick : null}
+                    onPitcherClick={!exporting && scoringMode === 'live' ? handlePitcherClick : null}
+                    activeCellKey={!exporting && scoringMode === 'live' ? activeCellContext?.cellKey : null}
+                    isInteractive={!exporting && scoringMode === 'live'}
+                    isExporting={exporting}
                   />
                 </div>
               </div>
@@ -2962,7 +2990,10 @@ export default function App() {
       {/* Interactive At-Bat Play Scoring Modal */}
       <PlayEntryModal
         isOpen={playModalOpen}
-        onClose={() => setPlayModalOpen(false)}
+        onClose={() => {
+          setPlayModalOpen(false);
+          setActiveCellContext(null);
+        }}
         cellContext={activeCellContext}
         onSavePlay={handleSavePlay}
         onClearPlay={handleClearPlay}

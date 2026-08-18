@@ -212,6 +212,13 @@ function parsePlayNotation(play) {
   const event = play.result?.eventType || '';
   const desc = play.result?.description || '';
   const descLower = desc.toLowerCase();
+  const isComplete = play.about?.isComplete ?? Boolean(event || desc);
+
+  // If play is still in progress with no finalized event outcome, do not record a fake OUT placeholder
+  if (!isComplete || (!event && !desc)) {
+    return null;
+  }
+
   const hitDist = play.hitData?.totalDistance;
   const launchSpeed = play.hitData?.launchSpeed;
   const launchAngle = play.hitData?.launchAngle;
@@ -285,7 +292,11 @@ function parsePlayNotation(play) {
   if (descLower.includes('pops out to third')) return { code: 'P5', type: 'out', extraEvent };
   if (descLower.includes('pops out to first')) return { code: 'P3', type: 'out', extraEvent };
 
-  return { code: 'OUT', type: 'out', extraEvent };
+  if (descLower.includes('out') || event.includes('out')) {
+    return { code: 'OUT', type: 'out', extraEvent };
+  }
+
+  return null;
 }
 
 function baseToNum(b) {
@@ -446,14 +457,15 @@ export function processMLBData(data, gamePkOverride) {
         const batterId = play.matchup?.batter?.id;
         if (!batterId) return;
 
+        const parsed = parsePlayNotation(play);
+        if (!parsed || !parsed.code) return;
+
         if (!batterInningPlays[batterId]) {
           batterInningPlays[batterId] = {};
         }
         if (!batterInningPlays[batterId][inn]) {
           batterInningPlays[batterId][inn] = [];
         }
-
-        const parsed = parsePlayNotation(play);
 
         // Base reached from own at-bat
         let atBatBases = parsed.bases || 0;
