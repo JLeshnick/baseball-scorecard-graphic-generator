@@ -1005,9 +1005,10 @@ export default function ScorecardGraphic({
                       const isSelected = activeCellKey === cellKey;
                       const hasInteractiveClick = Boolean(onCellClick);
                       const isLiveActiveCell = Boolean(
-                        gameInfo.isLive &&
-                        gameInfo.liveActiveCell &&
-                        gameInfo.liveActiveCell.cellKey === cellKey &&
+                        gameInfo?.isLive &&
+                        gameInfo?.liveActiveCell &&
+                        String(gameInfo.liveActiveCell.batterId) === String(b.id) &&
+                        Number(gameInfo.liveActiveCell.inning) === Number(n) &&
                         gameInfo.liveActiveCell.teamKey === (isHome ? 'home' : 'away')
                       );
 
@@ -1035,7 +1036,7 @@ export default function ScorecardGraphic({
                             backgroundColor: isSelected
                               ? 'rgba(59, 130, 246, 0.3)'
                               : isLiveActiveCell
-                              ? 'rgba(239, 68, 68, 0.18)'
+                              ? 'rgba(239, 68, 68, 0.22)'
                               : (n % 2 === 0 ? t.tableInningAlt : 'transparent'),
                             position: 'relative',
                             cursor: hasInteractiveClick ? 'pointer' : 'default',
@@ -1050,6 +1051,20 @@ export default function ScorecardGraphic({
                           }
                         >
                           {renderPlayCell(play, isHome, cellKey)}
+                          {isLiveActiveCell && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '2px',
+                              right: '2px',
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: '#ef4444',
+                              boxShadow: '0 0 8px #ef4444',
+                              animation: 'liveDotPulse 1.2s ease-in-out infinite',
+                              pointerEvents: 'none',
+                            }} />
+                          )}
                         </td>
                       );
                     })}
@@ -1883,6 +1898,11 @@ export default function ScorecardGraphic({
           animation: liveAtBatPulse 2.2s ease-in-out infinite !important;
           position: relative !important;
           z-index: 2;
+        }
+        @keyframes liveDotPulse {
+          0% { transform: scale(0.85); opacity: 0.6; }
+          50% { transform: scale(1.4); opacity: 1; }
+          100% { transform: scale(0.85); opacity: 0.6; }
         }
       `}</style>
     </div>

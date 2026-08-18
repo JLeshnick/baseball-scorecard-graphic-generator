@@ -227,7 +227,9 @@ export default function App() {
   const [prefillDate, setPrefillDate] = useState(getTodayDateString());
   const [prefillGames, setPrefillGames] = useState([]);
   const [prefillSelectedGamePk, setPrefillSelectedGamePk] = useState('');
+  const [prefillSelectOpen, setPrefillSelectOpen] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
+  const [lastRefreshedTime, setLastRefreshedTime] = useState(() => new Date());
 
   // ─── Mobile State ───────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
@@ -468,23 +470,35 @@ export default function App() {
     }
   };
 
-  const loadGameData = async (gamePk) => {
-    setLoading(true);
+  const loadGameData = async (gamePk, isSilentRefresh = false) => {
+    if (!isSilentRefresh) setLoading(true);
     setError(null);
     try {
       const data = await fetchGameScorecardData(gamePk);
       setScorecardData(data);
       setRawGameData(data._rawData || null);
-      setCustomHeadline(data.gameInfo.dateDisplay || '');
-      setCustomSubtitle(`${data.gameInfo.venue || ''} · ${data.gameInfo.headline || ''}`);
-      setCustomFooter(`${(data.gameInfo.venue || '').toUpperCase()} • ${data.gameInfo.dateDisplay || ''}`);
+      setLastRefreshedTime(new Date());
+      if (!isSilentRefresh) {
+        setCustomHeadline(data.gameInfo.dateDisplay || '');
+        setCustomSubtitle(`${data.gameInfo.venue || ''} · ${data.gameInfo.headline || ''}`);
+        setCustomFooter(`${(data.gameInfo.venue || '').toUpperCase()} • ${data.gameInfo.dateDisplay || ''}`);
+      }
     } catch (err) {
       console.error(err);
-      setError('Could not load MLB game data.');
+      if (!isSilentRefresh) setError('Could not load MLB game data.');
     } finally {
-      setLoading(false);
+      if (!isSilentRefresh) setLoading(false);
     }
   };
+
+  // Auto-polling for active live MLB in-progress games (every 30 seconds)
+  useEffect(() => {
+    if (scoringMode !== 'mlb' || !selectedGamePk || !scorecardData?.gameInfo?.isLive) return;
+    const interval = setInterval(() => {
+      loadGameData(selectedGamePk, true);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [scoringMode, selectedGamePk, scorecardData?.gameInfo?.isLive]);
 
   // ─── Live Scoring Handlers ───────────────────────────────────────────────────
   const handleStartNewBlankGame = () => {
@@ -1678,6 +1692,58 @@ export default function App() {
                         </div>
                       </div>
 
+                      {/* Live Data Refresh Bar & Timestamp */}
+                      {selectedGamePk && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: scorecardData?.gameInfo?.isLive ? (isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.06)') : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                          border: `1px solid ${scorecardData?.gameInfo?.isLive ? 'rgba(239, 68, 68, 0.3)' : c.border}`,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {scorecardData?.gameInfo?.isLive ? (
+                              <span style={{
+                                display: 'inline-block', width: '7px', height: '7px',
+                                borderRadius: '50%', backgroundColor: '#ef4444',
+                                boxShadow: '0 0 6px #ef4444',
+                                animation: 'liveDotPulse 1.2s ease-in-out infinite',
+                              }} />
+                            ) : (
+                              <span style={{
+                                display: 'inline-block', width: '6px', height: '6px',
+                                borderRadius: '50%', backgroundColor: c.textMuted,
+                              }} />
+                            )}
+                            <span style={{ fontSize: '10.5px', fontWeight: 600, color: scorecardData?.gameInfo?.isLive ? '#ef4444' : c.textMuted }}>
+                              {lastRefreshedTime ? `Updated ${lastRefreshedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Live'}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              loadGameData(selectedGamePk);
+                              setToastMessage('Refreshed latest MLB game data!');
+                              setTimeout(() => setToastMessage(''), 2500);
+                            }}
+                            disabled={loading}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '4px',
+                              padding: '4px 9px', borderRadius: '4px', border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgCard, color: c.textHead,
+                              fontSize: '11px', fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+                              opacity: loading ? 0.6 : 1,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <RefreshCw style={{ width: '11px', height: '11px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                            <span>Refresh</span>
+                          </button>
+                        </div>
+                      )}
+
                       {/* Game summary badge */}
                       {scorecardData && !loading && (
                         <div style={{
@@ -1880,34 +1946,171 @@ export default function App() {
                             />
                           </div>
 
-                          {/* Games Dropdown */}
+                          {/* Custom Grouped Games Dropdown */}
                           {prefillGames.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <select
-                                value={prefillSelectedGamePk}
-                                onChange={(e) => setPrefillSelectedGamePk(e.target.value)}
-                                style={{
-                                  width: '100%', padding: '5px 6px', fontSize: '11px', fontWeight: 600,
-                                  borderRadius: '4px', border: `1px solid ${c.border}`,
-                                  backgroundColor: c.bgInput, color: c.textHead,
-                                }}
-                              >
-                                {prefillGames.map(g => (
-                                  <option key={g.gamePk} value={g.gamePk}>
-                                    {g.awayTeam} @ {g.homeTeam} {g.status ? `(${g.status})` : ''}
-                                  </option>
-                                ))}
-                              </select>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ position: 'relative' }}>
+                                <button
+                                  onClick={() => setPrefillSelectOpen(o => !o)}
+                                  disabled={prefillLoading || prefillGames.length === 0}
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '7px 10px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${c.border}`,
+                                    backgroundColor: c.bgInput,
+                                    color: prefillGames.length === 0 ? c.textMuted : c.textMain,
+                                    fontSize: '11.5px', fontWeight: 500,
+                                    cursor: prefillGames.length === 0 ? 'default' : 'pointer',
+                                    textAlign: 'left',
+                                    fontFamily: "'Inter', sans-serif",
+                                  }}
+                                >
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, paddingRight: '8px' }}>
+                                    {prefillLoading
+                                      ? 'Searching games…'
+                                      : prefillGames.length === 0
+                                      ? 'No games on this date'
+                                      : prefillGames.find(g => String(g.gamePk) === String(prefillSelectedGamePk))
+                                        ? `${prefillGames.find(g => String(g.gamePk) === String(prefillSelectedGamePk)).awayTeam} @ ${prefillGames.find(g => String(g.gamePk) === String(prefillSelectedGamePk)).homeTeam}`
+                                        : 'Select a matchup'}
+                                  </span>
+                                  <ChevronDown style={{
+                                    width: '13px', height: '13px', color: c.textMuted, flexShrink: 0,
+                                    transition: 'transform 0.15s',
+                                    transform: prefillSelectOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                  }} />
+                                </button>
+
+                                {prefillSelectOpen && prefillGames.length > 0 && (
+                                  <>
+                                    <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setPrefillSelectOpen(false)} />
+                                    <div style={{
+                                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                                      maxHeight: '260px', overflowY: 'auto',
+                                      backgroundColor: c.bgCard,
+                                      border: `1px solid ${c.border}`,
+                                      borderRadius: '8px',
+                                      boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                                      zIndex: 100,
+                                      padding: '6px 4px',
+                                    }}>
+                                      {(() => {
+                                        const liveG = prefillGames.filter(g => g.isLive);
+                                        const finalG = prefillGames.filter(g => g.isFinal);
+                                        const schedG = prefillGames.filter(g => !g.isLive && !g.isFinal);
+
+                                        const renderPrefillItem = (g) => {
+                                          const isSelected = String(g.gamePk) === String(prefillSelectedGamePk);
+                                          return (
+                                            <button
+                                              key={g.gamePk}
+                                              onClick={() => {
+                                                setPrefillSelectedGamePk(String(g.gamePk));
+                                                setPrefillSelectOpen(false);
+                                              }}
+                                              style={{
+                                                display: 'block', width: '100%', padding: '7px 9px',
+                                                borderRadius: '5px', border: 'none',
+                                                backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
+                                                textAlign: 'left', cursor: 'pointer',
+                                                transition: 'background 0.1s',
+                                                marginBottom: '2px',
+                                              }}
+                                              onMouseEnter={e => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                                              }}
+                                              onMouseLeave={e => {
+                                                if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                              }}
+                                            >
+                                              <div style={{
+                                                fontSize: '11.5px', fontWeight: 700,
+                                                color: isSelected ? c.textHead : c.textMain,
+                                                lineHeight: 1.3, wordBreak: 'break-word',
+                                              }}>
+                                                {g.awayTeam} @ {g.homeTeam}
+                                              </div>
+                                              <div style={{
+                                                fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
+                                                display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                                              }}>
+                                                {g.awayScore !== undefined && (
+                                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
+                                                    {g.awayScore} – {g.homeScore}
+                                                  </span>
+                                                )}
+                                                <span style={{
+                                                  fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700,
+                                                  color: g.isLive ? '#ef4444' : c.textMuted,
+                                                }}>
+                                                  {g.isLive ? `🔴 ${g.inningText || 'Live'}` : (g.inningText || g.status || 'Scheduled')}
+                                                </span>
+                                              </div>
+                                              <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
+                                                {g.venue}
+                                              </div>
+                                            </button>
+                                          );
+                                        };
+
+                                        return (
+                                          <>
+                                            {liveG.length > 0 && (
+                                              <div style={{ marginBottom: '8px' }}>
+                                                <div style={{
+                                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                                  color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px',
+                                                }}>
+                                                  <span>🔴 Live & In Progress ({liveG.length})</span>
+                                                </div>
+                                                {liveG.map(renderPrefillItem)}
+                                              </div>
+                                            )}
+
+                                            {finalG.length > 0 && (
+                                              <div style={{ marginBottom: '8px' }}>
+                                                <div style={{
+                                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                                  color: c.textMuted, padding: '4px 8px',
+                                                }}>
+                                                  Completed Games ({finalG.length})
+                                                </div>
+                                                {finalG.map(renderPrefillItem)}
+                                              </div>
+                                            )}
+
+                                            {schedG.length > 0 && (
+                                              <div style={{ marginBottom: '4px' }}>
+                                                <div style={{
+                                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+                                                  color: c.textMuted, padding: '4px 8px',
+                                                }}>
+                                                  Upcoming / Scheduled ({schedG.length})
+                                                </div>
+                                                {schedG.map(renderPrefillItem)}
+                                              </div>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
 
                               <button
                                 onClick={() => handleApplyPrefillFromGame(prefillSelectedGamePk)}
+                                disabled={!prefillSelectedGamePk || loading}
                                 style={{
                                   width: '100%', padding: '7px 10px',
-                                  borderRadius: '6px', cursor: 'pointer',
+                                  borderRadius: '6px', cursor: !prefillSelectedGamePk ? 'default' : 'pointer',
                                   border: 'none',
                                   backgroundColor: c.accent, color: '#ffffff',
                                   fontSize: '11px', fontWeight: 700,
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                                  opacity: !prefillSelectedGamePk || loading ? 0.6 : 1,
                                 }}
                               >
                                 <Users style={{ width: '13px', height: '13px' }} />
@@ -1915,7 +2118,7 @@ export default function App() {
                               </button>
                             </div>
                           ) : (
-                            <div style={{ fontSize: '10px', color: c.textMuted, textAlign: 'center', padding: '4px 0' }}>
+                            <div style={{ fontSize: '10.5px', color: c.textMuted, textAlign: 'center', padding: '6px 0' }}>
                               {prefillLoading ? 'Searching games for date…' : 'No MLB games found on this date.'}
                             </div>
                           )}
