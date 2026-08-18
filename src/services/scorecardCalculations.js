@@ -51,8 +51,8 @@ export function createBlankScorecardData({
   dateDisplay = null,
   awayBatters = null,
   homeBatters = null,
-  awayPitcher = 'STARTER',
-  homePitcher = 'STARTER',
+  awayPitcher = '',
+  homePitcher = '',
 } = {}) {
   const initialLinescore = Array.from({ length: totalInnings }, (_, i) => ({
     num: i + 1,
@@ -61,15 +61,26 @@ export function createBlankScorecardData({
   }));
 
   const buildBatters = (lineup, prefix) => {
-    const list = lineup || DEFAULT_AWAY_LINEUP;
-    return list.map((item, idx) => ({
+    if (lineup && lineup.length > 0) {
+      return lineup.map((item, idx) => ({
+        id: `${prefix}_${idx + 1}`,
+        jerseyNumber: item.jerseyNumber !== undefined ? String(item.jerseyNumber) : '',
+        position: item.position || '',
+        name: (item.name || '').toUpperCase(),
+        fullName: item.fullName || item.name || '',
+        subNotes: item.subNotes || [],
+        plays: item.plays || {},
+      }));
+    }
+    // Clean blank slots without placeholder text
+    return Array.from({ length: 9 }, (_, idx) => ({
       id: `${prefix}_${idx + 1}`,
-      jerseyNumber: item.jerseyNumber || String(idx + 1),
-      position: item.position || '—',
-      name: (item.name || `BATTER ${idx + 1}`).toUpperCase(),
-      fullName: item.fullName || `Batter ${idx + 1}`,
-      subNotes: item.subNotes || [],
-      plays: item.plays || {},
+      jerseyNumber: '',
+      position: '',
+      name: '',
+      fullName: '',
+      subNotes: [],
+      plays: {},
     }));
   };
 
@@ -78,8 +89,8 @@ export function createBlankScorecardData({
     pitchers: [
       {
         id: 'away_p1',
-        number: '30',
-        name: awayPitcher.toUpperCase(),
+        number: '',
+        name: (awayPitcher || '').toUpperCase(),
         strikeouts: [],
         ip: '0.0',
         hits: 0,
@@ -103,8 +114,8 @@ export function createBlankScorecardData({
     pitchers: [
       {
         id: 'home_p1',
-        number: '40',
-        name: homePitcher.toUpperCase(),
+        number: '',
+        name: (homePitcher || '').toUpperCase(),
         strikeouts: [],
         ip: '0.0',
         hits: 0,
@@ -229,6 +240,10 @@ export function createScorecardFromMlbGame(mlbData) {
   cloned.gameInfo.topHits = [];
   cloned.gameInfo.gameMomentum = [];
   cloned.gameInfo.gameMvp = null;
+  cloned.gameInfo.decisions = { winner: '', loser: '', save: '' };
+  cloned.gameInfo.isFinal = false;
+  cloned.gameInfo.isLive = false;
+  cloned.gameInfo.statusDisplay = 'MANUAL SCOREBOOK';
 
   return cloned;
 }

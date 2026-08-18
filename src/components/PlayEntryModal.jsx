@@ -142,22 +142,61 @@ export default function PlayEntryModal({
     }
   };
 
-  const handleToggleAtBatBase = (baseNum) => {
-    if (atBatBases === baseNum) {
-      setAtBatBases(baseNum - 1);
-      if (endInningBases === baseNum) setEndInningBases(baseNum - 1);
-    } else {
-      setAtBatBases(baseNum);
-      if (endInningBases < baseNum) setEndInningBases(baseNum);
+  const applyAtBatBases = (bVal) => {
+    setAtBatBases(bVal);
+    if (endInningBases < bVal) setEndInningBases(bVal);
+
+    if (bVal === 1) {
+      if (!code || ['2B', '3B', 'HR', ''].includes(code.trim())) {
+        setCode('1B');
+        setPlayType('hit');
+        setOutsRecorded(0);
+      }
+    } else if (bVal === 2) {
+      if (!code || ['1B', '3B', 'HR', ''].includes(code.trim())) {
+        setCode('2B');
+        setPlayType('hit');
+        setOutsRecorded(0);
+      }
+    } else if (bVal === 3) {
+      if (!code || ['1B', '2B', 'HR', ''].includes(code.trim())) {
+        setCode('3B');
+        setPlayType('hit');
+        setOutsRecorded(0);
+      }
+    } else if (bVal === 4) {
+      if (!code || ['1B', '2B', '3B', ''].includes(code.trim())) {
+        setCode('HR');
+        setPlayType('hr');
+        setOutsRecorded(0);
+        if (rbi === 0) setRbi(1);
+      }
+    } else if (bVal === 0) {
+      if (['1B', '2B', '3B', 'HR'].includes(code.trim())) {
+        setCode('');
+        setPlayType('out');
+      }
     }
   };
 
-  const handleToggleEndInningBase = (baseNum) => {
-    if (endInningBases === baseNum) {
-      setEndInningBases(baseNum - 1);
-    } else {
-      setEndInningBases(baseNum);
+  const applyEndInningBases = (bVal) => {
+    setEndInningBases(bVal);
+    if (atBatBases > bVal) setAtBatBases(bVal);
+    if (bVal === 4 && atBatBases === 4 && (!code || ['1B', '2B', '3B'].includes(code.trim()))) {
+      setCode('HR');
+      setPlayType('hr');
+      if (rbi === 0) setRbi(1);
     }
+  };
+
+  const handleToggleAtBatBase = (baseNum) => {
+    const nextBases = atBatBases === baseNum ? baseNum - 1 : baseNum;
+    applyAtBatBases(nextBases);
+  };
+
+  const handleToggleEndInningBase = (baseNum) => {
+    const nextBases = endInningBases === baseNum ? baseNum - 1 : baseNum;
+    applyEndInningBases(nextBases);
   };
 
   const handleSave = (autoAdvance = false) => {
@@ -311,10 +350,7 @@ export default function PlayEntryModal({
               ].map(b => (
                 <button
                   key={b.val}
-                  onClick={() => {
-                    setAtBatBases(b.val);
-                    if (endInningBases < b.val) setEndInningBases(b.val);
-                  }}
+                  onClick={() => applyAtBatBases(b.val)}
                   style={{
                     flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 700, borderRadius: '4px',
                     border: 'none', cursor: 'pointer',
@@ -340,7 +376,7 @@ export default function PlayEntryModal({
               ].map(b => (
                 <button
                   key={b.val}
-                  onClick={() => setEndInningBases(b.val)}
+                  onClick={() => applyEndInningBases(b.val)}
                   style={{
                     flex: 1, padding: '4px 0', fontSize: '10px', fontWeight: 700, borderRadius: '4px',
                     border: 'none', cursor: 'pointer',

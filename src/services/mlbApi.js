@@ -797,6 +797,31 @@ export function processMLBData(data, gamePkOverride) {
     }
   }
 
+  // Live Active At-Bat cell detection
+  let liveActiveCell = null;
+  if (isLive) {
+    const currentPlay = liveData.plays?.currentPlay;
+    const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
+    const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
+    const battingTeamKey = isTop ? 'away' : 'home';
+    const activeBatters = isTop ? awayBatters : homeBatters;
+    
+    let batterId = currentPlay?.matchup?.batter?.id;
+    if (!batterId && activeBatters && activeBatters.length > 0) {
+      const playedBatter = activeBatters.find(b => b.plays && b.plays[inn]);
+      batterId = playedBatter ? playedBatter.id : activeBatters[0]?.id;
+    }
+
+    if (batterId) {
+      liveActiveCell = {
+        cellKey: `${batterId}_${inn}`,
+        batterId,
+        inning: inn,
+        teamKey: battingTeamKey,
+      };
+    }
+  }
+
   return {
     gameInfo: {
       gamePk,
@@ -819,6 +844,7 @@ export function processMLBData(data, gamePkOverride) {
       isFinal,
       isLive,
       statusDetailed,
+      liveActiveCell,
     },
     awayData,
     homeData

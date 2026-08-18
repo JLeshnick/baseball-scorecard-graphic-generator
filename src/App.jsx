@@ -404,31 +404,28 @@ export default function App() {
     setShowTeamWatermarks(true);
     setCustomAwayColor('');
     setCustomHomeColor('');
+    setCustomNotes('');
 
-    // Restore textboxes to default game data values instead of leaving them wiped/blank
-    if (scorecardData) {
+    if (scoringMode === 'live') {
+      const blank = createBlankScorecardData();
+      setScorecardData(blank);
+      setCustomHeadline(blank.gameInfo.dateDisplay);
+      setCustomSubtitle(`${blank.gameInfo.venue} · ${blank.gameInfo.headline}`);
+      setCustomFooter(`${blank.gameInfo.venue.toUpperCase()} • ${blank.gameInfo.dateDisplay}`);
+      setToastMessage('Reset manual scorecard to a clean blank sheet!');
+    } else if (scorecardData) {
       setCustomHeadline(scorecardData.gameInfo.dateDisplay || '');
       setCustomSubtitle(`${scorecardData.gameInfo.venue || ''} · ${scorecardData.gameInfo.headline || ''}`);
       setCustomFooter(`${(scorecardData.gameInfo.venue || '').toUpperCase()} • ${scorecardData.gameInfo.dateDisplay || ''}`);
-    } else {
-      setCustomHeadline('');
-      setCustomSubtitle('');
-      setCustomFooter('');
+      setToastMessage('All options reset to default game values!');
     }
-    setCustomNotes('');
-
-    setToastMessage('All options reset to default game values!');
     setTimeout(() => setToastMessage(''), 3500);
   };
 
   useEffect(() => {
     const bg = isDark ? '#09090b' : '#f0ede8';
-    document.documentElement.setAttribute('data-theme', appTheme);
-    document.documentElement.style.backgroundColor = bg;
     document.body.style.backgroundColor = bg;
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-  }, [appTheme, isDark]);
+  }, [isDark]);
 
   const fetchGamesForDate = async (dateStr) => {
     setSearching(true);
@@ -485,25 +482,45 @@ export default function App() {
     const blank = createBlankScorecardData();
     setScorecardData(blank);
     setScoringMode('live');
+    setBlankMode('none');
     setLiveInning(1);
     setLiveHalf('away');
     setLiveBatterIdx(0);
     setCustomHeadline(blank.gameInfo.dateDisplay);
     setCustomSubtitle(`${blank.gameInfo.venue} · ${blank.gameInfo.headline}`);
     setCustomFooter(`${blank.gameInfo.venue.toUpperCase()} • ${blank.gameInfo.dateDisplay}`);
-    setToastMessage('Created new blank live scorecard!');
+    setCustomNotes('');
+    setToastMessage('Created new blank scorecard!');
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  const handleStartLiveFromCurrentGame = () => {
-    if (!scorecardData) return;
-    const liveClone = createScorecardFromMlbGame(scorecardData);
+  const handleStartLiveFromCurrentGame = async () => {
+    let sourceData = scorecardData;
+    if (!sourceData || sourceData.isLiveScorebook) {
+      if (selectedGamePk) {
+        try {
+          sourceData = await fetchGameScorecardData(selectedGamePk);
+        } catch (e) {
+          console.warn('Could not fetch game for lineup template', e);
+        }
+      }
+    }
+    if (!sourceData) {
+      handleStartNewBlankGame();
+      return;
+    }
+    const liveClone = createScorecardFromMlbGame(sourceData);
     setScorecardData(liveClone);
     setScoringMode('live');
+    setBlankMode('none');
     setLiveInning(1);
     setLiveHalf('away');
     setLiveBatterIdx(0);
-    setToastMessage('Live scoring initialized from MLB rosters!');
+    setCustomHeadline(liveClone.gameInfo.dateDisplay);
+    setCustomSubtitle(`${liveClone.gameInfo.venue} · ${liveClone.gameInfo.headline}`);
+    setCustomFooter(`${(liveClone.gameInfo.venue || '').toUpperCase()} • ${liveClone.gameInfo.dateDisplay}`);
+    setCustomNotes('');
+    setToastMessage('Pre-filled lineups & teams from MLB game!');
     setTimeout(() => setToastMessage(''), 3500);
   };
 
@@ -1360,7 +1377,7 @@ export default function App() {
                         }}
                       >
                         <Calendar style={{ width: '13px', height: '13px' }} />
-                        Completed Scorecards
+                        Active/Complete Scorecards
                       </button>
 
                       <button
@@ -2577,11 +2594,11 @@ export default function App() {
                     isBlankScorecard={blankMode}
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
-                    onCellClick={handleCellClick}
-                    onBatterClick={handleBatterClick}
-                    onPitcherClick={handlePitcherClick}
-                    activeCellKey={activeCellContext?.cellKey}
-                    isInteractive={true}
+                    onCellClick={scoringMode === 'live' ? handleCellClick : null}
+                    onBatterClick={scoringMode === 'live' ? handleBatterClick : null}
+                    onPitcherClick={scoringMode === 'live' ? handlePitcherClick : null}
+                    activeCellKey={scoringMode === 'live' ? activeCellContext?.cellKey : null}
+                    isInteractive={scoringMode === 'live'}
                   />
                 </div>
               </div>

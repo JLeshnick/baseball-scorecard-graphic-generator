@@ -1004,6 +1004,17 @@ export default function ScorecardGraphic({
                       const cellKey = `${b.id}_${n}`;
                       const isSelected = activeCellKey === cellKey;
                       const hasInteractiveClick = Boolean(onCellClick);
+                      const isLiveActiveCell = Boolean(
+                        gameInfo.isLive &&
+                        gameInfo.liveActiveCell &&
+                        gameInfo.liveActiveCell.cellKey === cellKey &&
+                        gameInfo.liveActiveCell.teamKey === (isHome ? 'home' : 'away')
+                      );
+
+                      let cellClassName = '';
+                      if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
+                      else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+
                       return (
                         <td
                           key={n}
@@ -1016,19 +1027,27 @@ export default function ScorecardGraphic({
                             currentPlay: play,
                             cellKey,
                           }) : undefined}
-                          className={hasInteractiveClick ? 'interactive-diamond-cell' : ''}
+                          className={cellClassName}
                           style={{
                             textAlign: 'center', verticalAlign: 'middle',
                             padding: '1px',
                             borderLeft: `1px solid ${t.borderLight}`,
                             backgroundColor: isSelected
                               ? 'rgba(59, 130, 246, 0.3)'
+                              : isLiveActiveCell
+                              ? 'rgba(239, 68, 68, 0.18)'
                               : (n % 2 === 0 ? t.tableInningAlt : 'transparent'),
                             position: 'relative',
                             cursor: hasInteractiveClick ? 'pointer' : 'default',
-                            boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : 'none',
+                            boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : (isLiveActiveCell ? 'inset 0 0 0 2px #ef4444' : 'none'),
                           }}
-                          title={hasInteractiveClick ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})` : undefined}
+                          title={
+                            isLiveActiveCell
+                              ? `🔴 Active At-Bat: #${b.jerseyNumber} ${b.name}`
+                              : hasInteractiveClick
+                              ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})`
+                              : undefined
+                          }
                         >
                           {renderPlayCell(play, isHome, cellKey)}
                         </td>
@@ -1835,6 +1854,25 @@ export default function ScorecardGraphic({
         }
         .interactive-roster-cell:hover {
           background-color: rgba(59, 130, 246, 0.12) !important;
+        }
+        @keyframes liveAtBatPulse {
+          0% {
+            background-color: rgba(239, 68, 68, 0.14);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 4px rgba(239, 68, 68, 0.4);
+          }
+          50% {
+            background-color: rgba(239, 68, 68, 0.32);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 12px rgba(239, 68, 68, 0.85);
+          }
+          100% {
+            background-color: rgba(239, 68, 68, 0.14);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 4px rgba(239, 68, 68, 0.4);
+          }
+        }
+        .live-active-atbat-cell {
+          animation: liveAtBatPulse 2.2s ease-in-out infinite !important;
+          position: relative !important;
+          z-index: 2;
         }
       `}</style>
     </div>
