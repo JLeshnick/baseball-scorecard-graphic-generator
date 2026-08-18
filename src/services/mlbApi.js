@@ -804,7 +804,7 @@ export function processMLBData(data, gamePkOverride) {
     const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
     const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
     const battingTeamKey = isTop ? 'away' : 'home';
-    const activeBatters = isTop ? awayBatters : homeBatters;
+    const activeBatters = isTop ? awayData?.batters : homeData?.batters;
     
     let batterId = currentPlay?.matchup?.batter?.id;
     if (!batterId && activeBatters && activeBatters.length > 0) {

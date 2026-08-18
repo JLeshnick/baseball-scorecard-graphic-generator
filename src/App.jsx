@@ -8,6 +8,7 @@ import ScorecardGraphic from './components/ScorecardGraphic';
 import PlayEntryModal from './components/PlayEntryModal';
 import RosterEditModal from './components/RosterEditModal';
 import SavedGamesModal from './components/SavedGamesModal';
+import PitcherEditModal from './components/PitcherEditModal';
 import {
   createBlankScorecardData,
   createScorecardFromMlbGame,
@@ -213,12 +214,20 @@ export default function App() {
   const [scoringMode, setScoringMode] = useState('mlb'); // 'mlb' or 'live'
   const [playModalOpen, setPlayModalOpen] = useState(false);
   const [activeCellContext, setActiveCellContext] = useState(null);
+  const [pitcherModalOpen, setPitcherModalOpen] = useState(false);
+  const [activePitcherContext, setActivePitcherContext] = useState(null);
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
   const [savedGamesModalOpen, setSavedGamesModalOpen] = useState(false);
   const [liveInning, setLiveInning] = useState(1);
   const [liveHalf, setLiveHalf] = useState('away'); // 'away' (top) or 'home' (bottom)
   const [liveBatterIdx, setLiveBatterIdx] = useState(0); // 0..8
   const [autoCalculateStats, setAutoCalculateStats] = useState(true);
+
+  // Matchup Pre-population state (Scheduled & Future games)
+  const [prefillDate, setPrefillDate] = useState(getTodayDateString());
+  const [prefillGames, setPrefillGames] = useState([]);
+  const [prefillSelectedGamePk, setPrefillSelectedGamePk] = useState('');
+  const [prefillLoading, setPrefillLoading] = useState(false);
 
   // ─── Mobile State ───────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
@@ -524,6 +533,55 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  const fetchPrefillGamesForDate = async (dateStr) => {
+    setPrefillLoading(true);
+    try {
+      const games = await searchGamesByDate(dateStr);
+      setPrefillGames(games);
+      if (games && games.length > 0) {
+        setPrefillSelectedGamePk(String(games[0].gamePk));
+      } else {
+        setPrefillSelectedGamePk('');
+      }
+    } catch (e) {
+      console.error(e);
+      setPrefillGames([]);
+    } finally {
+      setPrefillLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrefillGamesForDate(prefillDate);
+  }, [prefillDate]);
+
+  const handleApplyPrefillFromGame = async (gamePk) => {
+    if (!gamePk) return;
+    setLoading(true);
+    try {
+      const fetched = await fetchGameScorecardData(gamePk);
+      const liveClone = createScorecardFromMlbGame(fetched);
+      setScorecardData(liveClone);
+      setScoringMode('live');
+      setBlankMode('none');
+      setLiveInning(1);
+      setLiveHalf('away');
+      setLiveBatterIdx(0);
+      setCustomHeadline(liveClone.gameInfo.dateDisplay);
+      setCustomSubtitle(`${liveClone.gameInfo.venue} · ${liveClone.gameInfo.headline}`);
+      setCustomFooter(`${(liveClone.gameInfo.venue || '').toUpperCase()} • ${liveClone.gameInfo.dateDisplay}`);
+      setCustomNotes('');
+      setToastMessage(`Loaded: ${liveClone.gameInfo.awayTeam.name} @ ${liveClone.gameInfo.homeTeam.name}!`);
+      setTimeout(() => setToastMessage(''), 3500);
+    } catch (e) {
+      console.error(e);
+      setToastMessage('Could not load matchup rosters.');
+      setTimeout(() => setToastMessage(''), 3500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCellClick = (cellCtx) => {
     setActiveCellContext(cellCtx);
     setPlayModalOpen(true);
@@ -533,8 +591,23 @@ export default function App() {
     setRosterModalOpen(true);
   };
 
-  const handlePitcherClick = () => {
-    setRosterModalOpen(true);
+  const handlePitcherClick = (pitcherCtx) => {
+    setActivePitcherContext(pitcherCtx);
+    setPitcherModalOpen(true);
+  };
+
+  const handleSavePitcher = ({ teamKey, pitcherIndex, updatedPitcher }) => {
+    if (!scorecardData) return;
+    const nextData = JSON.parse(JSON.stringify(scorecardData));
+    const targetTeam = teamKey === 'away' ? nextData.awayData : nextData.homeData;
+    if (targetTeam && targetTeam.pitchers && targetTeam.pitchers[pitcherIndex]) {
+      targetTeam.pitchers[pitcherIndex] = updatedPitcher;
+    }
+    const calculated = autoCalculateStats ? recalculateScorecardStats(nextData) : nextData;
+    setScorecardData(calculated);
+    autosaveLiveScorecard(calculated);
+    setToastMessage(`Saved stats for #${updatedPitcher.number} ${updatedPitcher.name}`);
+    setTimeout(() => setToastMessage(''), 2500);
   };
 
   const handleSavePlay = (playObj, autoAdvance = false) => {
@@ -1383,7 +1456,7 @@ export default function App() {
                       <button
                         onClick={() => {
                           if (!scorecardData?.isLiveScorebook) {
-                            handleStartLiveFromCurrentGame();
+                            handleStartNewBlankGame();
                           } else {
                             setScoringMode('live');
                           }
@@ -1770,8 +1843,82 @@ export default function App() {
                             }}
                           >
                             <Users style={{ width: '13px', height: '13px', color: c.accent }} />
-                            <span>Pre-fill MLB Lineup</span>
+                            <span>Pre-fill Active Game</span>
                           </button>
+                        </div>
+
+                        {/* Pre-populate from Scheduled / Future MLB Matchup */}
+                        <div style={{
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: `1px solid ${c.border}`,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                          display: 'flex', flexDirection: 'column', gap: '8px',
+                          marginTop: '4px',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: c.textHead }}>
+                              Pre-fill from MLB Matchup
+                            </span>
+                            <span style={{ fontSize: '9px', color: c.textMuted }}>
+                              {prefillLoading ? 'Loading…' : `${prefillGames.length} games`}
+                            </span>
+                          </div>
+
+                          {/* Date Picker */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 600, color: c.textMuted }}>Date:</label>
+                            <input
+                              type="date"
+                              value={prefillDate}
+                              onChange={(e) => setPrefillDate(e.target.value)}
+                              style={{
+                                flex: 1, padding: '4px 6px', fontSize: '11px',
+                                borderRadius: '4px', border: `1px solid ${c.border}`,
+                                backgroundColor: c.bgInput, color: c.textHead,
+                              }}
+                            />
+                          </div>
+
+                          {/* Games Dropdown */}
+                          {prefillGames.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <select
+                                value={prefillSelectedGamePk}
+                                onChange={(e) => setPrefillSelectedGamePk(e.target.value)}
+                                style={{
+                                  width: '100%', padding: '5px 6px', fontSize: '11px', fontWeight: 600,
+                                  borderRadius: '4px', border: `1px solid ${c.border}`,
+                                  backgroundColor: c.bgInput, color: c.textHead,
+                                }}
+                              >
+                                {prefillGames.map(g => (
+                                  <option key={g.gamePk} value={g.gamePk}>
+                                    {g.awayTeam} @ {g.homeTeam} {g.status ? `(${g.status})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <button
+                                onClick={() => handleApplyPrefillFromGame(prefillSelectedGamePk)}
+                                style={{
+                                  width: '100%', padding: '7px 10px',
+                                  borderRadius: '6px', cursor: 'pointer',
+                                  border: 'none',
+                                  backgroundColor: c.accent, color: '#ffffff',
+                                  fontSize: '11px', fontWeight: 700,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                                }}
+                              >
+                                <Users style={{ width: '13px', height: '13px' }} />
+                                Load Matchup Lineup into Scorecard
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '10px', color: c.textMuted, textAlign: 'center', padding: '4px 0' }}>
+                              {prefillLoading ? 'Searching games for date…' : 'No MLB games found on this date.'}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -2625,6 +2772,16 @@ export default function App() {
         onClose={() => setRosterModalOpen(false)}
         scorecardData={scorecardData}
         onSaveScorecardData={handleSaveScorecardDataFromRoster}
+        isDark={isDark}
+      />
+
+      {/* Pitcher Stats & Inning Pitches Breakdown Modal */}
+      <PitcherEditModal
+        isOpen={pitcherModalOpen}
+        onClose={() => setPitcherModalOpen(false)}
+        pitcherContext={activePitcherContext}
+        onSavePitcher={handleSavePitcher}
+        totalInnings={scorecardData?.gameInfo?.totalInnings || 9}
         isDark={isDark}
       />
 

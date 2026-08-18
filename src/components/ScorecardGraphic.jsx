@@ -1121,13 +1121,10 @@ export default function ScorecardGraphic({
                   return (
                     <tr
                       key={p.id || pIdx}
-                      onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
                       style={{
                         borderBottom: `1px solid ${t.borderLight}`,
                         backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
-                        cursor: onPitcherClick ? 'pointer' : 'default',
                       }}
-                      title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
                     >
                       {/* Vertical 90-degree rotated PITCHING Sidebar */}
                       {pIdx === 0 && (
@@ -1152,11 +1149,17 @@ export default function ScorecardGraphic({
                         </td>
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
-                      <td style={{
-                        padding: '3px 6px',
-                        borderRight: `1.5px solid ${t.borderStrong}`,
-                        verticalAlign: 'middle',
-                      }}>
+                      <td
+                        onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                        className={onPitcherClick ? 'interactive-roster-cell' : ''}
+                        style={{
+                          padding: '3px 6px',
+                          borderRight: `1.5px solid ${t.borderStrong}`,
+                          verticalAlign: 'middle',
+                          cursor: onPitcherClick ? 'pointer' : 'default',
+                        }}
+                        title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
+                      >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{
@@ -1219,11 +1222,18 @@ export default function ScorecardGraphic({
                         const str = innStat?.strikes || 0;
                         const bll = innStat?.balls || 0;
                         return (
-                          <td key={n} style={{
-                            textAlign: 'center', padding: '2px 1px',
-                            borderLeft: `1px solid ${t.borderLight}`,
-                            verticalAlign: 'middle',
-                          }}>
+                          <td
+                            key={n}
+                            onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
+                            className={onPitcherClick ? 'interactive-diamond-cell' : ''}
+                            style={{
+                              textAlign: 'center', padding: '2px 1px',
+                              borderLeft: `1px solid ${t.borderLight}`,
+                              verticalAlign: 'middle',
+                              cursor: onPitcherClick ? 'pointer' : 'default',
+                            }}
+                            title={onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                          >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
                                 <span style={{ fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
