@@ -37,7 +37,7 @@ export const TEAM_COLORS = {
 
 export async function searchGamesByDate(dateStr) {
   try {
-    const response = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}`);
+    const response = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}&hydrate=linescore`);
     if (!response.ok) throw new Error('Failed to fetch schedule');
     const data = await response.json();
     
@@ -45,20 +45,121 @@ export async function searchGamesByDate(dateStr) {
       return [];
     }
     
-    return data.dates[0].games.map(g => ({
-      gamePk: g.gamePk,
-      date: g.officialDate || dateStr,
-      awayTeam: g.teams.away.team.name,
-      homeTeam: g.teams.home.team.name,
-      awayScore: g.teams.away.score,
-      homeScore: g.teams.home.score,
-      venue: g.venue?.name || 'MLB Stadium',
-      status: g.status?.detailedState || 'Final'
-    }));
+    return data.dates[0].games.map(g => {
+      const detailedState = (g.status?.detailedState || '').trim();
+      const abstractState = (g.status?.abstractGameState || '').trim();
+      const codedState = (g.status?.codedGameState || '').trim();
+      const statusCode = (g.status?.statusCode || '').trim();
+      
+      const isFinal =
+        abstractState.toLowerCase() === 'final' ||
+        codedState === 'F' || codedState === 'O' || statusCode === 'F' || statusCode === 'O' ||
+        detailedState.toLowerCase().includes('final') ||
+        detailedState.toLowerCase().includes('game over') ||
+        detailedState.toLowerCase().includes('completed') ||
+        (g.teams.away.score !== undefined && g.teams.home.score !== undefined && g.linescore && g.linescore.currentInning >= 9 && codedState !== 'I' && abstractState.toLowerCase() !== 'live');
+
+      const isLive =
+        !isFinal && (
+          abstractState.toLowerCase() === 'live' ||
+          codedState === 'I' || statusCode === 'I' ||
+          detailedState.toLowerCase().includes('in progress') ||
+          detailedState.toLowerCase().includes('live') ||
+          detailedState.toLowerCase().includes('inning') ||
+          detailedState.toLowerCase().includes('warmup') ||
+          detailedState.toLowerCase().includes('delayed')
+        );
+
+      let inningText = '';
+      if (isLive && g.linescore?.currentInningOrdinal) {
+        inningText = `${g.linescore.inningHalf === 'Top' ? 'Top' : 'Bot'} ${g.linescore.currentInningOrdinal}`;
+      } else if (isFinal && g.linescore?.innings?.length > 9) {
+        inningText = `F/${g.linescore.innings.length}`;
+      }
+
+      return {
+        gamePk: g.gamePk,
+        date: g.officialDate || dateStr,
+        awayTeam: g.teams.away.team.name,
+        homeTeam: g.teams.home.team.name,
+        awayScore: g.teams.away.score,
+        homeScore: g.teams.home.score,
+        venue: g.venue?.name || 'MLB Stadium',
+        status: detailedState || (isFinal ? 'Final' : isLive ? 'Live' : 'Scheduled'),
+        abstractState,
+        isLive,
+        isFinal,
+        inningText,
+      };
+    });
   } catch (err) {
     console.error('Error fetching games:', err);
     return [];
   }
+}
+
+export async function findMostRecentRaysGame() {
+  try {
+    const today = new Date();
+    const formatDate = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const endDateStr = formatDate(today);
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - 14);
+    const startDateStr = formatDate(startDate);
+
+    // Fetch Rays schedule for past 14 days
+    const res = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=139&startDate=${startDateStr}&endDate=${endDateStr}&hydrate=linescore`);
+    if (!res.ok) throw new Error('Failed to fetch Rays schedule');
+    const data = await res.json();
+
+    const allGames = [];
+    if (data.dates) {
+      data.dates.forEach(d => {
+        (d.games || []).forEach(g => {
+          allGames.push({
+            gamePk: g.gamePk,
+            date: g.officialDate || d.date,
+            status: g.status?.detailedState || '',
+            abstractState: g.status?.abstractGameState || '',
+            codedState: g.status?.codedGameState || '',
+          });
+        });
+      });
+    }
+
+    // Sort chronologically descending by date, then gamePk
+    allGames.sort((a, b) => b.date.localeCompare(a.date) || b.gamePk - a.gamePk);
+
+    // Prefer completed games first, or active live games
+    const completedGame = allGames.find(g =>
+      g.abstractState.toLowerCase() === 'final' ||
+      g.codedState === 'F' || g.codedState === 'O' ||
+      g.status.toLowerCase().includes('final') ||
+      g.status.toLowerCase().includes('game over')
+    );
+    const liveGame = allGames.find(g =>
+      g.abstractState.toLowerCase() === 'live' ||
+      g.codedState === 'I' ||
+      g.status.toLowerCase().includes('in progress')
+    );
+
+    const chosen = completedGame || liveGame || allGames[0];
+    if (chosen) {
+      return {
+        date: chosen.date,
+        gamePk: String(chosen.gamePk),
+      };
+    }
+  } catch (err) {
+    console.warn('Could not find recent Rays game automatically:', err);
+  }
+  return null;
 }
 
 export async function fetchGameScorecardData(gamePk) {
@@ -289,12 +390,29 @@ export function processMLBData(data, gamePkOverride) {
     if (timeInfo) durationStr = `TIME: ${timeInfo}`;
   }
 
-  // Pitcher Decisions
-  const decisions = {
+  // Game Status
+  const statusDetailed = gameData.status?.detailedState || 'Final';
+  const abstractState = gameData.status?.abstractGameState || '';
+  const isFinal = abstractState === 'Final' || statusDetailed === 'Final' || statusDetailed === 'Game Over' || statusDetailed === 'Completed Early';
+  const isLive = abstractState === 'Live' || statusDetailed === 'In Progress' || statusDetailed.includes('Inning');
+
+  let statusDisplay = 'FINAL';
+  if (isLive) {
+    const half = linescore?.inningHalf || 'Top';
+    const ord = linescore?.currentInningOrdinal || (linescore?.currentInning ? `${linescore.currentInning}th` : '');
+    statusDisplay = ord ? `${half.toUpperCase()} ${ord.toUpperCase()}` : 'LIVE';
+  } else if (!isFinal) {
+    statusDisplay = statusDetailed.toUpperCase();
+  } else if (linescore?.innings?.length > 9) {
+    statusDisplay = `F/${linescore.innings.length}`;
+  }
+
+  // Pitcher Decisions (only for completed games)
+  const decisions = isFinal ? {
     winner: liveData?.decisions?.winner?.fullName ? extractLastNameGlobal(liveData.decisions.winner.fullName) : '',
     loser: liveData?.decisions?.loser?.fullName ? extractLastNameGlobal(liveData.decisions.loser.fullName) : '',
     save: liveData?.decisions?.save?.fullName ? extractLastNameGlobal(liveData.decisions.save.fullName) : '',
-  };
+  } : { winner: '', loser: '', save: '' };
 
   const totalInnings = Math.max(9, linescore.innings?.length || 9);
 
@@ -657,24 +775,51 @@ export function processMLBData(data, gamePkOverride) {
     };
   });
 
-  // Determine Game MVP
+  // Determine Game MVP (only for completed games)
   let gameMvp = null;
-  const topHr = hrHighlights[0];
-  if (topHr) {
-    gameMvp = {
-      name: topHr.batterName,
-      team: topHr.team,
-      badge: 'GAME MVP',
-      statLine: `${topHr.rbi} RBI HR ${topHr.dist ? `(${topHr.dist}` : ''}${topHr.speed ? `, ${topHr.speed})` : ')'}`,
-    };
-  } else if (decisions.winner) {
-    const winningTeam = homeTeam.score > awayTeam.score ? homeAbbr : awayAbbr;
-    gameMvp = {
-      name: decisions.winner,
-      team: winningTeam,
-      badge: 'WINNING PITCHER',
-      statLine: `WINNING PITCHER FOR ${winningTeam}`,
-    };
+  if (isFinal) {
+    const topHr = hrHighlights[0];
+    if (topHr) {
+      gameMvp = {
+        name: topHr.batterName,
+        team: topHr.team,
+        badge: 'GAME MVP',
+        statLine: `${topHr.rbi} RBI HR ${topHr.dist ? `(${topHr.dist}` : ''}${topHr.speed ? `, ${topHr.speed})` : ')'}`,
+      };
+    } else if (decisions.winner) {
+      const winningTeam = homeTeam.score > awayTeam.score ? homeAbbr : awayAbbr;
+      gameMvp = {
+        name: decisions.winner,
+        team: winningTeam,
+        badge: 'WINNING PITCHER',
+        statLine: `WINNING PITCHER FOR ${winningTeam}`,
+      };
+    }
+  }
+
+  // Live Active At-Bat cell detection
+  let liveActiveCell = null;
+  if (isLive) {
+    const currentPlay = liveData.plays?.currentPlay;
+    const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
+    const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
+    const battingTeamKey = isTop ? 'away' : 'home';
+    const activeBatters = isTop ? awayData?.batters : homeData?.batters;
+    
+    let batterId = currentPlay?.matchup?.batter?.id;
+    if (!batterId && activeBatters && activeBatters.length > 0) {
+      const playedBatter = activeBatters.find(b => b.plays && b.plays[inn]);
+      batterId = playedBatter ? playedBatter.id : activeBatters[0]?.id;
+    }
+
+    if (batterId) {
+      liveActiveCell = {
+        cellKey: `${batterId}_${inn}`,
+        batterId,
+        inning: inn,
+        teamKey: battingTeamKey,
+      };
+    }
   }
 
   return {
@@ -695,6 +840,11 @@ export function processMLBData(data, gamePkOverride) {
       topHits: topHits.slice(0, 4),
       gameMomentum,
       gameMvp,
+      statusDisplay,
+      isFinal,
+      isLive,
+      statusDetailed,
+      liveActiveCell,
     },
     awayData,
     homeData

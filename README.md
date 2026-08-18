@@ -14,6 +14,7 @@ Generate **framable, print-quality scorecard posters** for any MLB game — comp
 ## ✨ Features
 
 - **Live MLB data** — pulls real play-by-play from the official MLB Stats API for any completed game
+- **Interactive Live Scorebook** — score any game live in real-time or from scratch with hand scorebook notations (hits, strikeouts, groundouts, double plays, errors, walks), visual base path diamond advance tracking, RBI, pitch counts, and automatic box score & pitching calculations
 - **SVG base path diamonds** — each at-bat rendered with accurate base paths (1B, 2B, 3B, HR) and correct backward-K notation for called strikeouts
 - **Inning-by-inning linescore** — runs scored per inning displayed below each team's batting grid
 - **Pitching stats table** — IP, H, R, ER, BB, K for every pitcher used

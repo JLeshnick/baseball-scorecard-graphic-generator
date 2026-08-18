@@ -33,6 +33,11 @@ export default function ScorecardGraphic({
   customAwaySecondary,
   customHomeColor,
   customHomeSecondary,
+  onCellClick = null,
+  onBatterClick = null,
+  onPitcherClick = null,
+  activeCellKey = null,
+  isInteractive = false,
 }) {
   if (!data) return null;
 
@@ -952,13 +957,19 @@ export default function ScorecardGraphic({
                     </td>
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
-                    <td style={{
-                      verticalAlign: 'middle',
-                      padding: '3px 4px 3px 6px',
-                      borderRight: `1.5px solid ${t.borderStrong}`,
-                      overflow: 'visible',
-                      maxWidth: `${NAME_COL_W - 22}px`,
-                    }}>
+                    <td
+                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                      className={onBatterClick ? 'interactive-roster-cell' : ''}
+                      style={{
+                        verticalAlign: 'middle',
+                        padding: '3px 4px 3px 6px',
+                        borderRight: `1.5px solid ${t.borderStrong}`,
+                        overflow: 'visible',
+                        maxWidth: `${NAME_COL_W - 22}px`,
+                        cursor: onBatterClick ? 'pointer' : 'default',
+                      }}
+                      title={onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -990,15 +1001,70 @@ export default function ScorecardGraphic({
                     {/* Inning cells */}
                     {innings.map(n => {
                       const play = isBlankMode ? null : b.plays?.[n];
+                      const cellKey = `${b.id}_${n}`;
+                      const isSelected = activeCellKey === cellKey;
+                      const hasInteractiveClick = Boolean(onCellClick);
+                      const isLiveActiveCell = Boolean(
+                        gameInfo?.isLive &&
+                        gameInfo?.liveActiveCell &&
+                        String(gameInfo.liveActiveCell.batterId) === String(b.id) &&
+                        Number(gameInfo.liveActiveCell.inning) === Number(n) &&
+                        gameInfo.liveActiveCell.teamKey === (isHome ? 'home' : 'away')
+                      );
+
+                      let cellClassName = '';
+                      if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
+                      else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+
                       return (
-                        <td key={n} style={{
-                          textAlign: 'center', verticalAlign: 'middle',
-                          padding: '1px',
-                          borderLeft: `1px solid ${t.borderLight}`,
-                          backgroundColor: n % 2 === 0 ? t.tableInningAlt : 'transparent',
-                          position: 'relative',
-                        }}>
-                          {renderPlayCell(play, isHome, `${b.id}_${n}`)}
+                        <td
+                          key={n}
+                          onClick={hasInteractiveClick ? () => onCellClick({
+                            teamKey: isHome ? 'home' : 'away',
+                            teamName: teamInfo.name,
+                            batterIndex: bIdx,
+                            batter: b,
+                            inning: n,
+                            currentPlay: play,
+                            cellKey,
+                          }) : undefined}
+                          className={cellClassName}
+                          style={{
+                            textAlign: 'center', verticalAlign: 'middle',
+                            padding: '1px',
+                            borderLeft: `1px solid ${t.borderLight}`,
+                            backgroundColor: isSelected
+                              ? 'rgba(59, 130, 246, 0.3)'
+                              : isLiveActiveCell
+                              ? 'rgba(239, 68, 68, 0.22)'
+                              : (n % 2 === 0 ? t.tableInningAlt : 'transparent'),
+                            position: 'relative',
+                            cursor: hasInteractiveClick ? 'pointer' : 'default',
+                            boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : (isLiveActiveCell ? 'inset 0 0 0 2px #ef4444' : 'none'),
+                          }}
+                          title={
+                            isLiveActiveCell
+                              ? `🔴 Active At-Bat: #${b.jerseyNumber} ${b.name}`
+                              : hasInteractiveClick
+                              ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})`
+                              : undefined
+                          }
+                        >
+                          {renderPlayCell(play, isHome, cellKey)}
+                          {isLiveActiveCell && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '2px',
+                              right: '2px',
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: '#ef4444',
+                              boxShadow: '0 0 8px #ef4444',
+                              animation: 'liveDotPulse 1.2s ease-in-out infinite',
+                              pointerEvents: 'none',
+                            }} />
+                          )}
                         </td>
                       );
                     })}
@@ -1068,10 +1134,13 @@ export default function ScorecardGraphic({
                   const color = isHome ? t.homeColor : t.awayColor;
                   const text = isHome ? t.homeText : t.awayText;
                   return (
-                    <tr key={p.id || pIdx} style={{
-                      borderBottom: `1px solid ${t.borderLight}`,
-                      backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
-                    }}>
+                    <tr
+                      key={p.id || pIdx}
+                      style={{
+                        borderBottom: `1px solid ${t.borderLight}`,
+                        backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
+                      }}
+                    >
                       {/* Vertical 90-degree rotated PITCHING Sidebar */}
                       {pIdx === 0 && (
                         <td rowSpan={pitchersToRender.length + 1} style={{
@@ -1095,11 +1164,17 @@ export default function ScorecardGraphic({
                         </td>
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
-                      <td style={{
-                        padding: '3px 6px',
-                        borderRight: `1.5px solid ${t.borderStrong}`,
-                        verticalAlign: 'middle',
-                      }}>
+                      <td
+                        onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                        className={onPitcherClick ? 'interactive-roster-cell' : ''}
+                        style={{
+                          padding: '3px 6px',
+                          borderRight: `1.5px solid ${t.borderStrong}`,
+                          verticalAlign: 'middle',
+                          cursor: onPitcherClick ? 'pointer' : 'default',
+                        }}
+                        title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
+                      >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{
@@ -1162,11 +1237,18 @@ export default function ScorecardGraphic({
                         const str = innStat?.strikes || 0;
                         const bll = innStat?.balls || 0;
                         return (
-                          <td key={n} style={{
-                            textAlign: 'center', padding: '2px 1px',
-                            borderLeft: `1px solid ${t.borderLight}`,
-                            verticalAlign: 'middle',
-                          }}>
+                          <td
+                            key={n}
+                            onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
+                            className={onPitcherClick ? 'interactive-diamond-cell' : ''}
+                            style={{
+                              textAlign: 'center', padding: '2px 1px',
+                              borderLeft: `1px solid ${t.borderLight}`,
+                              verticalAlign: 'middle',
+                              cursor: onPitcherClick ? 'pointer' : 'default',
+                            }}
+                            title={onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                          >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
                                 <span style={{ fontFamily: t.fontMono, fontSize: '8.5px', fontWeight: 800, color: t.textPrimary, display: 'block' }}>
@@ -1227,8 +1309,9 @@ export default function ScorecardGraphic({
   // ─── Main Render ──────────────────────────────────────────────────────────────
   const away = gameInfo.awayTeam;
   const home = gameInfo.homeTeam;
-  const awayWon = away.score > home.score;
-  const homeWon = home.score > away.score;
+  const isFinal = gameInfo.isFinal !== undefined ? gameInfo.isFinal : true;
+  const awayWon = isFinal && !isBlankMode && away.score > home.score;
+  const homeWon = isFinal && !isBlankMode && home.score > away.score;
 
   const isLandscape = orientation === 'landscape';
   const totalInningsCount = Math.max(9, gameInfo.totalInnings || 9);
@@ -1324,7 +1407,7 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: awayWon && !isBlankMode ? t.awayColor : t.textPrimary,
+                color: awayWon ? t.awayColor : t.textPrimary,
                 lineHeight: 1, position: 'relative', zIndex: 1,
               }}>
                 {away.name}
@@ -1337,12 +1420,12 @@ export default function ScorecardGraphic({
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: awayWon && !isBlankMode ? t.awayColor : t.textSecondary,
+                  color: awayWon ? t.awayColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
                   {isBlankMode ? '—' : away.score}
                 </span>
-                {awayWon && !isBlankMode && (
+                {awayWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.awayColor, fontFamily: t.fontSans,
@@ -1376,12 +1459,14 @@ export default function ScorecardGraphic({
               }} />
               <div style={{
                 fontFamily: t.fontMono,
-                fontSize: '8px', fontWeight: 700,
-                color: t.textMuted,
+                fontSize: '8.5px', fontWeight: 800,
+                color: gameInfo.isLive ? '#ef4444' : t.textMuted,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
               }}>
-                {isBlankMode ? 'GAME DAY' : (gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL')}
+                {isBlankMode ? 'GAME DAY' : (gameInfo.statusDisplay || (gameInfo.totalInnings > 9 ? `F/${gameInfo.totalInnings}` : 'FINAL'))}
               </div>
             </div>
 
@@ -1419,7 +1504,7 @@ export default function ScorecardGraphic({
                 fontSize: '28px',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: homeWon && !isBlankMode ? t.homeColor : t.textPrimary,
+                color: homeWon ? t.homeColor : t.textPrimary,
                 lineHeight: 1,
                 textAlign: 'right', position: 'relative', zIndex: 1,
               }}>
@@ -1434,12 +1519,12 @@ export default function ScorecardGraphic({
                   fontFamily: t.fontMono,
                   fontWeight: 900,
                   fontSize: '50px',
-                  color: homeWon && !isBlankMode ? t.homeColor : t.textSecondary,
+                  color: homeWon ? t.homeColor : t.textSecondary,
                   lineHeight: 1,
                 }}>
                   {isBlankMode ? '—' : home.score}
                 </span>
-                {homeWon && !isBlankMode && (
+                {homeWon && (
                   <span style={{
                     fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em',
                     color: t.homeColor, fontFamily: t.fontSans,
@@ -1779,6 +1864,47 @@ export default function ScorecardGraphic({
           </div>
         </div>
       </div>
+
+      <style>{`
+        .interactive-diamond-cell {
+          cursor: pointer;
+          transition: background-color 0.12s ease;
+        }
+        .interactive-diamond-cell:hover {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+        }
+        .interactive-roster-cell {
+          cursor: pointer;
+          transition: background-color 0.12s ease;
+        }
+        .interactive-roster-cell:hover {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+        }
+        @keyframes liveAtBatPulse {
+          0% {
+            background-color: rgba(239, 68, 68, 0.14);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 4px rgba(239, 68, 68, 0.4);
+          }
+          50% {
+            background-color: rgba(239, 68, 68, 0.32);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 12px rgba(239, 68, 68, 0.85);
+          }
+          100% {
+            background-color: rgba(239, 68, 68, 0.14);
+            box-shadow: inset 0 0 0 2px #ef4444, 0 0 4px rgba(239, 68, 68, 0.4);
+          }
+        }
+        .live-active-atbat-cell {
+          animation: liveAtBatPulse 2.2s ease-in-out infinite !important;
+          position: relative !important;
+          z-index: 2;
+        }
+        @keyframes liveDotPulse {
+          0% { transform: scale(0.85); opacity: 0.6; }
+          50% { transform: scale(1.4); opacity: 1; }
+          100% { transform: scale(0.85); opacity: 0.6; }
+        }
+      `}</style>
     </div>
   );
 }
