@@ -4,6 +4,21 @@ import {
   fetchGameScorecardData
 } from './services/mlbApi';
 import ScorecardGraphic from './components/ScorecardGraphic';
+import PlayEntryModal from './components/PlayEntryModal';
+import RosterEditModal from './components/RosterEditModal';
+import SavedGamesModal from './components/SavedGamesModal';
+import {
+  createBlankScorecardData,
+  createScorecardFromMlbGame,
+  recalculateScorecardStats,
+} from './services/scorecardCalculations';
+import {
+  saveScorecardToStorage,
+  getSavedScorecardsList,
+  autosaveLiveScorecard,
+  getAutosavedLiveScorecard,
+  exportScorecardAsJson,
+} from './services/scorecardStorage';
 import {
   Calendar,
   Download,
@@ -23,6 +38,15 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  BookOpen,
+  Edit3,
+  Plus,
+  Play,
+  FolderOpen,
+  Save,
+  ChevronRight,
+  ChevronLeft,
+  Users,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -176,6 +200,17 @@ export default function App() {
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
   const [rawGameData, setRawGameData] = useState(null);
 
+  // ─── Live Scorebook State ───────────────────────────────────────────────────
+  const [scoringMode, setScoringMode] = useState('mlb'); // 'mlb' or 'live'
+  const [playModalOpen, setPlayModalOpen] = useState(false);
+  const [activeCellContext, setActiveCellContext] = useState(null);
+  const [rosterModalOpen, setRosterModalOpen] = useState(false);
+  const [savedGamesModalOpen, setSavedGamesModalOpen] = useState(false);
+  const [liveInning, setLiveInning] = useState(1);
+  const [liveHalf, setLiveHalf] = useState('away'); // 'away' (top) or 'home' (bottom)
+  const [liveBatterIdx, setLiveBatterIdx] = useState(0); // 0..8
+  const [autoCalculateStats, setAutoCalculateStats] = useState(true);
+
   // ─── Mobile State ───────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview'); // 'preview' or 'controls'
@@ -264,10 +299,10 @@ export default function App() {
   }, [selectedDate]);
 
   useEffect(() => {
-    if (selectedGamePk) {
+    if (selectedGamePk && scoringMode === 'mlb') {
       loadGameData(selectedGamePk);
     }
-  }, [selectedGamePk]);
+  }, [selectedGamePk, scoringMode]);
 
   // ─── URL Permalinks Parsing ────────────────────────────────────────────────
   useEffect(() => {
@@ -417,6 +452,170 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ─── Live Scoring Handlers ───────────────────────────────────────────────────
+  const handleStartNewBlankGame = () => {
+    const blank = createBlankScorecardData();
+    setScorecardData(blank);
+    setScoringMode('live');
+    setLiveInning(1);
+    setLiveHalf('away');
+    setLiveBatterIdx(0);
+    setCustomHeadline(blank.gameInfo.dateDisplay);
+    setCustomSubtitle(`${blank.gameInfo.venue} · ${blank.gameInfo.headline}`);
+    setCustomFooter(`${blank.gameInfo.venue.toUpperCase()} • ${blank.gameInfo.dateDisplay}`);
+    setToastMessage('Created new blank live scorecard!');
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleStartLiveFromCurrentGame = () => {
+    if (!scorecardData) return;
+    const liveClone = createScorecardFromMlbGame(scorecardData);
+    setScorecardData(liveClone);
+    setScoringMode('live');
+    setLiveInning(1);
+    setLiveHalf('away');
+    setLiveBatterIdx(0);
+    setToastMessage('Live scoring initialized from MLB rosters!');
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleCellClick = (cellCtx) => {
+    setActiveCellContext(cellCtx);
+    setPlayModalOpen(true);
+  };
+
+  const handleBatterClick = () => {
+    setRosterModalOpen(true);
+  };
+
+  const handlePitcherClick = () => {
+    setRosterModalOpen(true);
+  };
+
+  const handleSavePlay = (playObj, autoAdvance = false) => {
+    if (!activeCellContext || !scorecardData) return;
+
+    const { teamKey, batterIndex, inning } = activeCellContext;
+    const nextData = JSON.parse(JSON.stringify(scorecardData));
+    const targetTeam = teamKey === 'away' ? nextData.awayData : nextData.homeData;
+
+    if (targetTeam && targetTeam.batters && targetTeam.batters[batterIndex]) {
+      if (!targetTeam.batters[batterIndex].plays) {
+        targetTeam.batters[batterIndex].plays = {};
+      }
+      targetTeam.batters[batterIndex].plays[inning] = playObj;
+    }
+
+    const calculated = autoCalculateStats ? recalculateScorecardStats(nextData) : nextData;
+    setScorecardData(calculated);
+    autosaveLiveScorecard(calculated);
+
+    if (autoAdvance) {
+      // Calculate next batter index
+      const nextBatterIdx = (batterIndex + 1) % 9;
+      const nextInning = inning;
+      const nextTeamKey = teamKey;
+
+      const nextTeamData = nextTeamKey === 'away' ? calculated.awayData : calculated.homeData;
+      const nextBatter = nextTeamData.batters[nextBatterIdx];
+      const nextPlay = nextBatter?.plays?.[nextInning] || null;
+
+      const nextCtx = {
+        teamKey: nextTeamKey,
+        teamName: nextTeamKey === 'away' ? calculated.gameInfo.awayTeam.name : calculated.gameInfo.homeTeam.name,
+        batterIndex: nextBatterIdx,
+        batter: nextBatter,
+        inning: nextInning,
+        currentPlay: nextPlay,
+        cellKey: `${nextBatter.id}_${nextInning}`,
+      };
+
+      setActiveCellContext(nextCtx);
+      setLiveBatterIdx(nextBatterIdx);
+      setLiveInning(nextInning);
+      setLiveHalf(nextTeamKey);
+      setToastMessage(`Saved! Now scoring: #${nextBatter.jerseyNumber} ${nextBatter.name}`);
+      setTimeout(() => setToastMessage(''), 2500);
+    } else {
+      setPlayModalOpen(false);
+      setToastMessage(`Play saved: ${playObj.code}`);
+      setTimeout(() => setToastMessage(''), 2500);
+    }
+  };
+
+  const handleClearPlay = () => {
+    if (!activeCellContext || !scorecardData) return;
+    const { teamKey, batterIndex, inning } = activeCellContext;
+    const nextData = JSON.parse(JSON.stringify(scorecardData));
+    const targetTeam = teamKey === 'away' ? nextData.awayData : nextData.homeData;
+
+    if (targetTeam && targetTeam.batters && targetTeam.batters[batterIndex]?.plays) {
+      delete targetTeam.batters[batterIndex].plays[inning];
+    }
+
+    const calculated = autoCalculateStats ? recalculateScorecardStats(nextData) : nextData;
+    setScorecardData(calculated);
+    autosaveLiveScorecard(calculated);
+    setToastMessage('Play cleared from scorecard');
+    setTimeout(() => setToastMessage(''), 2500);
+  };
+
+  const handleScoreCurrentAtBat = () => {
+    if (!scorecardData) return;
+    const isAway = liveHalf === 'away';
+    const teamData = isAway ? scorecardData.awayData : scorecardData.homeData;
+    const teamInfo = isAway ? scorecardData.gameInfo.awayTeam : scorecardData.gameInfo.homeTeam;
+    const batter = teamData?.batters?.[liveBatterIdx] || { id: 'b0', name: 'BATTER', jerseyNumber: '1', position: 'CF' };
+    const currentPlay = batter.plays?.[liveInning] || null;
+
+    setActiveCellContext({
+      teamKey: liveHalf,
+      teamName: teamInfo.name,
+      batterIndex: liveBatterIdx,
+      batter,
+      inning: liveInning,
+      currentPlay,
+      cellKey: `${batter.id}_${liveInning}`,
+    });
+    setPlayModalOpen(true);
+  };
+
+  const handleNextBatter = () => {
+    setLiveBatterIdx(prev => (prev + 1) % 9);
+  };
+
+  const handlePrevBatter = () => {
+    setLiveBatterIdx(prev => (prev - 1 + 9) % 9);
+  };
+
+  const handleToggleHalfInning = () => {
+    if (liveHalf === 'away') {
+      setLiveHalf('home');
+      setLiveBatterIdx(0);
+    } else {
+      setLiveHalf('away');
+      setLiveInning(prev => Math.min(prev + 1, Math.max(9, scorecardData?.gameInfo?.totalInnings || 9)));
+      setLiveBatterIdx(0);
+    }
+  };
+
+  const handleSaveToLibrary = () => {
+    if (!scorecardData) return;
+    const ok = saveScorecardToStorage(scorecardData);
+    if (ok) {
+      setToastMessage('Scorecard successfully saved to your library!');
+      setTimeout(() => setToastMessage(''), 3500);
+    }
+  };
+
+  const handleSaveScorecardDataFromRoster = (updatedData) => {
+    const calculated = autoCalculateStats ? recalculateScorecardStats(updatedData) : updatedData;
+    setScorecardData(calculated);
+    autosaveLiveScorecard(calculated);
+    setToastMessage('Teams and rosters updated!');
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   const captureGraphic = async (pixelRatio = 8) => {
@@ -1099,8 +1298,9 @@ export default function App() {
 
               {/* ── GAME TAB ──────────────────────────────────────────────── */}
               {activeTab === 'game' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
+                  {/* Top Mode Segmented Switch: MLB Matchup vs Live Scorebook */}
                   <div>
                     <label style={{
                       display: 'block', marginBottom: '6px',
@@ -1108,249 +1308,518 @@ export default function App() {
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       color: c.textMuted,
                     }}>
-                      Game Date
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        ref={dateInputRef}
-                        type="date"
-                        value={selectedDate}
-                        onClick={triggerCalendarPicker}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        style={{
-                          width: '100%',
-                          border: `1px solid ${c.border}`,
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          fontSize: '12px',
-                          fontFamily: "'Inter', sans-serif",
-                          backgroundColor: c.bgInput,
-                          color: c.textMain,
-                          outline: 'none',
-                          cursor: 'pointer',
-                        }}
-                      />
-                      <Calendar style={{
-                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                        width: '14px', height: '14px', color: c.textMuted, pointerEvents: 'none',
-                      }} />
-                    </div>
-                  </div>
-
-                  {/* MLB Game selector dropdown */}
-                  <div>
-                    <label style={{
-                      display: 'block', marginBottom: '6px',
-                      fontSize: '11px', fontWeight: 600,
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: c.textMuted,
-                    }}>
-                      Select MLB Game ({availableGames.length})
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={() => setGameSelectOpen(o => !o)}
-                        disabled={searching || availableGames.length === 0}
-                        style={{
-                          width: '100%',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: `1px solid ${c.border}`,
-                          backgroundColor: c.bgInput,
-                          color: availableGames.length === 0 ? c.textMuted : c.textMain,
-                          fontSize: '12px', fontWeight: 500,
-                          cursor: availableGames.length === 0 ? 'default' : 'pointer',
-                          textAlign: 'left',
-                          fontFamily: "'Inter', sans-serif",
-                        }}
-                      >
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, paddingRight: '8px' }}>
-                          {searching
-                            ? 'Searching games…'
-                            : availableGames.length === 0
-                            ? 'No games on this date'
-                            : availableGames.find(g => String(g.gamePk) === String(selectedGamePk))
-                              ? `${availableGames.find(g => String(g.gamePk) === String(selectedGamePk)).awayTeam} @ ${availableGames.find(g => String(g.gamePk) === String(selectedGamePk)).homeTeam}`
-                              : 'Select a game'}
-                        </span>
-                        <ChevronDown style={{
-                          width: '13px', height: '13px', color: c.textMuted, flexShrink: 0,
-                          transition: 'transform 0.15s',
-                          transform: gameSelectOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                        }} />
-                      </button>
-
-                      {gameSelectOpen && availableGames.length > 0 && (
-                        <>
-                          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setGameSelectOpen(false)} />
-                          <div style={{
-                            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                            maxHeight: '240px', overflowY: 'auto',
-                            backgroundColor: c.bgCard,
-                            border: `1px solid ${c.border}`,
-                            borderRadius: '8px',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                            zIndex: 100,
-                            padding: '4px',
-                          }}>
-                            {availableGames.map((g) => {
-                              const isSelected = String(g.gamePk) === String(selectedGamePk);
-                              return (
-                                <button
-                                  key={g.gamePk}
-                                  onClick={() => {
-                                    setSelectedGamePk(String(g.gamePk));
-                                    setGameSelectOpen(false);
-                                  }}
-                                  style={{
-                                    display: 'block', width: '100%', padding: '7px 9px',
-                                    borderRadius: '5px', border: 'none',
-                                    backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
-                                    textAlign: 'left', cursor: 'pointer',
-                                    transition: 'background 0.1s',
-                                    marginBottom: '2px',
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                                  }}
-                                >
-                                  <div style={{
-                                    fontSize: '11.5px', fontWeight: 700,
-                                    color: isSelected ? c.textHead : c.textMain,
-                                    lineHeight: 1.3, wordBreak: 'break-word',
-                                  }}>
-                                    {g.awayTeam} @ {g.homeTeam}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
-                                    display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
-                                  }}>
-                                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
-                                      {g.awayScore ?? '?'} – {g.homeScore ?? '?'}
-                                    </span>
-                                    <span style={{ fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-                                      {g.status || 'Final'}
-                                    </span>
-                                  </div>
-                                  <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
-                                    {g.venue}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 3-Way Segmented Control: Scorecard Data Mode */}
-                  <div>
-                    <label style={{
-                      display: 'block', marginBottom: '6px',
-                      fontSize: '11px', fontWeight: 600,
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: c.textMuted,
-                    }}>
-                      Scorecard Mode
+                      Scoring Mode
                     </label>
                     <div style={{
-                      display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px',
+                      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px',
                       backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                       padding: '3px', borderRadius: '8px', border: `1px solid ${c.border}`,
                     }}>
-                      {[
-                        { id: 'none', label: 'Live Game', sub: 'MLB Plays' },
-                        { id: 'prefill', label: 'Partially Filled', sub: 'Blank Sheet' },
-                        { id: 'full', label: 'Full Blank', sub: 'Empty Sheet' },
-                      ].map(mode => {
-                        const active = blankMode === mode.id;
-                        return (
-                          <button
-                            key={mode.id}
-                            onClick={() => setBlankMode(mode.id)}
-                            style={{
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                              padding: '6px 2px', borderRadius: '6px', cursor: 'pointer',
-                              border: active ? `1px solid ${c.border}` : '1px solid transparent',
-                              backgroundColor: active ? c.bgCard : 'transparent',
-                              color: active ? c.textHead : c.textMuted,
-                              fontWeight: active ? 700 : 500,
-                              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <span style={{ fontSize: '10px', lineHeight: 1.2 }}>{mode.label}</span>
-                            <span style={{ fontSize: '8.5px', opacity: 0.7, marginTop: '2px', fontFamily: "'Inter', sans-serif" }}>{mode.sub}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Game summary badge */}
-                  {scorecardData && !loading && (
-                    <div style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: `1px solid ${c.border}`,
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      display: 'flex', flexDirection: 'column', gap: '10px',
-                    }}>
-                      <div style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                        gap: '8px',
-                      }}>
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
-                            {scorecardData.gameInfo.awayTeam.abbreviation}
-                          </div>
-                          <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                            {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: '18px', fontWeight: 900,
-                            color: c.textHead, letterSpacing: '-0.02em',
-                            lineHeight: 1,
-                          }}>
-                            {blankMode !== 'none' ? '— vs —' : `${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
-                          </div>
-                          <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '2px', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
-                            {blankMode !== 'none' ? (blankMode === 'full' ? 'Full Blank Sheet' : 'Partially Filled Blank') : 'Final'}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
-                            {scorecardData.gameInfo.homeTeam.abbreviation}
-                          </div>
-                          <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                            {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
-                          </div>
-                        </div>
-                      </div>
-
                       <button
-                        onClick={handleCopyShareLink}
+                        onClick={() => {
+                          setScoringMode('mlb');
+                          if (selectedGamePk) loadGameData(selectedGamePk);
+                        }}
                         style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                          width: '100%', padding: '7px 10px',
-                          borderRadius: '6px', cursor: 'pointer',
-                          border: `1px solid ${c.border}`,
-                          backgroundColor: c.bgInput, color: c.textHead,
-                          fontSize: '11.5px', fontWeight: 600,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                          padding: '7px 4px', borderRadius: '6px', cursor: 'pointer',
+                          border: scoringMode === 'mlb' ? `1px solid ${c.border}` : '1px solid transparent',
+                          backgroundColor: scoringMode === 'mlb' ? c.bgCard : 'transparent',
+                          color: scoringMode === 'mlb' ? c.textHead : c.textMuted,
+                          fontWeight: scoringMode === 'mlb' ? 700 : 500,
+                          fontSize: '11px',
+                          boxShadow: scoringMode === 'mlb' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
-                        Copy Shareable URL Link
+                        <Calendar style={{ width: '13px', height: '13px' }} />
+                        MLB Schedule
                       </button>
+
+                      <button
+                        onClick={() => {
+                          if (!scorecardData?.isLiveScorebook) {
+                            handleStartLiveFromCurrentGame();
+                          } else {
+                            setScoringMode('live');
+                          }
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                          padding: '7px 4px', borderRadius: '6px', cursor: 'pointer',
+                          border: scoringMode === 'live' ? `1px solid ${c.border}` : '1px solid transparent',
+                          backgroundColor: scoringMode === 'live' ? c.bgCard : 'transparent',
+                          color: scoringMode === 'live' ? c.textHead : c.textMuted,
+                          fontWeight: scoringMode === 'live' ? 700 : 500,
+                          fontSize: '11px',
+                          boxShadow: scoringMode === 'live' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <BookOpen style={{ width: '13px', height: '13px', color: '#3b82f6' }} />
+                        Live Scorebook
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── MODE 1: MLB SCHEDULE (AUTO) ─────────────────────────── */}
+                  {scoringMode === 'mlb' && (
+                    <>
+                      <div>
+                        <label style={{
+                          display: 'block', marginBottom: '6px',
+                          fontSize: '11px', fontWeight: 600,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: c.textMuted,
+                        }}>
+                          Game Date
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            ref={dateInputRef}
+                            type="date"
+                            value={selectedDate}
+                            onClick={triggerCalendarPicker}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            style={{
+                              width: '100%',
+                              border: `1px solid ${c.border}`,
+                              borderRadius: '6px',
+                              padding: '8px 10px',
+                              fontSize: '12px',
+                              fontFamily: "'Inter', sans-serif",
+                              backgroundColor: c.bgInput,
+                              color: c.textMain,
+                              outline: 'none',
+                              cursor: 'pointer',
+                            }}
+                          />
+                          <Calendar style={{
+                            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                            width: '14px', height: '14px', color: c.textMuted, pointerEvents: 'none',
+                          }} />
+                        </div>
+                      </div>
+
+                      {/* MLB Game selector dropdown */}
+                      <div>
+                        <label style={{
+                          display: 'block', marginBottom: '6px',
+                          fontSize: '11px', fontWeight: 600,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: c.textMuted,
+                        }}>
+                          Select MLB Game ({availableGames.length})
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            onClick={() => setGameSelectOpen(o => !o)}
+                            disabled={searching || availableGames.length === 0}
+                            style={{
+                              width: '100%',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '8px 10px',
+                              borderRadius: '6px',
+                              border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgInput,
+                              color: availableGames.length === 0 ? c.textMuted : c.textMain,
+                              fontSize: '12px', fontWeight: 500,
+                              cursor: availableGames.length === 0 ? 'default' : 'pointer',
+                              textAlign: 'left',
+                              fontFamily: "'Inter', sans-serif",
+                            }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, paddingRight: '8px' }}>
+                              {searching
+                                ? 'Searching games…'
+                                : availableGames.length === 0
+                                ? 'No games on this date'
+                                : availableGames.find(g => String(g.gamePk) === String(selectedGamePk))
+                                  ? `${availableGames.find(g => String(g.gamePk) === String(selectedGamePk)).awayTeam} @ ${availableGames.find(g => String(g.gamePk) === String(selectedGamePk)).homeTeam}`
+                                  : 'Select a game'}
+                            </span>
+                            <ChevronDown style={{
+                              width: '13px', height: '13px', color: c.textMuted, flexShrink: 0,
+                              transition: 'transform 0.15s',
+                              transform: gameSelectOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                            }} />
+                          </button>
+
+                          {gameSelectOpen && availableGames.length > 0 && (
+                            <>
+                              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setGameSelectOpen(false)} />
+                              <div style={{
+                                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                                maxHeight: '240px', overflowY: 'auto',
+                                backgroundColor: c.bgCard,
+                                border: `1px solid ${c.border}`,
+                                borderRadius: '8px',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                                zIndex: 100,
+                                padding: '4px',
+                              }}>
+                                {availableGames.map((g) => {
+                                  const isSelected = String(g.gamePk) === String(selectedGamePk);
+                                  return (
+                                    <button
+                                      key={g.gamePk}
+                                      onClick={() => {
+                                        setSelectedGamePk(String(g.gamePk));
+                                        setGameSelectOpen(false);
+                                      }}
+                                      style={{
+                                        display: 'block', width: '100%', padding: '7px 9px',
+                                        borderRadius: '5px', border: 'none',
+                                        backgroundColor: isSelected ? (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.08)') : 'transparent',
+                                        textAlign: 'left', cursor: 'pointer',
+                                        transition: 'background 0.1s',
+                                        marginBottom: '2px',
+                                      }}
+                                      onMouseEnter={e => {
+                                        if (!isSelected) e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                                      }}
+                                      onMouseLeave={e => {
+                                        if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                                      }}
+                                    >
+                                      <div style={{
+                                        fontSize: '11.5px', fontWeight: 700,
+                                        color: isSelected ? c.textHead : c.textMain,
+                                        lineHeight: 1.3, wordBreak: 'break-word',
+                                      }}>
+                                        {g.awayTeam} @ {g.homeTeam}
+                                      </div>
+                                      <div style={{
+                                        fontSize: '10.5px', color: c.textMuted, marginTop: '2px',
+                                        display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                                      }}>
+                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: c.textHead }}>
+                                          {g.awayScore ?? '?'} – {g.homeScore ?? '?'}
+                                        </span>
+                                        <span style={{ fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                                          {g.status || 'Final'}
+                                        </span>
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
+                                        {g.venue}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 3-Way Segmented Control: Scorecard Data Mode */}
+                      <div>
+                        <label style={{
+                          display: 'block', marginBottom: '6px',
+                          fontSize: '11px', fontWeight: 600,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: c.textMuted,
+                        }}>
+                          Sheet Format
+                        </label>
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px',
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                          padding: '3px', borderRadius: '8px', border: `1px solid ${c.border}`,
+                        }}>
+                          {[
+                            { id: 'none', label: 'Completed', sub: 'MLB Plays' },
+                            { id: 'prefill', label: 'Roster Sheet', sub: 'Empty Plays' },
+                            { id: 'full', label: 'Full Blank', sub: 'Empty Sheet' },
+                          ].map(mode => {
+                            const active = blankMode === mode.id;
+                            return (
+                              <button
+                                key={mode.id}
+                                onClick={() => setBlankMode(mode.id)}
+                                style={{
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                  padding: '6px 2px', borderRadius: '6px', cursor: 'pointer',
+                                  border: active ? `1px solid ${c.border}` : '1px solid transparent',
+                                  backgroundColor: active ? c.bgCard : 'transparent',
+                                  color: active ? c.textHead : c.textMuted,
+                                  fontWeight: active ? 700 : 500,
+                                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <span style={{ fontSize: '10px', lineHeight: 1.2 }}>{mode.label}</span>
+                                <span style={{ fontSize: '8.5px', opacity: 0.7, marginTop: '2px', fontFamily: "'Inter', sans-serif" }}>{mode.sub}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Game summary badge */}
+                      {scorecardData && !loading && (
+                        <div style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${c.border}`,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                          display: 'flex', flexDirection: 'column', gap: '10px',
+                        }}>
+                          <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                            gap: '8px',
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+                                {scorecardData.gameInfo.awayTeam.abbreviation}
+                              </div>
+                              <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
+                                {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: '18px', fontWeight: 900,
+                                color: c.textHead, letterSpacing: '-0.02em',
+                                lineHeight: 1,
+                              }}>
+                                {blankMode !== 'none' ? '— vs —' : `${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
+                              </div>
+                              <div style={{ fontSize: '9px', color: c.textMuted, marginTop: '2px', letterSpacing: '0.06em', fontWeight: 600, textTransform: 'uppercase' }}>
+                                {blankMode !== 'none' ? (blankMode === 'full' ? 'Full Blank Sheet' : 'Partially Filled Blank') : 'Final'}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+                                {scorecardData.gameInfo.homeTeam.abbreviation}
+                              </div>
+                              <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
+                                {blankMode !== 'none' ? '—' : `${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleStartLiveFromCurrentGame}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              width: '100%', padding: '8px 10px',
+                              borderRadius: '6px', cursor: 'pointer',
+                              border: 'none',
+                              backgroundColor: '#3b82f6', color: '#ffffff',
+                              fontSize: '11.5px', fontWeight: 700,
+                              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <BookOpen style={{ width: '14px', height: '14px' }} />
+                            Score This Matchup Live ➔
+                          </button>
+
+                          <button
+                            onClick={handleCopyShareLink}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              width: '100%', padding: '7px 10px',
+                              borderRadius: '6px', cursor: 'pointer',
+                              border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgInput, color: c.textHead,
+                              fontSize: '11.5px', fontWeight: 600,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
+                            Copy Shareable URL Link
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ── MODE 2: INTERACTIVE LIVE SCOREBOOK ────────────────────── */}
+                  {scoringMode === 'live' && scorecardData && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                      {/* Current Batter & Quick Scoring Hero Card */}
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${c.border}`,
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.04)',
+                        display: 'flex', flexDirection: 'column', gap: '10px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{
+                            fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                            padding: '2px 6px', borderRadius: '4px',
+                            backgroundColor: liveHalf === 'away' ? '#0e3386' : '#c41e3a',
+                            color: '#ffffff',
+                          }}>
+                            {liveHalf === 'away' ? 'TOP' : 'BOT'} INN {liveInning}
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: c.textMuted }}>
+                            Slot #{liveBatterIdx + 1}
+                          </span>
+                        </div>
+
+                        {/* Current Batter Name & Info */}
+                        {(() => {
+                          const currentTeamData = liveHalf === 'away' ? scorecardData.awayData : scorecardData.homeData;
+                          const currentBatter = currentTeamData?.batters?.[liveBatterIdx] || { name: 'BATTER', jerseyNumber: '1', position: 'CF' };
+                          const currentPlay = currentBatter.plays?.[liveInning];
+
+                          return (
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: 800, color: c.textHead }}>
+                                #{currentBatter.jerseyNumber} {currentBatter.name} ({currentBatter.position})
+                              </div>
+                              <div style={{ fontSize: '11px', color: currentPlay ? '#10b981' : c.textMuted, marginTop: '2px', fontWeight: currentPlay ? 700 : 500 }}>
+                                {currentPlay ? `Recorded Play: ${currentPlay.code}` : 'Awaiting at-bat result…'}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Big Primary Score Button */}
+                        <button
+                          onClick={handleScoreCurrentAtBat}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            width: '100%', padding: '9px 12px',
+                            borderRadius: '6px', cursor: 'pointer',
+                            border: 'none',
+                            backgroundColor: '#3b82f6', color: '#ffffff',
+                            fontSize: '12px', fontWeight: 700,
+                            boxShadow: '0 2px 10px rgba(59, 130, 246, 0.3)',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <Edit3 style={{ width: '14px', height: '14px' }} />
+                          Score At-Bat (Inn {liveInning})
+                        </button>
+
+                        {/* Fast Batter Step Navigation */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '4px' }}>
+                          <button
+                            onClick={handlePrevBatter}
+                            style={{
+                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                            }}
+                          >
+                            <ChevronLeft style={{ width: '12px', height: '12px' }} /> Prev
+                          </button>
+                          <button
+                            onClick={handleNextBatter}
+                            style={{
+                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                            }}
+                          >
+                            Next <ChevronRight style={{ width: '12px', height: '12px' }} />
+                          </button>
+                          <button
+                            onClick={handleToggleHalfInning}
+                            style={{
+                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
+                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
+                              cursor: 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {liveHalf === 'away' ? 'Bot Inn ➔' : `Inn ${liveInning + 1} ➔`}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Lineup & Game Settings Actions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <button
+                          onClick={() => setRosterModalOpen(true)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '8px 10px', borderRadius: '6px',
+                            border: `1px solid ${c.border}`, backgroundColor: c.bgCard, color: c.textHead,
+                            fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Users style={{ width: '14px', height: '14px', color: c.accent }} />
+                            <span>Edit Lineups, Teams & Pitchers</span>
+                          </div>
+                          <ChevronRight style={{ width: '12px', height: '12px', color: c.textMuted }} />
+                        </button>
+
+                        <button
+                          onClick={handleSaveToLibrary}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '8px 10px', borderRadius: '6px',
+                            border: `1px solid ${c.border}`, backgroundColor: c.bgCard, color: c.textHead,
+                            fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Save style={{ width: '14px', height: '14px', color: '#10b981' }} />
+                            <span>Save Game to Library</span>
+                          </div>
+                          <Check style={{ width: '12px', height: '12px', color: '#10b981' }} />
+                        </button>
+
+                        <button
+                          onClick={() => setSavedGamesModalOpen(true)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '8px 10px', borderRadius: '6px',
+                            border: `1px solid ${c.border}`, backgroundColor: c.bgCard, color: c.textHead,
+                            fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <FolderOpen style={{ width: '14px', height: '14px', color: '#f59e0b' }} />
+                            <span>Saved Library & JSON Backup</span>
+                          </div>
+                          <ChevronRight style={{ width: '12px', height: '12px', color: c.textMuted }} />
+                        </button>
+
+                        <button
+                          onClick={handleStartNewBlankGame}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '8px 10px', borderRadius: '6px',
+                            border: `1px solid ${c.border}`, backgroundColor: c.bgInput, color: c.textMuted,
+                            fontSize: '11.5px', fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <Plus style={{ width: '14px', height: '14px' }} />
+                          <span>New Blank Game</span>
+                        </button>
+                      </div>
+
+                      {/* Auto calculate stats toggle */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 10px', borderRadius: '6px',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                        border: `1px solid ${c.border}`,
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: c.textHead }}>
+                            Auto-Calculate Stats
+                          </span>
+                          <span style={{ fontSize: '9px', color: c.textMuted }}>
+                            Updates line scores & pitcher IP automatically
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={autoCalculateStats}
+                          onChange={(e) => setAutoCalculateStats(e.target.checked)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2148,6 +2617,11 @@ export default function App() {
                     isBlankScorecard={blankMode}
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
+                    onCellClick={handleCellClick}
+                    onBatterClick={handleBatterClick}
+                    onPitcherClick={handlePitcherClick}
+                    activeCellKey={activeCellContext?.cellKey}
+                    isInteractive={true}
                   />
                 </div>
               </div>
@@ -2156,6 +2630,45 @@ export default function App() {
         )}
 
       </div>
+
+      {/* ── MODALS ──────────────────────────────────────────────────────── */}
+      {/* Interactive At-Bat Play Scoring Modal */}
+      <PlayEntryModal
+        isOpen={playModalOpen}
+        onClose={() => setPlayModalOpen(false)}
+        cellContext={activeCellContext}
+        onSavePlay={handleSavePlay}
+        onClearPlay={handleClearPlay}
+        isDark={isDark}
+      />
+
+      {/* Lineups / Teams / Pitchers Roster Modal */}
+      <RosterEditModal
+        isOpen={rosterModalOpen}
+        onClose={() => setRosterModalOpen(false)}
+        scorecardData={scorecardData}
+        onSaveScorecardData={handleSaveScorecardDataFromRoster}
+        isDark={isDark}
+      />
+
+      {/* Saved Scorecards Library Modal */}
+      <SavedGamesModal
+        isOpen={savedGamesModalOpen}
+        onClose={() => setSavedGamesModalOpen(false)}
+        onLoadGame={(loadedData) => {
+          setScorecardData(loadedData);
+          setScoringMode('live');
+          setToastMessage('Loaded scorecard from library!');
+          setTimeout(() => setToastMessage(''), 3500);
+        }}
+        onNewGame={handleStartNewBlankGame}
+        currentScorecard={scorecardData}
+        isDark={isDark}
+        onToast={(msg) => {
+          setToastMessage(msg);
+          setTimeout(() => setToastMessage(''), 3500);
+        }}
+      />
 
       {/* TOAST NOTIFICATION POPUP */}
       {toastMessage && (
@@ -2176,6 +2689,35 @@ export default function App() {
       {/* ── UNIFIED MOBILE FLOATING DOCK (MOBILE ONLY) ─────────────────── */}
       {isMobile && (
         <>
+          {/* Floating Mobile Live Score Pill (Live Scoring Mode) */}
+          {mobileView === 'preview' && scoringMode === 'live' && scorecardData && (
+            <div style={{
+              position: 'fixed', bottom: '116px', left: 0, right: 0,
+              zIndex: 46, display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+            }}>
+              <button
+                onClick={handleScoreCurrentAtBat}
+                style={{
+                  pointerEvents: 'auto',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  backgroundColor: '#3b82f6', color: '#ffffff',
+                  padding: '6px 14px', borderRadius: '24px',
+                  border: 'none',
+                  boxShadow: '0 6px 20px rgba(59, 130, 246, 0.4)',
+                  fontSize: '11.5px', fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <Edit3 style={{ width: '13px', height: '13px' }} />
+                <span>Score {liveHalf === 'away' ? 'Top' : 'Bot'} {liveInning}: #{(() => {
+                  const currentTeamData = liveHalf === 'away' ? scorecardData.awayData : scorecardData.homeData;
+                  const currentBatter = currentTeamData?.batters?.[liveBatterIdx];
+                  return currentBatter ? `${currentBatter.jerseyNumber} ${currentBatter.name}` : 'Batter';
+                })()}</span>
+              </button>
+            </div>
+          )}
+
           {/* Floating Mobile Zoom Pill (Preview Mode Only) */}
           {mobileView === 'preview' && (
             <div style={{

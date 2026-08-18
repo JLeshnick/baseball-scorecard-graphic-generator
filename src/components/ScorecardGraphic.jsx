@@ -33,6 +33,11 @@ export default function ScorecardGraphic({
   customAwaySecondary,
   customHomeColor,
   customHomeSecondary,
+  onCellClick = null,
+  onBatterClick = null,
+  onPitcherClick = null,
+  activeCellKey = null,
+  isInteractive = false,
 }) {
   if (!data) return null;
 
@@ -952,13 +957,18 @@ export default function ScorecardGraphic({
                     </td>
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
-                    <td style={{
-                      verticalAlign: 'middle',
-                      padding: '3px 4px 3px 6px',
-                      borderRight: `1.5px solid ${t.borderStrong}`,
-                      overflow: 'visible',
-                      maxWidth: `${NAME_COL_W - 22}px`,
-                    }}>
+                    <td
+                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: idx, batter: b, teamName: teamInfo.name }) : undefined}
+                      style={{
+                        verticalAlign: 'middle',
+                        padding: '3px 4px 3px 6px',
+                        borderRight: `1.5px solid ${t.borderStrong}`,
+                        overflow: 'visible',
+                        maxWidth: `${NAME_COL_W - 22}px`,
+                        cursor: onBatterClick ? 'pointer' : 'default',
+                      }}
+                      title={onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -990,15 +1000,36 @@ export default function ScorecardGraphic({
                     {/* Inning cells */}
                     {innings.map(n => {
                       const play = isBlankMode ? null : b.plays?.[n];
+                      const cellKey = `${b.id}_${n}`;
+                      const isSelected = activeCellKey === cellKey;
+                      const hasInteractiveClick = Boolean(onCellClick);
                       return (
-                        <td key={n} style={{
-                          textAlign: 'center', verticalAlign: 'middle',
-                          padding: '1px',
-                          borderLeft: `1px solid ${t.borderLight}`,
-                          backgroundColor: n % 2 === 0 ? t.tableInningAlt : 'transparent',
-                          position: 'relative',
-                        }}>
-                          {renderPlayCell(play, isHome, `${b.id}_${n}`)}
+                        <td
+                          key={n}
+                          onClick={hasInteractiveClick ? () => onCellClick({
+                            teamKey: isHome ? 'home' : 'away',
+                            teamName: teamInfo.name,
+                            batterIndex: idx,
+                            batter: b,
+                            inning: n,
+                            currentPlay: play,
+                            cellKey,
+                          }) : undefined}
+                          style={{
+                            textAlign: 'center', verticalAlign: 'middle',
+                            padding: '1px',
+                            borderLeft: `1px solid ${t.borderLight}`,
+                            backgroundColor: isSelected
+                              ? 'rgba(59, 130, 246, 0.3)'
+                              : (n % 2 === 0 ? t.tableInningAlt : 'transparent'),
+                            position: 'relative',
+                            cursor: hasInteractiveClick ? 'pointer' : 'default',
+                            boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : 'none',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                          title={hasInteractiveClick ? `Score Inn ${n}: ${b.name}` : undefined}
+                        >
+                          {renderPlayCell(play, isHome, cellKey)}
                         </td>
                       );
                     })}
@@ -1068,10 +1099,16 @@ export default function ScorecardGraphic({
                   const color = isHome ? t.homeColor : t.awayColor;
                   const text = isHome ? t.homeText : t.awayText;
                   return (
-                    <tr key={p.id || pIdx} style={{
-                      borderBottom: `1px solid ${t.borderLight}`,
-                      backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
-                    }}>
+                    <tr
+                      key={p.id || pIdx}
+                      onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                      style={{
+                        borderBottom: `1px solid ${t.borderLight}`,
+                        backgroundColor: pIdx % 2 === 1 ? t.tableRowAlt : 'transparent',
+                        cursor: onPitcherClick ? 'pointer' : 'default',
+                      }}
+                      title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
+                    >
                       {/* Vertical 90-degree rotated PITCHING Sidebar */}
                       {pIdx === 0 && (
                         <td rowSpan={pitchersToRender.length + 1} style={{
