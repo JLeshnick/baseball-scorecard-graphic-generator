@@ -1651,96 +1651,22 @@ export default function App() {
                   {scoringMode === 'live' && scorecardData && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                      {/* Current Batter & Quick Scoring Hero Card */}
+                      {/* Interactive Tap Guide Card */}
                       <div style={{
                         padding: '12px',
                         borderRadius: '8px',
                         border: `1px solid ${c.border}`,
                         backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.04)',
-                        display: 'flex', flexDirection: 'column', gap: '10px',
+                        display: 'flex', flexDirection: 'column', gap: '6px',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{
-                            fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                            padding: '2px 6px', borderRadius: '4px',
-                            backgroundColor: liveHalf === 'away' ? '#0e3386' : '#c41e3a',
-                            color: '#ffffff',
-                          }}>
-                            {liveHalf === 'away' ? 'TOP' : 'BOT'} INN {liveInning}
-                          </span>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: c.textMuted }}>
-                            Slot #{liveBatterIdx + 1}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Edit3 style={{ width: '14px', height: '14px', color: '#3b82f6' }} />
+                          <span style={{ fontSize: '11.5px', fontWeight: 700, color: c.textHead }}>
+                            Direct Cell Scoring
                           </span>
                         </div>
-
-                        {/* Current Batter Name & Info */}
-                        {(() => {
-                          const currentTeamData = liveHalf === 'away' ? scorecardData.awayData : scorecardData.homeData;
-                          const currentBatter = currentTeamData?.batters?.[liveBatterIdx] || { name: 'BATTER', jerseyNumber: '1', position: 'CF' };
-                          const currentPlay = currentBatter.plays?.[liveInning];
-
-                          return (
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: 800, color: c.textHead }}>
-                                #{currentBatter.jerseyNumber} {currentBatter.name} ({currentBatter.position})
-                              </div>
-                              <div style={{ fontSize: '11px', color: currentPlay ? '#10b981' : c.textMuted, marginTop: '2px', fontWeight: currentPlay ? 700 : 500 }}>
-                                {currentPlay ? `Recorded Play: ${currentPlay.code}` : 'Awaiting at-bat result…'}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Big Primary Score Button */}
-                        <button
-                          onClick={handleScoreCurrentAtBat}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                            width: '100%', padding: '9px 12px',
-                            borderRadius: '6px', cursor: 'pointer',
-                            border: 'none',
-                            backgroundColor: '#3b82f6', color: '#ffffff',
-                            fontSize: '12px', fontWeight: 700,
-                            boxShadow: '0 2px 10px rgba(59, 130, 246, 0.3)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <Edit3 style={{ width: '14px', height: '14px' }} />
-                          Score At-Bat (Inn {liveInning})
-                        </button>
-
-                        {/* Fast Batter Step Navigation */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '4px' }}>
-                          <button
-                            onClick={handlePrevBatter}
-                            style={{
-                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
-                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
-                            }}
-                          >
-                            <ChevronLeft style={{ width: '12px', height: '12px' }} /> Prev
-                          </button>
-                          <button
-                            onClick={handleNextBatter}
-                            style={{
-                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
-                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
-                            }}
-                          >
-                            Next <ChevronRight style={{ width: '12px', height: '12px' }} />
-                          </button>
-                          <button
-                            onClick={handleToggleHalfInning}
-                            style={{
-                              padding: '5px 4px', borderRadius: '4px', border: `1px solid ${c.border}`,
-                              backgroundColor: c.bgInput, color: c.textMain, fontSize: '10.5px', fontWeight: 600,
-                              cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {liveHalf === 'away' ? 'Bot Inn ➔' : `Inn ${liveInning + 1} ➔`}
-                          </button>
+                        <div style={{ fontSize: '10.5px', color: c.textMuted, lineHeight: 1.4 }}>
+                          Click or tap any diamond cell on the scorecard graphic to record or edit that at-bat. Click player names or pitcher rows to edit rosters.
                         </div>
                       </div>
 
@@ -2715,35 +2641,6 @@ export default function App() {
       {/* ── UNIFIED MOBILE FLOATING DOCK (MOBILE ONLY) ─────────────────── */}
       {isMobile && (
         <>
-          {/* Floating Mobile Live Score Pill (Live Scoring Mode) */}
-          {mobileView === 'preview' && scoringMode === 'live' && scorecardData && (
-            <div style={{
-              position: 'fixed', bottom: '116px', left: 0, right: 0,
-              zIndex: 46, display: 'flex', justifyContent: 'center', pointerEvents: 'none',
-            }}>
-              <button
-                onClick={handleScoreCurrentAtBat}
-                style={{
-                  pointerEvents: 'auto',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  backgroundColor: '#3b82f6', color: '#ffffff',
-                  padding: '6px 14px', borderRadius: '24px',
-                  border: 'none',
-                  boxShadow: '0 6px 20px rgba(59, 130, 246, 0.4)',
-                  fontSize: '11.5px', fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                <Edit3 style={{ width: '13px', height: '13px' }} />
-                <span>Score {liveHalf === 'away' ? 'Top' : 'Bot'} {liveInning}: #{(() => {
-                  const currentTeamData = liveHalf === 'away' ? scorecardData.awayData : scorecardData.homeData;
-                  const currentBatter = currentTeamData?.batters?.[liveBatterIdx];
-                  return currentBatter ? `${currentBatter.jerseyNumber} ${currentBatter.name}` : 'Batter';
-                })()}</span>
-              </button>
-            </div>
-          )}
-
           {/* Floating Mobile Zoom Pill (Preview Mode Only) */}
           {mobileView === 'preview' && (
             <div style={{

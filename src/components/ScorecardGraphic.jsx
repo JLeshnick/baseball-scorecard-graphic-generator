@@ -1015,6 +1015,12 @@ export default function ScorecardGraphic({
                             currentPlay: play,
                             cellKey,
                           }) : undefined}
+                          onMouseEnter={hasInteractiveClick ? (e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.16)';
+                          } : undefined}
+                          onMouseLeave={hasInteractiveClick ? (e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = n % 2 === 0 ? t.tableInningAlt : 'transparent';
+                          } : undefined}
                           style={{
                             textAlign: 'center', verticalAlign: 'middle',
                             padding: '1px',
@@ -1027,7 +1033,7 @@ export default function ScorecardGraphic({
                             boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : 'none',
                             transition: 'background-color 0.15s ease',
                           }}
-                          title={hasInteractiveClick ? `Score Inn ${n}: ${b.name}` : undefined}
+                          title={hasInteractiveClick ? `Score #${b.jerseyNumber} ${b.name} (Inn ${n})` : undefined}
                         >
                           {renderPlayCell(play, isHome, cellKey)}
                         </td>

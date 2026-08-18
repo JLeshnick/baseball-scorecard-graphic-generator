@@ -745,7 +745,7 @@ export default function PlayEntryModal({
             <button
               onClick={onClose}
               style={{
-                padding: '7px 12px', borderRadius: '6px',
+                padding: '8px 14px', borderRadius: '6px',
                 border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
                 backgroundColor: isDark ? '#27272a' : '#ffffff',
                 color: isDark ? '#d4d4d8' : '#374151',
@@ -758,30 +758,17 @@ export default function PlayEntryModal({
             <button
               onClick={() => handleSave(false)}
               style={{
-                padding: '7px 14px', borderRadius: '6px',
-                border: 'none',
-                backgroundColor: isDark ? '#fafafa' : '#18181b',
-                color: isDark ? '#09090b' : '#fafafa',
-                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '5px',
-              }}
-            >
-              <Check style={{ width: '14px', height: '14px' }} />
-              Save Play
-            </button>
-
-            <button
-              onClick={() => handleSave(true)}
-              style={{
-                padding: '7px 14px', borderRadius: '6px',
+                padding: '8px 18px', borderRadius: '6px',
                 border: 'none',
                 backgroundColor: '#3b82f6',
                 color: '#ffffff',
                 fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '5px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
               }}
             >
-              Save & Next ➔
+              <Check style={{ width: '14px', height: '14px' }} />
+              Save Play
             </button>
           </div>
         </div>
