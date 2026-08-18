@@ -60,6 +60,14 @@ const GithubIcon = ({ style }) => (
   </svg>
 );
 
+const getTodayDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getYesterdayDateString = () => {
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -159,7 +167,7 @@ export default function App() {
     accent:           isDark ? '#6366f1' : '#4f46e5',
     accentBg:         isDark ? 'rgba(99,102,241,0.15)' : 'rgba(79,70,229,0.08)',
   };
-  const [selectedDate, setSelectedDate] = useState(getYesterdayDateString());
+  const [selectedDate, setSelectedDate] = useState(getTodayDateString());
   const [availableGames, setAvailableGames] = useState([]);
   const [selectedGamePk, setSelectedGamePk] = useState('');
   const [scorecardData, setScorecardData] = useState(null);
@@ -1318,7 +1326,7 @@ export default function App() {
               {activeTab === 'game' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                  {/* Top Mode Segmented Switch: MLB Games vs Custom Scorebook */}
+                  {/* Top Mode Segmented Switch: Completed Scorecards vs Manual Scorecard */}
                   <div>
                     <label style={{
                       display: 'block', marginBottom: '6px',
@@ -1352,7 +1360,7 @@ export default function App() {
                         }}
                       >
                         <Calendar style={{ width: '13px', height: '13px' }} />
-                        Official MLB Games
+                        Completed Scorecards
                       </button>
 
                       <button
@@ -1376,7 +1384,7 @@ export default function App() {
                         }}
                       >
                         <BookOpen style={{ width: '13px', height: '13px', color: '#3b82f6' }} />
-                        Custom Scorebook
+                        Manual Scorecard
                       </button>
                     </div>
                   </div>

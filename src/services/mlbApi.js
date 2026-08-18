@@ -46,11 +46,30 @@ export async function searchGamesByDate(dateStr) {
     }
     
     return data.dates[0].games.map(g => {
-      const detailedState = g.status?.detailedState || 'Final';
-      const abstractState = g.status?.abstractGameState || '';
-      const isLive = abstractState === 'Live' || detailedState === 'In Progress' || detailedState.includes('Inning');
-      const isFinal = abstractState === 'Final' || detailedState === 'Final' || detailedState === 'Game Over' || detailedState === 'Completed Early';
+      const detailedState = (g.status?.detailedState || '').trim();
+      const abstractState = (g.status?.abstractGameState || '').trim();
+      const codedState = (g.status?.codedGameState || '').trim();
+      const statusCode = (g.status?.statusCode || '').trim();
       
+      const isFinal =
+        abstractState.toLowerCase() === 'final' ||
+        codedState === 'F' || codedState === 'O' || statusCode === 'F' || statusCode === 'O' ||
+        detailedState.toLowerCase().includes('final') ||
+        detailedState.toLowerCase().includes('game over') ||
+        detailedState.toLowerCase().includes('completed') ||
+        (g.teams.away.score !== undefined && g.teams.home.score !== undefined && g.linescore && g.linescore.currentInning >= 9 && codedState !== 'I' && abstractState.toLowerCase() !== 'live');
+
+      const isLive =
+        !isFinal && (
+          abstractState.toLowerCase() === 'live' ||
+          codedState === 'I' || statusCode === 'I' ||
+          detailedState.toLowerCase().includes('in progress') ||
+          detailedState.toLowerCase().includes('live') ||
+          detailedState.toLowerCase().includes('inning') ||
+          detailedState.toLowerCase().includes('warmup') ||
+          detailedState.toLowerCase().includes('delayed')
+        );
+
       let inningText = '';
       if (isLive && g.linescore?.currentInningOrdinal) {
         inningText = `${g.linescore.inningHalf === 'Top' ? 'Top' : 'Bot'} ${g.linescore.currentInningOrdinal}`;
@@ -66,7 +85,7 @@ export async function searchGamesByDate(dateStr) {
         awayScore: g.teams.away.score,
         homeScore: g.teams.home.score,
         venue: g.venue?.name || 'MLB Stadium',
-        status: detailedState,
+        status: detailedState || (isFinal ? 'Final' : isLive ? 'Live' : 'Scheduled'),
         abstractState,
         isLive,
         isFinal,
@@ -108,20 +127,26 @@ export async function findMostRecentRaysGame() {
             date: g.officialDate || d.date,
             status: g.status?.detailedState || '',
             abstractState: g.status?.abstractGameState || '',
+            codedState: g.status?.codedGameState || '',
           });
         });
       });
     }
 
-    // Sort descending by date and gamePk
-    allGames.sort((a, b) => b.gamePk - a.gamePk);
+    // Sort chronologically descending by date, then gamePk
+    allGames.sort((a, b) => b.date.localeCompare(a.date) || b.gamePk - a.gamePk);
 
     // Prefer completed games first, or active live games
     const completedGame = allGames.find(g =>
-      g.abstractState === 'Final' || g.status === 'Final' || g.status === 'Game Over' || g.status === 'Completed Early'
+      g.abstractState.toLowerCase() === 'final' ||
+      g.codedState === 'F' || g.codedState === 'O' ||
+      g.status.toLowerCase().includes('final') ||
+      g.status.toLowerCase().includes('game over')
     );
     const liveGame = allGames.find(g =>
-      g.abstractState === 'Live' || g.status === 'In Progress'
+      g.abstractState.toLowerCase() === 'live' ||
+      g.codedState === 'I' ||
+      g.status.toLowerCase().includes('in progress')
     );
 
     const chosen = completedGame || liveGame || allGames[0];

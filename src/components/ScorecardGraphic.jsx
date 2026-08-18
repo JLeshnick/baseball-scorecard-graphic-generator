@@ -958,7 +958,8 @@ export default function ScorecardGraphic({
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
                     <td
-                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: idx, batter: b, teamName: teamInfo.name }) : undefined}
+                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                      className={onBatterClick ? 'interactive-roster-cell' : ''}
                       style={{
                         verticalAlign: 'middle',
                         padding: '3px 4px 3px 6px',
@@ -1009,18 +1010,13 @@ export default function ScorecardGraphic({
                           onClick={hasInteractiveClick ? () => onCellClick({
                             teamKey: isHome ? 'home' : 'away',
                             teamName: teamInfo.name,
-                            batterIndex: idx,
+                            batterIndex: bIdx,
                             batter: b,
                             inning: n,
                             currentPlay: play,
                             cellKey,
                           }) : undefined}
-                          onMouseEnter={hasInteractiveClick ? (e) => {
-                            if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.16)';
-                          } : undefined}
-                          onMouseLeave={hasInteractiveClick ? (e) => {
-                            if (!isSelected) e.currentTarget.style.backgroundColor = n % 2 === 0 ? t.tableInningAlt : 'transparent';
-                          } : undefined}
+                          className={hasInteractiveClick ? 'interactive-diamond-cell' : ''}
                           style={{
                             textAlign: 'center', verticalAlign: 'middle',
                             padding: '1px',
@@ -1031,9 +1027,8 @@ export default function ScorecardGraphic({
                             position: 'relative',
                             cursor: hasInteractiveClick ? 'pointer' : 'default',
                             boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : 'none',
-                            transition: 'background-color 0.15s ease',
                           }}
-                          title={hasInteractiveClick ? `Score #${b.jerseyNumber} ${b.name} (Inn ${n})` : undefined}
+                          title={hasInteractiveClick ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})` : undefined}
                         >
                           {renderPlayCell(play, isHome, cellKey)}
                         </td>
@@ -1825,6 +1820,23 @@ export default function ScorecardGraphic({
           </div>
         </div>
       </div>
+
+      <style>{`
+        .interactive-diamond-cell {
+          cursor: pointer;
+          transition: background-color 0.12s ease;
+        }
+        .interactive-diamond-cell:hover {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+        }
+        .interactive-roster-cell {
+          cursor: pointer;
+          transition: background-color 0.12s ease;
+        }
+        .interactive-roster-cell:hover {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+        }
+      `}</style>
     </div>
   );
 }
