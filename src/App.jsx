@@ -12,6 +12,7 @@ import RosterEditModal from './components/RosterEditModal';
 import SavedGamesModal from './components/SavedGamesModal';
 import PitcherEditModal from './components/PitcherEditModal';
 import ScoringGuide from './components/ScoringGuide';
+import AtBatInspectionModal from './components/AtBatInspectionModal';
 import {
   createBlankScorecardData,
   createScorecardFromMlbGame,
@@ -131,6 +132,7 @@ export default function App() {
   // Responsive & Pan/Zoom State
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview');
+  const [mobileInspectionOpen, setMobileInspectionOpen] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [posterHeight, setPosterHeight] = useState(0);
@@ -467,6 +469,9 @@ export default function App() {
       // In MLB mode: select/toggle at-bat to inspect pitch sequence and strike zone
       setActiveTab('game');
       setInspectedCell(prev => (prev?.cellKey === cellCtx.cellKey ? null : cellCtx));
+      if (isMobile) {
+        setMobileInspectionOpen(true);
+      }
     }
   };
 
@@ -1101,6 +1106,21 @@ export default function App() {
           setTimeout(() => setToastMessage(''), 3500);
         }}
       />
+
+      {/* Mobile Full-Size At-Bat Visualizer Modal */}
+      {isMobile && (
+        <AtBatInspectionModal
+          isOpen={mobileInspectionOpen && Boolean(inspectedCell) && scoringMode === 'mlb'}
+          onClose={() => {
+            setMobileInspectionOpen(false);
+            setInspectedCell(null);
+          }}
+          inspectedCell={inspectedCell}
+          scorecardData={scorecardData}
+          isDark={isDark}
+          c={c}
+        />
+      )}
 
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
