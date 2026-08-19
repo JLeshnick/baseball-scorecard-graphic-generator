@@ -152,10 +152,10 @@ export default function Sidebar({
 
   return (
     <aside style={{
-      width: isMobile ? '100%' : '330px',
-      minWidth: isMobile ? '100%' : '330px',
-      maxWidth: isMobile ? '100%' : '330px',
-      flex: isMobile ? '1 1 auto' : '0 0 330px',
+      width: isMobile ? '100%' : '380px',
+      minWidth: isMobile ? '100%' : '380px',
+      maxWidth: isMobile ? '100%' : '380px',
+      flex: isMobile ? '1 1 auto' : '0 0 380px',
       height: '100%',
       maxHeight: '100%',
       flexShrink: 0,

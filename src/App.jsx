@@ -1055,8 +1055,9 @@ export default function App() {
                     customHomeColor={customHomeColor}
                     onCellClick={!exporting ? handleCellClick : null}
                     onBatterClick={!exporting && scoringMode === 'live' ? handleBatterClick : null}
-                    onPitcherClick={!exporting && scoringMode === 'live' ? handlePitcherClick : null}
+                    onPitcherClick={!exporting ? handlePitcherClick : null}
                     activeCellKey={!exporting ? (scoringMode === 'live' ? activeCellContext?.cellKey : inspectedCell?.cellKey) : null}
+                    activePitcherKey={!exporting ? (inspectedPitcher ? (inspectedPitcher.inning ? `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}-${inspectedPitcher.inning}` : `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}`) : null) : null}
                     isInteractive={!exporting}
                     isExporting={exporting}
                     isAdvancedMode={isAdvancedMode}

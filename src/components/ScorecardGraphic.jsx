@@ -39,6 +39,7 @@ const ScorecardGraphic = ({
   onBatterClick = null,
   onPitcherClick = null,
   activeCellKey = null,
+  activePitcherKey = null,
   isInteractive = false,
   isExporting = false,
   isAdvancedMode = false,
@@ -982,74 +983,83 @@ const ScorecardGraphic = ({
                         </td>
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
-                      <td
-                        onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
-                        className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
-                        style={{
-                          padding: '3px 5px',
-                          borderRight: `1.5px solid ${t.borderStrong}`,
-                          verticalAlign: 'middle',
-                          cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
-                        }}
-                        title={!isExporting && onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                width: '15px', height: '15px', borderRadius: '50%',
-                                backgroundColor: p.number && p.number.trim() ? color : 'transparent',
-                                color: text,
-                                fontSize: '7px', fontWeight: 800,
-                                fontFamily: t.fontMono, flexShrink: 0,
+                      {(() => {
+                        const thisPitcherKey = `pitcher-${isHome ? 'home' : 'away'}-${p.id ?? pIdx}`;
+                        const isPitcherActive = activePitcherKey === thisPitcherKey;
+                        return (
+                          <td
+                            onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                            className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
+                            style={{
+                              padding: '3px 5px',
+                              borderRight: `1.5px solid ${t.borderStrong}`,
+                              verticalAlign: 'middle',
+                              cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
+                              backgroundColor: isPitcherActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                              boxShadow: isPitcherActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                              transition: 'all 0.12s ease',
+                            }}
+                            title={!isExporting && onPitcherClick ? `Inspect ${p.fullName || p.name} Performance` : undefined}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '15px', height: '15px', borderRadius: '50%',
+                                    backgroundColor: p.number && p.number.trim() ? color : 'transparent',
+                                    color: text,
+                                    fontSize: '7px', fontWeight: 800,
+                                    fontFamily: t.fontMono, flexShrink: 0,
+                                  }}>
+                                    {p.number}
+                                  </span>
+                                  <span style={{
+                                    fontFamily: t.fontHeader, fontWeight: 700,
+                                    fontSize: p.name && p.name.length > 13 ? '9px' : '10.5px', letterSpacing: '0.02em',
+                                    color: t.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                  }}>
+                                    {p.name}
+                                  </span>
+                                </div>
+
+                                {/* Total Pitches Pill on Top-Right of cell */}
+                                {!isBlankMode && p.totalPitches != null && (
+                                  <span style={{
+                                    fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 900,
+                                    color: t.textPrimary,
+                                    backgroundColor: t.borderLight, padding: '1px 4px', borderRadius: '3px',
+                                    display: 'inline-flex', alignItems: 'center', gap: '1px',
+                                    flexShrink: 0,
+                                  }}>
+                                    <span>{p.totalPitches}</span>
+                                    <span style={{ opacity: 0.75 }}>P</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Stats summary row: IP • H • R • ER • BB • K */}
+                              <div style={{
+                                fontFamily: t.fontMono, fontSize: '7px', fontWeight: 700,
+                                color: t.textMuted, whiteSpace: 'nowrap',
+                                display: 'flex', alignItems: 'center', gap: '2px', opacity: 0.95, flexWrap: 'nowrap',
                               }}>
-                                {p.number}
-                              </span>
-                              <span style={{
-                                fontFamily: t.fontHeader, fontWeight: 700,
-                                fontSize: p.name && p.name.length > 13 ? '9px' : '10.5px', letterSpacing: '0.02em',
-                                color: t.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                              }}>
-                                {p.name}
-                              </span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong>H</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong>R</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong>ER</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong>BB</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong>K</span>
+                              </div>
                             </div>
-
-                            {/* Total Pitches Pill on Top-Right of cell */}
-                            {!isBlankMode && p.totalPitches != null && (
-                              <span style={{
-                                fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 900,
-                                color: t.textPrimary,
-                                backgroundColor: t.borderLight, padding: '1px 4px', borderRadius: '3px',
-                                display: 'inline-flex', alignItems: 'center', gap: '1px',
-                                flexShrink: 0,
-                              }}>
-                                <span>{p.totalPitches}</span>
-                                <span style={{ opacity: 0.75 }}>P</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Stats summary row: IP • H • R • ER • BB • K */}
-                          <div style={{
-                            fontFamily: t.fontMono, fontSize: '7px', fontWeight: 700,
-                            color: t.textMuted, whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: '2px', opacity: 0.95, flexWrap: 'nowrap',
-                          }}>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong>H</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong>R</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong>ER</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong>BB</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong>K</span>
-                          </div>
-                        </div>
-                      </td>
+                          </td>
+                        );
+                      })()}
 
                       {/* Inning Pitch Breakdown Cells with Uppercase S / B and Clear Spacing */}
                       {innings.map(n => {
@@ -1062,6 +1072,8 @@ const ScorecardGraphic = ({
                         const cnt = innStat?.pitches || 0;
                         const str = innStat?.strikes || 0;
                         const bll = innStat?.balls || 0;
+                        const thisInningKey = `pitcher-${isHome ? 'home' : 'away'}-${p.id ?? pIdx}-${n}`;
+                        const isInningActive = activePitcherKey === thisInningKey;
                         return (
                           <td
                             key={n}
@@ -1072,8 +1084,11 @@ const ScorecardGraphic = ({
                               borderLeft: `1px solid ${t.borderLight}`,
                               verticalAlign: 'middle',
                               cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
+                              backgroundColor: isInningActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.18)') : undefined,
+                              boxShadow: isInningActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                              transition: 'all 0.12s ease',
                             }}
-                            title={!isExporting && onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                            title={!isExporting && onPitcherClick ? `Inspect ${p.fullName || p.name} Inning ${n} Performance` : undefined}
                           >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
