@@ -275,7 +275,6 @@ const ScorecardGraphic = ({
           zIndex: 3,
           boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
         }}
-        title={`Out on basepaths: ${play.outAtBaseEvent || 'OUT'} at ${play.outAtBase === 4 ? 'HOME' : play.outAtBase + 'B'}`}
       >
         {play.outAtBaseEvent === 'CS' ? 'CS' : play.outAtBaseEvent === 'PO' ? 'PO' : 'X'} {play.outAtBase === 4 ? 'HP' : `${play.outAtBase}B`}
       </span>
@@ -887,13 +886,6 @@ const ScorecardGraphic = ({
                             cursor: hasInteractiveClick ? 'pointer' : 'default',
                             boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : (isLiveActiveCell ? 'inset 0 0 0 2px #ef4444' : 'none'),
                           }}
-                          title={
-                            isLiveActiveCell
-                              ? `Active At-Bat: #${b.jerseyNumber} ${b.name}`
-                              : hasInteractiveClick
-                              ? `Select #${b.jerseyNumber} ${b.name} (Inn ${n}) to view pitch locations`
-                              : undefined
-                          }
                         >
                           {renderPlayCell(play, isHome, cellKey)}
 
@@ -956,7 +948,6 @@ const ScorecardGraphic = ({
                                     cursor: 'pointer',
                                     padding: 0,
                                   }}
-                                  title="Close popover"
                                 >
                                   <X style={{ width: '10px', height: '10px' }} />
                                 </button>

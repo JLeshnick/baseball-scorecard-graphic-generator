@@ -598,7 +598,6 @@ export default function Sidebar({
                                   backgroundColor: isDark ? '#27272a' : '#e5e7eb',
                                   color: c.textMain, cursor: 'pointer',
                                 }}
-                                title="Close inspected at-bat and return to live view"
                               >
                                 Clear
                               </button>
@@ -867,24 +866,47 @@ export default function Sidebar({
                             {/* TAB 1: Strike Zone Visualizer */}
                             {visualizerTab === 'strikezone' && (
                               <>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: isInspecting ? '#3b82f6' : c.textMuted }}>
-                                    Strike Zone {targetPitches?.length ? `(${targetPitches.length} Pitches)` : '(0 Pitches)'}
-                                  </span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700 }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
-                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                      Strike
-                                    </span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
-                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                      Ball
-                                    </span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
-                                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                      Foul
-                                    </span>
-                                  </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '18px' }}>
+                                  {hoveredPitchNum ? (() => {
+                                    const hp = targetPitches?.find(p => p.pitchNumber === hoveredPitchNum);
+                                    if (!hp) return null;
+                                    return (
+                                      <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '9.5px',
+                                        fontWeight: 800,
+                                        color: c.textHead,
+                                      }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                                        {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
+                                        <span>{hp.pitchType}</span>
+                                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                                      </div>
+                                    );
+                                  })() : (
+                                    <>
+                                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: isInspecting ? '#3b82f6' : c.textMuted }}>
+                                        Strike Zone {targetPitches?.length ? `(${targetPitches.length} Pitches)` : '(0 Pitches)'}
+                                      </span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700 }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
+                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
+                                          Strike
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
+                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                                          Ball
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
+                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
+                                          Foul
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
 
                                 {/* Strike Zone Graphic */}
@@ -1016,9 +1038,7 @@ export default function Sidebar({
                                                 : 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))',
                                               transition: 'r 0.15s ease, stroke-width 0.15s ease',
                                             }}
-                                          >
-                                            <title>{`#${p.pitchNumber}: ${p.speed ? p.speed + ' MPH ' : ''}${p.pitchType} (${p.callDesc})`}</title>
-                                          </circle>
+                                          />
 
                                           {/* Pitch Number Text */}
                                           <text
@@ -1037,41 +1057,6 @@ export default function Sidebar({
                                       );
                                     })}
                                   </svg>
-
-                                  {/* Active Hovered Pitch Magnified Callout Pill */}
-                                  {hoveredPitchNum && (() => {
-                                    const hp = targetPitches?.find(p => p.pitchNumber === hoveredPitchNum);
-                                    if (!hp) return null;
-                                    return (
-                                      <div style={{
-                                        position: 'absolute',
-                                        top: '6px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        zIndex: 15,
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '2px 8px',
-                                        borderRadius: '12px',
-                                        backgroundColor: isDark ? 'rgba(9, 9, 11, 0.94)' : 'rgba(255, 255, 255, 0.94)',
-                                        border: `1px solid ${hp.color}`,
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                                        fontSize: '9px',
-                                        fontWeight: 800,
-                                        color: c.textHead,
-                                        whiteSpace: 'nowrap',
-                                        pointerEvents: 'none',
-                                        backdropFilter: 'blur(4px)',
-                                      }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color }} />
-                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                                        {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
-                                        <span>{hp.pitchType}</span>
-                                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                                      </div>
-                                    );
-                                  })()}
 
                                   {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
                                   {isInspecting && !inspectedPlay && (
@@ -1139,7 +1124,6 @@ export default function Sidebar({
                                             transform: isHovered ? 'scale(1.04)' : 'scale(1)',
                                             transition: 'all 0.12s ease',
                                           }}
-                                          title={`${p.speed ? p.speed + ' MPH ' : ''}${p.callDesc}`}
                                         >
                                           <span style={{
                                             width: '5px', height: '5px', borderRadius: '50%',
@@ -1291,9 +1275,7 @@ export default function Sidebar({
                                               stroke="#ffffff"
                                               strokeWidth="1.2"
                                               style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' }}
-                                            >
-                                              <title>{`${targetHitData.launchSpeed ? targetHitData.launchSpeed + ' MPH ' : ''}${targetHitData.trajectory || ''}`}</title>
-                                            </circle>
+                                            />
                                           </g>
                                         );
                                       })()}
