@@ -56,8 +56,7 @@ const ScorecardGraphic = ({
     (_, i) => i + 1
   );
 
-  // When in Simplified Mode, suppress dense technical overlays (Statcast tables, momentum charts, pitch ball/strike counters)
-  const effectiveShowPitchBreakdown = isAdvancedMode && showPitchBreakdown;
+  const effectiveShowPitchBreakdown = showPitchBreakdown;
   const effectiveShowStatcast = isAdvancedMode && showStatcast;
   const effectiveShowMomentum = isAdvancedMode && showMomentum;
   const effectiveShowMvp = isAdvancedMode && showMvp;

@@ -19,6 +19,7 @@ import { POSTER_THEMES, formatPlayerName } from '../utils/constants';
 import { useAppStore } from '../store/useAppStore';
 
 import ScoringGuide from './ScoringGuide';
+import { getPitcherPlays } from './PitcherInspectionModal';
 
 export default function Sidebar({
   isMobile,
@@ -70,6 +71,8 @@ export default function Sidebar({
   onTogglePinGuide,
   inspectedCell,
   setInspectedCell,
+  inspectedPitcher,
+  setInspectedPitcher,
 }) {
   // Read and write directly to Zustand store for all display & custom text options!
   const theme = useAppStore(s => s.theme);
@@ -108,10 +111,9 @@ export default function Sidebar({
   const showHRDistances = useAppStore(s => s.showHRDistances);
   const setShowHRDistances = useAppStore(s => s.setShowHRDistances);
   const eraserSeed = useAppStore(s => s.eraserSeed);
-  const setEraserSeed = useAppStore(s => s.setEraserSeed);
 
-  const customHeadline = useAppStore(s => s.customHeadline);
-  const setCustomHeadline = useAppStore(s => s.setCustomHeadline);
+  const customTitle = useAppStore(s => s.customTitle);
+  const setCustomTitle = useAppStore(s => s.setCustomTitle);
   const customSubtitle = useAppStore(s => s.customSubtitle);
   const setCustomSubtitle = useAppStore(s => s.setCustomSubtitle);
   const customNotes = useAppStore(s => s.customNotes);
@@ -125,6 +127,7 @@ export default function Sidebar({
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
+  const [pitcherInningFilter, setPitcherInningFilter] = useState('all');
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
@@ -133,6 +136,17 @@ export default function Sidebar({
     setHoveredBattedBallIndex(null);
     setHoveredPitchNum(null);
   }, [inspectedCellKey]);
+
+  useEffect(() => {
+    if (inspectedPitcher?.inning) {
+      setPitcherInningFilter(Number(inspectedPitcher.inning));
+    } else {
+      setPitcherInningFilter('all');
+    }
+    setSelectedBattedBallIndex(null);
+    setHoveredBattedBallIndex(null);
+    setHoveredPitchNum(null);
+  }, [inspectedPitcher]);
 
   if (isMobile && mobileView !== 'controls') return null;
 
@@ -549,46 +563,84 @@ export default function Sidebar({
                       </div>
                     </div>
 
-                    {/* Live Count & Bases & Strike Zone (Active Game OR Inspected Cell) */}
-                    {(scorecardData.gameInfo.liveGameState || inspectedCell) && (() => {
-                      const isInspecting = Boolean(inspectedCell);
+                    {/* Live Count & Bases & Strike Zone (Active Game OR Inspected Cell OR Inspected Pitcher) */}
+                    {(scorecardData.gameInfo.liveGameState || inspectedCell || inspectedPitcher) && (() => {
+                      const isInspectingCell = Boolean(inspectedCell);
+                      const isInspectingPitcher = Boolean(inspectedPitcher);
+                      const isInspecting = isInspectingCell || isInspectingPitcher;
+
+                      // Pitcher inspection plays
+                      const pitcherPlays = isInspectingPitcher
+                        ? getPitcherPlays(inspectedPitcher, scorecardData, pitcherInningFilter)
+                        : [];
+                      const pitcherInningsList = isInspectingPitcher
+                        ? Object.entries(inspectedPitcher.pitcher?.pitchesByInning || {}).filter(([_, d]) => (d?.pitches || 0) > 0).map(([inn]) => Number(inn)).sort((a, b) => a - b)
+                        : [];
+
                       const inspectedPlaysArray = inspectedCell?.plays?.length
                         ? inspectedCell.plays
                         : (Array.isArray(inspectedCell?.currentPlay)
                             ? inspectedCell.currentPlay
                             : (inspectedCell?.currentPlay ? [inspectedCell.currentPlay] : []));
                       const activeMultiIndex = (selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
-                      const inspectedPlay = isInspecting
+                      const inspectedPlay = isInspectingCell
                         ? (inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null)
                         : null;
-                      const targetPitches = isInspecting
-                        ? (inspectedPlay?.pitches || [])
-                        : (scorecardData.gameInfo.liveGameState?.pitches || []);
-                      const targetHitData = isInspecting
+
+                      const targetPitches = isInspectingPitcher
+                        ? pitcherPlays.flatMap((p, pIdx) => (p.pitches || []).map((pitch, idx) => ({
+                            ...pitch,
+                            playDesc: p.description || p.code,
+                            batterName: p.batterFullName || p.batterName,
+                            inning: p.inning,
+                            pitchNumber: idx + 1,
+                          })))
+                        : (isInspectingCell
+                            ? (inspectedPlay?.pitches || [])
+                            : (scorecardData.gameInfo.liveGameState?.pitches || []));
+
+                      const targetHitData = isInspectingCell
                         ? (inspectedPlay?.hitData || null)
                         : (scorecardData.gameInfo.liveGameState?.hitData || null);
-                      const targetBattedBalls = isInspecting
-                        ? (inspectedPlay?.battedBalls?.length ? inspectedPlay.battedBalls : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : []))
-                        : (scorecardData.gameInfo.liveGameState?.battedBalls?.length ? scorecardData.gameInfo.liveGameState.battedBalls : (scorecardData.gameInfo.liveGameState?.hitData ? [scorecardData.gameInfo.liveGameState.hitData] : []));
+
+                      const targetBattedBalls = isInspectingPitcher
+                        ? pitcherPlays.flatMap(p => {
+                            const balls = p.battedBalls?.length ? p.battedBalls : (p.hitData ? [p.hitData] : []);
+                            return balls.map(b => ({
+                              ...b,
+                              batterName: p.batterFullName || p.batterName,
+                              batterJerseyNumber: p.batterJerseyNumber,
+                              playCode: p.code,
+                              playDesc: p.description || p.code,
+                              inning: p.inning,
+                            }));
+                          })
+                        : (isInspectingCell
+                            ? (inspectedPlay?.battedBalls?.length ? inspectedPlay.battedBalls : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : []))
+                            : (scorecardData.gameInfo.liveGameState?.battedBalls?.length ? scorecardData.gameInfo.liveGameState.battedBalls : (scorecardData.gameInfo.liveGameState?.hitData ? [scorecardData.gameInfo.liveGameState.hitData] : [])));
+
                       const activeHit = (hoveredBattedBallIndex !== null && targetBattedBalls[hoveredBattedBallIndex])
                         || (selectedBattedBallIndex !== null && targetBattedBalls[selectedBattedBallIndex])
                         || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
-                      const batterName = isInspecting
+
+                      const batterName = isInspectingCell
                         ? formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
-                        : formatPlayerName(scorecardData.gameInfo.liveGameState?.batterName || '');
-                      const displayJersey = isInspecting
+                        : (isInspectingPitcher ? '' : formatPlayerName(scorecardData.gameInfo.liveGameState?.batterName || ''));
+                      const displayJersey = isInspectingCell
                         ? (inspectedPlay?.batterJerseyNumber || inspectedCell.batter?.jerseyNumber || '')
                         : '';
-                      const displayHeaderName = isInspecting
+                      const displayHeaderName = isInspectingCell
                         ? formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
                         : '';
-                      const pitcherName = isInspecting
-                        ? formatPlayerName(inspectedPlay?.pitcherFullName || inspectedPlay?.pitcherName || '')
-                        : formatPlayerName(scorecardData.gameInfo.liveGameState?.pitcherName || '');
-                      const batSide = isInspecting
+                      const pitcherName = isInspectingPitcher
+                        ? formatPlayerName(inspectedPitcher.pitcher?.fullName || inspectedPitcher.pitcher?.name || 'Pitcher')
+                        : (isInspectingCell
+                            ? formatPlayerName(inspectedPlay?.pitcherFullName || inspectedPlay?.pitcherName || '')
+                            : formatPlayerName(scorecardData.gameInfo.liveGameState?.pitcherName || ''));
+                      const batSide = isInspectingCell
                         ? (inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R')
                         : (scorecardData?.gameInfo?.liveGameState?.batSide || 'R');
-                      const playDesc = isInspecting
+                      const playDesc = isInspectingCell
                         ? (inspectedPlay?.description || (inspectedPlay?.code ? inspectedPlay.code : (inspectedPlay ? '' : 'No plate appearance in this inning.')))
                         : '';
 
@@ -601,8 +653,59 @@ export default function Sidebar({
                           boxShadow: isInspecting ? '0 0 0 1px #3b82f6' : 'none',
                           transition: 'all 0.15s ease',
                         }}>
-                          {/* Top Header: Live Count vs Inspected Cell */}
-                          {isInspecting ? (
+                          {/* Top Header: Inspected Pitcher vs Inspected Cell vs Live Count */}
+                          {isInspectingPitcher ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                  padding: '2px 5px', borderRadius: '4px',
+                                  backgroundColor: inspectedPitcher.teamKey === 'away' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: inspectedPitcher.teamKey === 'away' ? '#3b82f6' : '#ef4444',
+                                }}>
+                                  {`${inspectedPitcher.teamKey === 'away' ? 'AWAY' : 'HOME'} PITCHER`}
+                                </span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
+                                  {inspectedPitcher.pitcher?.number ? `#${inspectedPitcher.pitcher.number} ` : ''}{pitcherName}
+                                </span>
+                              </div>
+
+                              {/* Pitcher Inning Pills Selector */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', overflowX: 'auto', padding: '2px 0' }}>
+                                <button
+                                  onClick={() => setPitcherInningFilter('all')}
+                                  style={{
+                                    padding: '2px 6px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 800,
+                                    backgroundColor: pitcherInningFilter === 'all' ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
+                                    color: pitcherInningFilter === 'all' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                    border: `1px solid ${pitcherInningFilter === 'all' ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
+                                    cursor: 'pointer', whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  All ({inspectedPitcher.pitcher?.totalPitches || targetPitches.length}P)
+                                </button>
+                                {pitcherInningsList.map(inn => {
+                                  const pCount = inspectedPitcher.pitcher?.pitchesByInning?.[inn]?.pitches || 0;
+                                  const isSel = pitcherInningFilter === inn;
+                                  return (
+                                    <button
+                                      key={inn}
+                                      onClick={() => setPitcherInningFilter(inn)}
+                                      style={{
+                                        padding: '2px 6px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 800,
+                                        backgroundColor: isSel ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
+                                        color: isSel ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                        border: `1px solid ${isSel ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
+                                        cursor: 'pointer', whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      Inn {inn} ({pCount}P)
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : isInspectingCell ? (
                             <>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <span style={{
@@ -742,8 +845,23 @@ export default function Sidebar({
                             )
                           )}
 
-                          {/* Batter & Pitcher Matchup & Result */}
-                          {(batterName || pitcherName || playDesc) && (
+                          {/* Pitcher Performance Info vs Batter Matchup */}
+                          {isInspectingPitcher ? (
+                            <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitcher:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherName}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Inning:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherInningFilter === 'all' ? 'All Outing' : `Inning ${pitcherInningFilter}`}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitches / Hits:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{`${targetPitches.length} Pitches · ${targetBattedBalls.length} Balls in Play`}</span>
+                              </div>
+                            </div>
+                          ) : (batterName || pitcherName || playDesc) && (
                             <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
                               {batterName && (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1279,7 +1397,7 @@ export default function Sidebar({
                                   )}
 
                                   {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
-                                  {isInspecting && !inspectedPlay && (
+                                  {isInspectingCell && !inspectedPlay && (
                                     <div style={{
                                       position: 'absolute',
                                       inset: 0,

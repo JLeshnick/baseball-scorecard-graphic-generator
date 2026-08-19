@@ -876,6 +876,7 @@ export function processMLBData(data, gamePkOverride) {
         id,
         number,
         name,
+        fullName: p.person?.fullName || name,
         strikeouts: ks,
         ip: formatIP(gp.outs),
         hits: gp.hits ?? null,

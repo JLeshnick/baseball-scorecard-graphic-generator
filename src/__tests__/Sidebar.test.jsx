@@ -168,4 +168,96 @@ describe('Sidebar Component & Visualizer Tests', () => {
     fireEvent.click(pa2Btn);
     expect(screen.getByText(/3-Run Home run to right center/i)).toBeDefined();
   });
+
+  it('renders Pitcher Inspection breakdown by inning with pitch count pills and visualizer tabs', () => {
+    const mockScorecardWithPitcher = {
+      gameInfo: {
+        dateDisplay: 'OCT 30, 2024',
+        awayTeam: { name: 'Los Angeles Dodgers', score: 7 },
+        homeTeam: { name: 'New York Yankees', score: 6 },
+        totalInnings: 9,
+      },
+      awayData: {
+        pitchers: [
+          {
+            id: 663556,
+            name: 'FLAHERTY',
+            fullName: 'Jack Flaherty',
+            number: '34',
+            ip: '5.1',
+            totalPitches: 86,
+            pitchesByInning: {
+              1: { pitches: 22, strikes: 14, balls: 8 },
+              2: { pitches: 14, strikes: 10, balls: 4 },
+            }
+          }
+        ]
+      },
+      homeData: {
+        batters: [
+          {
+            name: 'JUDGE',
+            fullName: 'Aaron Judge',
+            jerseyNumber: '99',
+            plays: {
+              1: {
+                pitcherId: 663556,
+                pitcherName: 'FLAHERTY',
+                code: 'HR',
+                pitches: [
+                  { pitchNumber: 1, speed: 94.2, pitchType: 'FF', callDesc: 'In Play', color: '#3b82f6', normX: 50, normY: 30 }
+                ],
+                hitData: { launchSpeed: 108.9, launchAngle: 28, totalDistance: 403, trajectory: 'fly_ball', coordX: 190, coordY: 50 }
+              }
+            }
+          }
+        ]
+      }
+    };
+
+    const mockInspectedPitcher = {
+      teamKey: 'away',
+      teamName: 'Los Angeles Dodgers',
+      pitcher: mockScorecardWithPitcher.awayData.pitchers[0],
+      pitcherIndex: 0,
+      inning: 1,
+    };
+
+    render(
+      <Sidebar
+        isMobile={false}
+        mobileView="controls"
+        c={mockColors}
+        isDark={false}
+        activeTab="game"
+        setActiveTab={vi.fn()}
+        tabStyle={vi.fn()}
+        scoringMode="mlb"
+        setScoringMode={vi.fn()}
+        scorecardData={mockScorecardWithPitcher}
+        setScorecardData={vi.fn()}
+        inspectedPitcher={mockInspectedPitcher}
+        setInspectedPitcher={vi.fn()}
+        selectedGamePk={123456}
+        setSelectedGamePk={vi.fn()}
+      />
+    );
+
+    // Should display Pitcher Header
+    expect(screen.getByText(/AWAY PITCHER/i)).toBeDefined();
+    expect(screen.getAllByText(/Jack Flaherty/i).length).toBeGreaterThan(0);
+
+    // Inning filter pills
+    expect(screen.getByText(/All \(86P\)/i)).toBeDefined();
+    const inn1Pill = screen.getByRole('button', { name: /Inn 1 \(22P\)/i });
+    expect(inn1Pill).toBeDefined();
+
+    // Visualizer Mode Buttons
+    const hitsTabBtn = screen.getByRole('button', { name: /Hit\/Foul Spray/i });
+    expect(hitsTabBtn).toBeDefined();
+    fireEvent.click(hitsTabBtn);
+
+    // Batted ball details allowed by pitcher
+    expect(screen.getByText(/Exit Velocity/i)).toBeDefined();
+  });
 });
