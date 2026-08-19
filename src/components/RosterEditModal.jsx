@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, Users, Shield, Palette } from 'lucide-react';
+import { X, Check, Users, Shield, Palette, Plus, Trash2 } from 'lucide-react';
 import { TEAM_COLORS } from '../services/mlbApi';
 
 const MLB_TEAM_KEYS = Object.keys(TEAM_COLORS);
@@ -23,11 +23,8 @@ export default function RosterEditModal({
   const [awayBatters, setAwayBatters] = useState(
     JSON.parse(JSON.stringify(scorecardData.awayData?.batters || []))
   );
-  const [awayPitcherName, setAwayPitcherName] = useState(
-    scorecardData.awayData?.pitchers?.[0]?.name || 'STARTER'
-  );
-  const [awayPitcherNum, setAwayPitcherNum] = useState(
-    scorecardData.awayData?.pitchers?.[0]?.number || '30'
+  const [awayPitchers, setAwayPitchers] = useState(
+    JSON.parse(JSON.stringify(scorecardData.awayData?.pitchers?.length ? scorecardData.awayData.pitchers : [{ id: 'away_p1', name: 'STARTER', number: '30', ip: '0.0', hits: 0, runs: 0, earnedRuns: 0, walks: 0, strikeouts: [], pitchesByInning: {} }]))
   );
 
   // Home Team State
@@ -38,11 +35,8 @@ export default function RosterEditModal({
   const [homeBatters, setHomeBatters] = useState(
     JSON.parse(JSON.stringify(scorecardData.homeData?.batters || []))
   );
-  const [homePitcherName, setHomePitcherName] = useState(
-    scorecardData.homeData?.pitchers?.[0]?.name || 'STARTER'
-  );
-  const [homePitcherNum, setHomePitcherNum] = useState(
-    scorecardData.homeData?.pitchers?.[0]?.number || '40'
+  const [homePitchers, setHomePitchers] = useState(
+    JSON.parse(JSON.stringify(scorecardData.homeData?.pitchers?.length ? scorecardData.homeData.pitchers : [{ id: 'home_p1', name: 'STARTER', number: '40', ip: '0.0', hits: 0, runs: 0, earnedRuns: 0, walks: 0, strikeouts: [], pitchesByInning: {} }]))
   );
 
   // Game Info State
@@ -76,6 +70,88 @@ export default function RosterEditModal({
     }
   };
 
+  const handleAddSubstitute = (isAway, batterIdx) => {
+    const targetBatters = isAway ? [...awayBatters] : [...homeBatters];
+    const target = { ...targetBatters[batterIdx] };
+    if (!target.substitutes) target.substitutes = [];
+    const subLetters = ['a', 'b', 'c', 'd', 'e'];
+    const letter = subLetters[target.substitutes.length % subLetters.length];
+    target.substitutes.push({
+      id: `sub_${batterIdx}_${Date.now()}`,
+      name: 'SUB',
+      jerseyNumber: '',
+      position: 'PH',
+      subLetter: letter,
+    });
+    targetBatters[batterIdx] = target;
+    if (isAway) setAwayBatters(targetBatters);
+    else setHomeBatters(targetBatters);
+  };
+
+  const handleSubChange = (isAway, batterIdx, subIdx, field, val) => {
+    const targetBatters = isAway ? [...awayBatters] : [...homeBatters];
+    const target = { ...targetBatters[batterIdx] };
+    const subs = [...(target.substitutes || [])];
+    subs[subIdx] = { ...subs[subIdx], [field]: val };
+    target.substitutes = subs;
+    targetBatters[batterIdx] = target;
+    if (isAway) setAwayBatters(targetBatters);
+    else setHomeBatters(targetBatters);
+  };
+
+  const handleRemoveSubstitute = (isAway, batterIdx, subIdx) => {
+    const targetBatters = isAway ? [...awayBatters] : [...homeBatters];
+    const target = { ...targetBatters[batterIdx] };
+    const subs = [...(target.substitutes || [])];
+    subs.splice(subIdx, 1);
+    target.substitutes = subs;
+    targetBatters[batterIdx] = target;
+    if (isAway) setAwayBatters(targetBatters);
+    else setHomeBatters(targetBatters);
+  };
+
+  const handlePitcherChange = (isAway, index, field, val) => {
+    if (isAway) {
+      const updated = [...awayPitchers];
+      updated[index] = { ...updated[index], [field]: val };
+      setAwayPitchers(updated);
+    } else {
+      const updated = [...homePitchers];
+      updated[index] = { ...updated[index], [field]: val };
+      setHomePitchers(updated);
+    }
+  };
+
+  const handleAddPitcher = (isAway) => {
+    const newPitcher = {
+      id: `p_${Date.now()}`,
+      name: 'RELIEVER',
+      number: '99',
+      ip: '0.0',
+      hits: 0,
+      runs: 0,
+      earnedRuns: 0,
+      walks: 0,
+      strikeouts: [],
+      pitchesByInning: {},
+    };
+    if (isAway) {
+      setAwayPitchers(prev => [...prev, newPitcher]);
+    } else {
+      setHomePitchers(prev => [...prev, newPitcher]);
+    }
+  };
+
+  const handleRemovePitcher = (isAway, index) => {
+    if (isAway) {
+      if (awayPitchers.length <= 1) return;
+      setAwayPitchers(prev => prev.filter((_, i) => i !== index));
+    } else {
+      if (homePitchers.length <= 1) return;
+      setHomePitchers(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSave = () => {
     const next = JSON.parse(JSON.stringify(scorecardData));
 
@@ -100,6 +176,11 @@ export default function RosterEditModal({
       name: (b.name || `BATTER ${i + 1}`).toUpperCase(),
       jerseyNumber: b.jerseyNumber || String(i + 1),
       position: (b.position || '—').toUpperCase(),
+      substitutes: (b.substitutes || []).map(s => ({
+        ...s,
+        name: (s.name || '').toUpperCase(),
+        position: (s.position || 'PH').toUpperCase(),
+      })),
     }));
 
     next.homeData.batters = homeBatters.map((b, i) => ({
@@ -107,20 +188,25 @@ export default function RosterEditModal({
       name: (b.name || `BATTER ${i + 1}`).toUpperCase(),
       jerseyNumber: b.jerseyNumber || String(i + 1),
       position: (b.position || '—').toUpperCase(),
+      substitutes: (b.substitutes || []).map(s => ({
+        ...s,
+        name: (s.name || '').toUpperCase(),
+        position: (s.position || 'PH').toUpperCase(),
+      })),
     }));
 
     // Update Pitchers
-    if (!next.awayData.pitchers || next.awayData.pitchers.length === 0) {
-      next.awayData.pitchers = [{ id: 'away_p1' }];
-    }
-    next.awayData.pitchers[0].name = (awayPitcherName || 'PITCHER').toUpperCase();
-    next.awayData.pitchers[0].number = awayPitcherNum || 'P';
+    next.awayData.pitchers = awayPitchers.map((p, i) => ({
+      ...p,
+      name: (p.name || (i === 0 ? 'STARTER' : 'RELIEVER')).toUpperCase(),
+      number: p.number || (i === 0 ? 'P' : `${i + 1}`),
+    }));
 
-    if (!next.homeData.pitchers || next.homeData.pitchers.length === 0) {
-      next.homeData.pitchers = [{ id: 'home_p1' }];
-    }
-    next.homeData.pitchers[0].name = (homePitcherName || 'PITCHER').toUpperCase();
-    next.homeData.pitchers[0].number = homePitcherNum || 'P';
+    next.homeData.pitchers = homePitchers.map((p, i) => ({
+      ...p,
+      name: (p.name || (i === 0 ? 'STARTER' : 'RELIEVER')).toUpperCase(),
+      number: p.number || (i === 0 ? 'P' : `${i + 1}`),
+    }));
 
     onSaveScorecardData(next);
     onClose();
@@ -128,9 +214,9 @@ export default function RosterEditModal({
 
   const renderBatterRows = (batters, isAway) => {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '32px 50px 60px 1fr', gap: '8px',
+          display: 'grid', gridTemplateColumns: '28px 46px 56px 1fr 68px', gap: '6px',
           fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: isDark ? '#a1a1aa' : '#78716c',
           textTransform: 'uppercase', padding: '0 4px',
         }}>
@@ -138,51 +224,215 @@ export default function RosterEditModal({
           <div>NUM</div>
           <div>POS</div>
           <div>PLAYER NAME</div>
+          <div style={{ textAlign: 'right' }}>SUB</div>
         </div>
 
         {batters.map((b, idx) => (
           <div key={b.id || idx} style={{
-            display: 'grid', gridTemplateColumns: '32px 50px 60px 1fr', gap: '8px',
+            display: 'flex', flexDirection: 'column', gap: '4px',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+            padding: '4px 6px', borderRadius: '6px',
+            border: `1px solid ${isDark ? '#27272a' : '#f0ede6'}`,
+          }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '28px 46px 56px 1fr 68px', gap: '6px',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#71717a' : '#9ca3af', textAlign: 'center' }}>
+                {idx + 1}
+              </span>
+              <input
+                type="text"
+                value={b.jerseyNumber || ''}
+                onChange={(e) => handleBatterChange(isAway, idx, 'jerseyNumber', e.target.value)}
+                placeholder="27"
+                style={{
+                  padding: '5px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
+                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                  backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                }}
+              />
+              <input
+                type="text"
+                value={b.position || ''}
+                onChange={(e) => handleBatterChange(isAway, idx, 'position', e.target.value.toUpperCase())}
+                placeholder="CF"
+                style={{
+                  padding: '5px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
+                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                  backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                }}
+              />
+              <input
+                type="text"
+                value={b.name || ''}
+                onChange={(e) => handleBatterChange(isAway, idx, 'name', e.target.value)}
+                placeholder={`Batter ${idx + 1} Name`}
+                style={{
+                  padding: '5px 8px', fontSize: '12px', fontWeight: 600,
+                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                  backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleAddSubstitute(isAway, idx)}
+                style={{
+                  padding: '4px 6px', fontSize: '10px', fontWeight: 700,
+                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                  backgroundColor: isDark ? '#27272a' : '#f4f4f5',
+                  color: isDark ? '#38bdf8' : '#0284c7',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                }}
+                title="Add a pinch hitter / substitute to this lineup spot"
+              >
+                <Plus style={{ width: '11px', height: '11px' }} />
+                <span>+Sub</span>
+              </button>
+            </div>
+
+            {/* Substitutes under this slot */}
+            {b.substitutes && b.substitutes.map((sub, sIdx) => (
+              <div key={sub.id || sIdx} style={{
+                display: 'grid', gridTemplateColumns: '28px 46px 56px 1fr 28px', gap: '6px',
+                alignItems: 'center', paddingLeft: '12px',
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: isDark ? '#38bdf8' : '#0284c7', textAlign: 'center' }}>
+                  {sub.subLetter ? `${sub.subLetter}.` : 'sub'}
+                </span>
+                <input
+                  type="text"
+                  value={sub.jerseyNumber || ''}
+                  onChange={(e) => handleSubChange(isAway, idx, sIdx, 'jerseyNumber', e.target.value)}
+                  placeholder="15"
+                  style={{
+                    padding: '4px', fontSize: '10.5px', fontWeight: 700, textAlign: 'center',
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={sub.position || ''}
+                  onChange={(e) => handleSubChange(isAway, idx, sIdx, 'position', e.target.value.toUpperCase())}
+                  placeholder="PH"
+                  style={{
+                    padding: '4px', fontSize: '10.5px', fontWeight: 700, textAlign: 'center',
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={sub.name || ''}
+                  onChange={(e) => handleSubChange(isAway, idx, sIdx, 'name', e.target.value)}
+                  placeholder="Sub Player Name"
+                  style={{
+                    padding: '4px 6px', fontSize: '11px', fontWeight: 600,
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSubstitute(isAway, idx, sIdx)}
+                  style={{
+                    padding: '4px', borderRadius: '4px', border: 'none',
+                    backgroundColor: 'transparent', color: '#ef4444',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title="Remove substitute"
+                >
+                  <Trash2 style={{ width: '12px', height: '12px' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPitcherRows = (pitchers, isAway) => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '70px 50px 1fr 32px', gap: '6px',
+          fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: isDark ? '#a1a1aa' : '#78716c',
+          textTransform: 'uppercase', padding: '0 4px',
+        }}>
+          <div>ROLE</div>
+          <div>NUM</div>
+          <div>PITCHER NAME</div>
+          <div></div>
+        </div>
+
+        {pitchers.map((p, idx) => (
+          <div key={p.id || idx} style={{
+            display: 'grid', gridTemplateColumns: '70px 50px 1fr 32px', gap: '6px',
             alignItems: 'center',
           }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#71717a' : '#9ca3af', textAlign: 'center' }}>
-              {idx + 1}
+            <span style={{
+              fontSize: '9.5px', fontWeight: 800,
+              color: idx === 0 ? (isDark ? '#fbbf24' : '#d97706') : (isDark ? '#a1a1aa' : '#78716c'),
+              textTransform: 'uppercase',
+            }}>
+              {idx === 0 ? 'Starter' : `Relief #${idx}`}
             </span>
             <input
               type="text"
-              value={b.jerseyNumber || ''}
-              onChange={(e) => handleBatterChange(isAway, idx, 'jerseyNumber', e.target.value)}
-              placeholder="e.g. 27"
+              value={p.number || ''}
+              onChange={(e) => handlePitcherChange(isAway, idx, 'number', e.target.value)}
+              placeholder="P#"
               style={{
                 padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
-                borderRadius: '6px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
                 backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
               }}
             />
             <input
               type="text"
-              value={b.position || ''}
-              onChange={(e) => handleBatterChange(isAway, idx, 'position', e.target.value.toUpperCase())}
-              placeholder="CF"
-              style={{
-                padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
-                borderRadius: '6px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
-              }}
-            />
-            <input
-              type="text"
-              value={b.name || ''}
-              onChange={(e) => handleBatterChange(isAway, idx, 'name', e.target.value)}
-              placeholder={`Batter ${idx + 1} Last Name`}
+              value={p.name || ''}
+              onChange={(e) => handlePitcherChange(isAway, idx, 'name', e.target.value)}
+              placeholder={idx === 0 ? 'Starting Pitcher Name' : 'Relief Pitcher Name'}
               style={{
                 padding: '6px 8px', fontSize: '12px', fontWeight: 600,
-                borderRadius: '6px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
                 backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
               }}
             />
+            {idx > 0 ? (
+              <button
+                type="button"
+                onClick={() => handleRemovePitcher(isAway, idx)}
+                style={{
+                  padding: '6px', borderRadius: '4px', border: 'none',
+                  backgroundColor: 'transparent', color: '#ef4444',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                title="Remove relief pitcher"
+              >
+                <Trash2 style={{ width: '13px', height: '13px' }} />
+              </button>
+            ) : <div />}
           </div>
         ))}
+
+        <button
+          type="button"
+          onClick={() => handleAddPitcher(isAway)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            padding: '7px', borderRadius: '6px',
+            border: `1px dashed ${isDark ? '#3f3f46' : '#cbd5e1'}`,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            color: isDark ? '#38bdf8' : '#0284c7',
+            fontSize: '11px', fontWeight: 700, cursor: 'pointer', marginTop: '2px',
+          }}
+        >
+          <Plus style={{ width: '13px', height: '13px' }} />
+          <span>+ Add Reliever / Pitcher</span>
+        </button>
       </div>
     );
   };
@@ -249,33 +499,35 @@ export default function RosterEditModal({
           backgroundColor: isDark ? '#141417' : '#f9f9f8',
         }}>
           {[
-            { id: 'away', label: `Visiting Team (${awayAbbr})` },
-            { id: 'home', label: `Home Team (${homeAbbr})` },
-            { id: 'gameInfo', label: 'Venue & Game Info' },
-          ].map(t => (
+            { id: 'away', label: `Away: ${awayName || 'Visiting Team'}` },
+            { id: 'home', label: `Home: ${homeName || 'Home Team'}` },
+            { id: 'gameInfo', label: 'Venue & Details' },
+          ].map(tab => (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '10px 14px',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: 'none',
-                background: 'transparent',
-                color: activeTab === t.id ? (isDark ? '#fafafa' : '#18181b') : (isDark ? '#71717a' : '#78716c'),
-                borderBottom: `2px solid ${activeTab === t.id ? '#3b82f6' : 'transparent'}`,
+                backgroundColor: 'transparent',
+                color: activeTab === tab.id ? (isDark ? '#ffffff' : '#000000') : (isDark ? '#71717a' : '#a1a1aa'),
+                borderBottom: `2px solid ${activeTab === tab.id ? '#3b82f6' : 'transparent'}`,
+                transition: 'all 0.15s',
               }}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Modal Body (Scrollable) */}
+        {/* Content Body */}
         <div style={{
           padding: '16px',
           overflowY: 'auto',
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -395,51 +647,22 @@ export default function RosterEditModal({
                 </div>
               </div>
 
-              {/* Starting Pitcher */}
+              {/* Pitchers (Starter & Relievers) */}
               <div style={{
-                display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px',
-                padding: '10px 12px', borderRadius: '8px',
+                padding: '12px', borderRadius: '8px',
                 backgroundColor: isDark ? '#141417' : '#f8f8f8',
                 border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
               }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                    PITCHER #
-                  </label>
-                  <input
-                    type="text"
-                    value={awayPitcherNum}
-                    onChange={(e) => setAwayPitcherNum(e.target.value)}
-                    style={{
-                      width: '100%', padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
-                      borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                      backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                    STARTING PITCHER NAME
-                  </label>
-                  <input
-                    type="text"
-                    value={awayPitcherName}
-                    onChange={(e) => setAwayPitcherName(e.target.value)}
-                    style={{
-                      width: '100%', padding: '6px 8px', fontSize: '12px', fontWeight: 600,
-                      borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                      backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fafafa' : '#18181b', display: 'block', marginBottom: '8px' }}>
+                  Away Pitching Staff
+                </span>
+                {renderPitcherRows(awayPitchers, true)}
               </div>
 
               {/* 9 Batter Lineup */}
               <div>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fafafa' : '#18181b' }}>
-                  Starting Batting Order (1–9)
+                  Starting Batting Order (1–9) & Substitutes
                 </span>
                 <div style={{ marginTop: '8px' }}>
                   {renderBatterRows(awayBatters, true)}
@@ -547,7 +770,7 @@ export default function RosterEditModal({
                   Quick MLB Color Presets
                 </span>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-                  {MLB_TEAM_KEYS.slice(15, 30).map(abbr => (
+                  {MLB_TEAM_KEYS.slice(15).map(abbr => (
                     <button
                       key={abbr}
                       onClick={() => handleApplyTeamPreset(abbr, false)}
@@ -563,51 +786,22 @@ export default function RosterEditModal({
                 </div>
               </div>
 
-              {/* Starting Pitcher */}
+              {/* Pitchers (Starter & Relievers) */}
               <div style={{
-                display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px',
-                padding: '10px 12px', borderRadius: '8px',
+                padding: '12px', borderRadius: '8px',
                 backgroundColor: isDark ? '#141417' : '#f8f8f8',
                 border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
               }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                    PITCHER #
-                  </label>
-                  <input
-                    type="text"
-                    value={homePitcherNum}
-                    onChange={(e) => setHomePitcherNum(e.target.value)}
-                    style={{
-                      width: '100%', padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center',
-                      borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                      backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                    STARTING PITCHER NAME
-                  </label>
-                  <input
-                    type="text"
-                    value={homePitcherName}
-                    onChange={(e) => setHomePitcherName(e.target.value)}
-                    style={{
-                      width: '100%', padding: '6px 8px', fontSize: '12px', fontWeight: 600,
-                      borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                      backgroundColor: isDark ? '#09090b' : '#ffffff', color: isDark ? '#fafafa' : '#18181b',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fafafa' : '#18181b', display: 'block', marginBottom: '8px' }}>
+                  Home Pitching Staff
+                </span>
+                {renderPitcherRows(homePitchers, false)}
               </div>
 
               {/* 9 Batter Lineup */}
               <div>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#fafafa' : '#18181b' }}>
-                  Starting Batting Order (1–9)
+                  Starting Batting Order (1–9) & Substitutes
                 </span>
                 <div style={{ marginTop: '8px' }}>
                   {renderBatterRows(homeBatters, false)}
@@ -620,7 +814,7 @@ export default function RosterEditModal({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '4px' }}>
-                  BALLPARK / VENUE & CITY
+                  BALLPARK / VENUE LOCATION
                 </label>
                 <input
                   type="text"
@@ -638,13 +832,13 @@ export default function RosterEditModal({
 
               <div>
                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '4px' }}>
-                  GAME DATE DISPLAY TEXT
+                  DATE DISPLAY STRING
                 </label>
                 <input
                   type="text"
                   value={dateDisplay}
                   onChange={(e) => setDateDisplay(e.target.value)}
-                  placeholder="e.g. OCTOBER 14, 2026"
+                  placeholder="e.g. OCTOBER 8, 2025"
                   style={{
                     width: '100%', padding: '8px 10px', fontSize: '12px', fontWeight: 600,
                     borderRadius: '6px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
@@ -656,11 +850,11 @@ export default function RosterEditModal({
 
               <div>
                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '4px' }}>
-                  TOTAL INNINGS (9 standard, or 10+ for extra innings)
+                  TOTAL INNINGS
                 </label>
                 <select
                   value={totalInnings}
-                  onChange={(e) => setTotalInnings(parseInt(e.target.value, 10))}
+                  onChange={(e) => setTotalInnings(Number(e.target.value))}
                   style={{
                     width: '100%', padding: '8px 10px', fontSize: '12px', fontWeight: 600,
                     borderRadius: '6px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
@@ -668,18 +862,20 @@ export default function RosterEditModal({
                     boxSizing: 'border-box',
                   }}
                 >
-                  <option value={9}>9 Innings (Standard Game)</option>
+                  <option value={9}>9 Innings (Standard)</option>
                   <option value={10}>10 Innings (Extra Innings)</option>
-                  <option value={11}>11 Innings (Extra Innings)</option>
-                  <option value={12}>12 Innings (Extra Innings)</option>
-                  <option value={13}>13 Innings (Extra Innings)</option>
+                  <option value={11}>11 Innings</option>
+                  <option value={12}>12 Innings</option>
+                  <option value={13}>13 Innings</option>
+                  <option value={14}>14 Innings</option>
+                  <option value={15}>15 Innings</option>
                 </select>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Buttons */}
         <div style={{
           padding: '12px 16px',
           borderTop: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
@@ -692,7 +888,7 @@ export default function RosterEditModal({
           <button
             onClick={onClose}
             style={{
-              padding: '7px 14px', borderRadius: '6px',
+              padding: '8px 14px', borderRadius: '6px',
               border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
               backgroundColor: isDark ? '#27272a' : '#ffffff',
               color: isDark ? '#d4d4d8' : '#374151',
@@ -705,16 +901,17 @@ export default function RosterEditModal({
           <button
             onClick={handleSave}
             style={{
-              padding: '7px 16px', borderRadius: '6px',
+              padding: '8px 18px', borderRadius: '6px',
               border: 'none',
-              backgroundColor: isDark ? '#fafafa' : '#18181b',
-              color: isDark ? '#09090b' : '#fafafa',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
               fontSize: '12px', fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
             }}
           >
             <Check style={{ width: '14px', height: '14px' }} />
-            Save Changes
+            Apply Changes
           </button>
         </div>
       </div>

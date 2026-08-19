@@ -136,20 +136,24 @@ export async function findMostRecentRaysGame() {
     // Sort chronologically descending by date, then gamePk
     allGames.sort((a, b) => b.date.localeCompare(a.date) || b.gamePk - a.gamePk);
 
-    // Prefer completed games first, or active live games
+    // Prefer active live / in-progress games first, then completed games
+    const liveGame = allGames.find(g =>
+      g.abstractState.toLowerCase() === 'live' ||
+      g.codedState === 'I' ||
+      g.status.toLowerCase().includes('in progress') ||
+      g.status.toLowerCase().includes('live') ||
+      g.status.toLowerCase().includes('warmup') ||
+      g.status.toLowerCase().includes('delayed')
+    );
     const completedGame = allGames.find(g =>
       g.abstractState.toLowerCase() === 'final' ||
       g.codedState === 'F' || g.codedState === 'O' ||
       g.status.toLowerCase().includes('final') ||
-      g.status.toLowerCase().includes('game over')
-    );
-    const liveGame = allGames.find(g =>
-      g.abstractState.toLowerCase() === 'live' ||
-      g.codedState === 'I' ||
-      g.status.toLowerCase().includes('in progress')
+      g.status.toLowerCase().includes('game over') ||
+      g.status.toLowerCase().includes('completed')
     );
 
-    const chosen = completedGame || liveGame || allGames[0];
+    const chosen = liveGame || completedGame || allGames[0];
     if (chosen) {
       return {
         date: chosen.date,
@@ -659,6 +663,7 @@ export function processMLBData(data, gamePkOverride) {
           name: lastName,
           fullName,
           subNotes: [],
+          substitutes: [],
           plays: playerPlaysMap
         });
       } else if (!isStarter && battingOrderNum !== null && !pitcherIdSet.has(id)) {
@@ -666,20 +671,35 @@ export function processMLBData(data, gamePkOverride) {
         const subLetter = subLetters[subCharIndex % subLetters.length];
         subCharIndex++;
 
-        subsList.push({ letter: subLetter, name: lastName });
+        subsList.push({ letter: subLetter, name: lastName, position: pos, jerseyNumber });
 
         const targetStarter = starters[slotIndex];
         if (targetStarter) {
+          if (!targetStarter.subNotes) targetStarter.subNotes = [];
+          if (!targetStarter.substitutes) targetStarter.substitutes = [];
           targetStarter.subNotes.push(subLetter);
+          targetStarter.substitutes.push({
+            id,
+            jerseyNumber,
+            position: pos,
+            name: lastName,
+            fullName,
+            subLetter,
+          });
+
           Object.keys(playerPlaysMap).forEach(inn => {
             const existing = targetStarter.plays[inn];
-            const subPlayList = playerPlaysMap[inn];
+            const subPlayList = (playerPlaysMap[inn] || []).map(p => ({
+              ...p,
+              subLetter,
+              batterName: lastName,
+              jerseyNumber,
+            }));
             if (!existing) {
               targetStarter.plays[inn] = subPlayList;
             } else {
               const existingArr = Array.isArray(existing) ? existing : [existing];
-              const subArr = Array.isArray(subPlayList) ? subPlayList : [subPlayList];
-              targetStarter.plays[inn] = [...existingArr, ...subArr];
+              targetStarter.plays[inn] = [...existingArr, ...subPlayList];
             }
           });
         }
