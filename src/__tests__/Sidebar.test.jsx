@@ -370,17 +370,12 @@ describe('Sidebar Component & Visualizer Tests', () => {
 
     // FULL GAME badge
     expect(screen.getByText(/FULL GAME/i)).toBeDefined();
-    expect(screen.getByText(/All \(3 PA\)/i)).toBeDefined();
-    expect(screen.getByText(/Inn 1 · HR/i)).toBeDefined();
-    expect(screen.getByText(/Inn 3 · 1B/i)).toBeDefined();
-    expect(screen.getByText(/Inn 5 · K/i)).toBeDefined();
+    // Static PA chips should be shown (no scope selector buttons for full-game)
+    expect(screen.getByText(/Inn 1/)).toBeDefined();
+    expect(screen.getByText(/Inn 3/)).toBeDefined();
+    expect(screen.getByText(/Inn 5/)).toBeDefined();
 
     // Aggregated pitch count (2 + 1 + 1 = 4 Pitches)
     expect(screen.getAllByText(/4P ·/i).length).toBeGreaterThan(0);
-
-    // Click individual PA
-    const pa1Btn = screen.getByRole('button', { name: /Inn 1 · HR/i });
-    fireEvent.click(pa1Btn);
-    expect(screen.getByText(/Aaron Judge homers to right field/i)).toBeDefined();
   });
 });

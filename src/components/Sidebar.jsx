@@ -754,8 +754,40 @@ export default function Sidebar({
                                 )}
                               </div>
 
-                              {/* Multi-PA Selector when player has multiple PAs or full game is inspected */}
-                              {inspectedPlaysArray.length > 1 && (
+                              {/* Full-game batter: show PA breakdown instead of scope selector */}
+                              {isFullGameBatter && inspectedPlaysArray.length > 0 && (
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', gap: '4px',
+                                  flexWrap: 'wrap',
+                                  padding: '2px 0 1px',
+                                }}>
+                                  {inspectedPlaysArray.map((p, pIdx) => {
+                                    const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : pIdx === 2 ? '③' : pIdx === 3 ? '④' : '⑤';
+                                    const playCode = p?.code || `PA ${pIdx + 1}`;
+                                    const pitchCount = p?.pitches?.length || 0;
+                                    return (
+                                      <span key={pIdx} style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '2px',
+                                        fontSize: '8.5px', fontWeight: 700,
+                                        color: c.textMuted,
+                                        padding: '2px 5px', borderRadius: '4px',
+                                        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                        border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                                        whiteSpace: 'nowrap',
+                                      }}>
+                                        <span style={{ opacity: 0.7 }}>{seqSymbol}</span>
+                                        <span style={{ fontWeight: 800, color: c.textHead }}>Inn {p.inning}</span>
+                                        <span>·</span>
+                                        <span>{playCode}</span>
+                                        <span style={{ opacity: 0.6, fontSize: '7.5px' }}>({pitchCount}P)</span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Multi-PA selector only for same-inning multiple PAs (non-full-game) */}
+                              {!isFullGameBatter && inspectedPlaysArray.length > 1 && (
                                 <div style={{
                                   display: 'flex', alignItems: 'center', gap: '4px',
                                   backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
@@ -764,35 +796,13 @@ export default function Sidebar({
                                   flexWrap: 'wrap',
                                 }}>
                                   <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted, paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
-                                    {isFullGameBatter ? 'Scope:' : 'At-Bat:'}
+                                    At-Bat:
                                   </span>
-                                  {isFullGameBatter && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedMultiPaIndex('all');
-                                        setHoveredBattedBallIndex(null);
-                                        setHoveredPitchIdx(null);
-                                      }}
-                                      style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-                                        padding: '3px 6px', borderRadius: '5px', cursor: 'pointer',
-                                        border: `1px solid ${isAggregatedFullGame ? '#3b82f6' : 'transparent'}`,
-                                        backgroundColor: isAggregatedFullGame ? (isDark ? '#1e3a8a' : '#eff6ff') : 'transparent',
-                                        color: isAggregatedFullGame ? (isDark ? '#93c5fd' : '#1d4ed8') : c.textMuted,
-                                        fontWeight: isAggregatedFullGame ? 800 : 600,
-                                        fontSize: '9.5px',
-                                        transition: 'all 0.15s ease',
-                                      }}
-                                    >
-                                      <span>All ({inspectedPlaysArray.length} PA)</span>
-                                    </button>
-                                  )}
                                   {inspectedPlaysArray.map((p, pIdx) => {
-                                    const isCur = !isAggregatedFullGame && pIdx === activeMultiIndex;
+                                    const isCur = pIdx === activeMultiIndex;
                                     const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : pIdx === 2 ? '③' : pIdx === 3 ? '④' : '⑤';
                                     const playCode = p?.code || `PA ${pIdx + 1}`;
                                     const pitchCount = p?.pitches?.length || 0;
-                                    const label = isFullGameBatter ? `Inn ${p.inning} · ${playCode}` : playCode;
                                     return (
                                       <button
                                         key={pIdx}
@@ -813,7 +823,7 @@ export default function Sidebar({
                                         }}
                                       >
                                         <span>{seqSymbol}</span>
-                                        <span>{label}</span>
+                                        <span>{playCode}</span>
                                         <span style={{ fontSize: '8px', opacity: 0.75 }}>({pitchCount}P)</span>
                                       </button>
                                     );
@@ -1528,7 +1538,7 @@ export default function Sidebar({
                                     )}
 
                                     {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
-                                    {isInspectingCell && !inspectedPlay && (
+                                    {isInspectingCell && !inspectedPlay && !isAggregatedFullGame && (
                                       <div style={{
                                         position: 'absolute',
                                         inset: 0,
