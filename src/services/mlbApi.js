@@ -443,6 +443,18 @@ export function processMLBData(data, gamePkOverride) {
     const playerMap = teamBox.players || {};
     const batterIds = teamBox.batters || [];
 
+    const SUFFIXES_B = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+    const extractBatterLastName = (fullName) => {
+      if (!fullName) return '—';
+      const parts = fullName.trim().split(/\s+/);
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (!SUFFIXES_B.has(parts[i].toLowerCase())) {
+          return parts[i].toUpperCase();
+        }
+      }
+      return parts[parts.length - 1].toUpperCase();
+    };
+
     const batterInningPlays = {};
     
     // Group plays by inning to track runner base advancement chronologically
@@ -471,56 +483,48 @@ export function processMLBData(data, gamePkOverride) {
           batterInningPlays[batterId][inn] = [];
         }
 
-        // Base reached from own at-bat
+        // Track base reaching across subsequent plays within the SAME half-inning
         let atBatBases = parsed.bases || 0;
-        if (parsed.type === 'hr') atBatBases = 4;
+        let endInningBases = atBatBases;
         let outAtBase = null;
         let outAtBaseEvent = null;
 
-        if (play.runners) {
-          play.runners.forEach(r => {
-            if (r.details?.runner?.id === batterId) {
-              if (!r.movement?.isOut) {
-                const reached = baseToNum(r.movement?.end);
-                if (reached > atBatBases) atBatBases = reached;
-              } else {
-                const ob = baseToNum(r.movement?.outBase || r.movement?.end);
-                // Only flag out on own at-bat if thrown out attempting 2B, 3B, or Home (e.g. stretching a hit)
-                if (ob >= 2) {
-                  outAtBase = ob;
-                  const descLower = (play.result?.description || '').toLowerCase();
-                  if (descLower.includes('caught stealing') || r.details?.event === 'Caught Stealing') outAtBaseEvent = 'CS';
-                  else if (descLower.includes('picked off') || r.details?.event === 'Pickoff') outAtBaseEvent = 'PO';
+        for (let i = playIdx + 1; i < innPlays.length; i++) {
+          const subsequentPlay = innPlays[i];
+          if (!subsequentPlay.runners) continue;
+
+          for (const r of subsequentPlay.runners) {
+            const runnerId = r.details?.runner?.id;
+            if (runnerId === batterId) {
+              const endBase = r.movement?.end;
+              if (endBase) {
+                if (endBase === 'score' || endBase === '4B' || endBase === 'home') {
+                  endInningBases = Math.max(endInningBases, 4);
+                } else if (endBase === '3B') {
+                  endInningBases = Math.max(endInningBases, 3);
+                } else if (endBase === '2B') {
+                  endInningBases = Math.max(endInningBases, 2);
+                } else if (endBase === '1B') {
+                  endInningBases = Math.max(endInningBases, 1);
+                }
+              }
+
+              if (r.movement?.isOut) {
+                const outBaseStr = r.movement?.outBase || endBase;
+                let numBase = null;
+                if (outBaseStr === '1B') numBase = 1;
+                else if (outBaseStr === '2B') numBase = 2;
+                else if (outBaseStr === '3B') numBase = 3;
+                else if (outBaseStr === '4B' || outBaseStr === 'score' || outBaseStr === 'home') numBase = 4;
+
+                if (numBase) {
+                  outAtBase = numBase;
+                  const descLower = (r.details?.event || r.details?.movementReason || subsequentPlay.result?.description || '').toLowerCase();
+                  if (descLower.includes('caught stealing')) outAtBaseEvent = 'CS';
+                  else if (descLower.includes('pickoff') || descLower.includes('picked off')) outAtBaseEvent = 'PO';
                   else outAtBaseEvent = 'OUT';
                 }
               }
-            }
-          });
-        }
-
-        // Base reached by end of inning from subsequent plays in same inning
-        let endInningBases = atBatBases;
-        if (atBatBases > 0) {
-          for (let i = playIdx + 1; i < innPlays.length; i++) {
-            const subPlay = innPlays[i];
-            if (subPlay.runners) {
-              subPlay.runners.forEach(r => {
-                if (r.details?.runner?.id === batterId) {
-                  if (!r.movement?.isOut) {
-                    const reached = baseToNum(r.movement?.end);
-                    if (reached > endInningBases) endInningBases = reached;
-                  } else {
-                    const ob = baseToNum(r.movement?.outBase || r.movement?.end || r.movement?.start) || 1;
-                    if (ob > 0) {
-                      outAtBase = ob;
-                      const subDesc = (subPlay.result?.description || '').toLowerCase();
-                      if (subDesc.includes('caught stealing') || r.details?.event === 'Caught Stealing') outAtBaseEvent = 'CS';
-                      else if (subDesc.includes('picked off') || r.details?.event === 'Pickoff') outAtBaseEvent = 'PO';
-                      else outAtBaseEvent = 'OUT';
-                    }
-                  }
-                }
-              });
             }
           }
         }
@@ -594,12 +598,21 @@ export function processMLBData(data, gamePkOverride) {
           });
         }
 
-        const batSide = play.matchup?.batSide?.code || playerMap[`ID${batterId}`]?.batSide?.code || 'R';
+        const playBatterId = play.matchup?.batter?.id || batterId;
+        const playBatterPlayer = playerMap[`ID${playBatterId}`];
+        const playBatterFullName = play.matchup?.batter?.fullName || playBatterPlayer?.person?.fullName || '';
+        const playBatterLastName = extractBatterLastName(playBatterFullName);
+        const playBatterJerseyNumber = playBatterPlayer?.jerseyNumber || '';
+
+        const batSide = play.matchup?.batSide?.code || playBatterPlayer?.batSide?.code || playerMap[`ID${batterId}`]?.batSide?.code || 'R';
         const pitchHand = play.matchup?.pitchHand?.code || 'R';
 
         parsed.pitches = playPitches;
         parsed.pitcherName = extractLastNameGlobal(play.matchup?.pitcher?.fullName || '');
-        parsed.batterName = extractLastNameGlobal(play.matchup?.batter?.fullName || '');
+        parsed.batterId = playBatterId;
+        parsed.batterName = playBatterLastName;
+        parsed.batterFullName = playBatterFullName;
+        parsed.batterJerseyNumber = playBatterJerseyNumber;
         parsed.batSide = batSide;
         parsed.pitchHand = pitchHand;
         parsed.count = play.count;
@@ -735,19 +748,6 @@ export function processMLBData(data, gamePkOverride) {
     const subsList = [];   // positional subs (PH, PR, defensive)
     let subCharIndex = 0;
     const subLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-    // Smart last name: ignore common name suffixes (Jr., Sr., II, III, IV)
-    const SUFFIXES_B = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
-    const extractBatterLastName = (fullName) => {
-      if (!fullName) return '—';
-      const parts = fullName.trim().split(/\s+/);
-      for (let i = parts.length - 1; i >= 0; i--) {
-        if (!SUFFIXES_B.has(parts[i].toLowerCase())) {
-          return parts[i].toUpperCase();
-        }
-      }
-      return parts[parts.length - 1].toUpperCase();
-    };
 
     batterIds.forEach(id => {
       const player = playerMap[`ID${id}`];
@@ -1055,6 +1055,11 @@ export function processMLBData(data, gamePkOverride) {
   // Extract the very last at-bat of the game (for default inspection on completed games)
   let lastAtBat = null;
   if (liveData.plays?.allPlays && liveData.plays.allPlays.length > 0) {
+    const allBoxPlayers = {
+      ...(box.teams?.away?.players || {}),
+      ...(box.teams?.home?.players || {}),
+    };
+
     for (let i = liveData.plays.allPlays.length - 1; i >= 0; i--) {
       const p = liveData.plays.allPlays[i];
       const bId = p.matchup?.batter?.id;
@@ -1088,13 +1093,13 @@ export function processMLBData(data, gamePkOverride) {
             id: bId,
             name: extractLastNameGlobal(p.matchup?.batter?.fullName || ''),
             fullName: p.matchup?.batter?.fullName || '',
-            jerseyNumber: playerMap[`ID${bId}`]?.jerseyNumber || '—',
+            jerseyNumber: allBoxPlayers[`ID${bId}`]?.jerseyNumber || '—',
             batSide: p.matchup?.batSide?.code || 'R',
           };
         }
 
-        const playList = batterInningPlays[bId]?.[inn] || [];
-        const currentPlay = playList.length > 0 ? playList[playList.length - 1] : null;
+        const rawPlays = batterObj?.plays?.[inn] || [];
+        const currentPlay = Array.isArray(rawPlays) ? (rawPlays.length > 0 ? rawPlays[rawPlays.length - 1] : null) : rawPlays;
 
         lastAtBat = {
           teamKey,

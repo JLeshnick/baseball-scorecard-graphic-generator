@@ -542,8 +542,14 @@ export default function Sidebar({
                         ? (inspectedPlay?.pitches || [])
                         : (scorecardData.gameInfo.liveGameState?.pitches || []);
                       const batterName = isInspecting
-                        ? (inspectedCell.batter?.fullName || inspectedCell.batter?.name || inspectedPlay?.batterName || 'Batter')
+                        ? (inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
                         : (scorecardData.gameInfo.liveGameState?.batterName || '');
+                      const displayJersey = isInspecting
+                        ? (inspectedPlay?.batterJerseyNumber || inspectedCell.batter?.jerseyNumber || '')
+                        : '';
+                      const displayHeaderName = isInspecting
+                        ? (inspectedPlay?.batterName || inspectedCell.batter?.name || 'Batter')
+                        : '';
                       const pitcherName = isInspecting
                         ? (inspectedPlay?.pitcherName || '')
                         : (scorecardData.gameInfo.liveGameState?.pitcherName || '');
@@ -551,7 +557,7 @@ export default function Sidebar({
                         ? (inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R')
                         : (scorecardData?.gameInfo?.liveGameState?.batSide || 'R');
                       const playDesc = isInspecting
-                        ? (inspectedPlay?.code ? `${inspectedPlay.code}${inspectedPlay.description ? ` · ${inspectedPlay.description}` : ''}` : (inspectedPlay?.description || (inspectedPlay ? '' : 'No plate appearance in this inning.')))
+                        ? (inspectedPlay?.description || (inspectedPlay?.code ? inspectedPlay.code : (inspectedPlay ? '' : 'No plate appearance in this inning.')))
                         : '';
 
                       return (
@@ -575,7 +581,7 @@ export default function Sidebar({
                                   {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
                                 </span>
                                 <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                  #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name}
+                                  {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
                                 </span>
                               </div>
                               <button
@@ -672,19 +678,10 @@ export default function Sidebar({
 
                           {/* Batter & Pitcher Matchup & Result */}
                           {(batterName || pitcherName || playDesc) && (
-                            <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '2px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
+                            <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
                               {batterName && (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontWeight: 700, color: c.textHead }}>At Bat:</span>
-                                    <span style={{
-                                      fontSize: '8px', fontWeight: 800, padding: '0 4px', borderRadius: '3px',
-                                      backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                      color: batSide === 'L' ? '#3b82f6' : '#ef4444',
-                                    }}>
-                                      {batSide === 'L' ? 'LHB' : 'RHB'}
-                                    </span>
-                                  </div>
+                                  <span style={{ fontWeight: 700, color: c.textHead }}>At Bat:</span>
                                   <span style={{ fontWeight: 600, color: c.textMain }}>{batterName}</span>
                                 </div>
                               )}
@@ -695,9 +692,35 @@ export default function Sidebar({
                                 </div>
                               )}
                               {playDesc && (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
-                                  <span style={{ fontWeight: 700, color: c.textHead }}>Result:</span>
-                                  <span style={{ fontWeight: 600, color: '#3b82f6', maxWidth: '200px', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={playDesc}>{playDesc}</span>
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  marginTop: '2px',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
+                                  border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`,
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '8.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#3b82f6' }}>
+                                      Play Result
+                                    </span>
+                                    {inspectedPlay?.code && (
+                                      <span style={{ fontSize: '9px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: '#3b82f6' }}>
+                                        {inspectedPlay.code}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '9.5px',
+                                    fontWeight: 600,
+                                    color: c.textHead,
+                                    lineHeight: 1.35,
+                                    wordBreak: 'break-word',
+                                  }}>
+                                    {playDesc}
+                                  </div>
                                 </div>
                               )}
                             </div>
