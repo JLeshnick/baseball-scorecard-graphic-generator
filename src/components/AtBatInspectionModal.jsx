@@ -14,14 +14,12 @@ export default function AtBatInspectionModal({
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
   const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
-  const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
     setSelectedMultiPaIndex(0);
-    setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
@@ -44,10 +42,9 @@ export default function AtBatInspectionModal({
   const targetHitData = inspectedPlay?.hitData || null;
   const targetBattedBalls = inspectedPlay?.battedBalls?.length
     ? inspectedPlay.battedBalls
-    : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : []);
+    : (targetHitData ? [targetHitData] : []);
 
   const activeHit = (hoveredBattedBallIndex !== null && targetBattedBalls[hoveredBattedBallIndex])
-    || (selectedBattedBallIndex !== null && targetBattedBalls[selectedBattedBallIndex])
     || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
 
   const batterName = formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter');
@@ -951,41 +948,45 @@ export default function AtBatInspectionModal({
                       {(() => {
                         const rawBalls = (targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : []));
                         const sortedBalls = rawBalls.map((b, idx) => ({ ...b, origIdx: idx }));
-                        const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                        if (activeBallIdx !== null) {
+                        if (hoveredBattedBallIndex !== null) {
                           sortedBalls.sort((a, b) => {
-                            if (a.origIdx === activeBallIdx) return 1;
-                            if (b.origIdx === activeBallIdx) return -1;
+                            if (a.origIdx === hoveredBattedBallIndex) return 1;
+                            if (b.origIdx === hoveredBattedBallIndex) return -1;
                             return 0;
                           });
                         }
                         return sortedBalls.map((bBall) => {
                           const isFoul = Boolean(bBall.isFoul);
                           const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
-                          const isSel = (hoveredBattedBallIndex === bBall.origIdx) || (selectedBattedBallIndex === bBall.origIdx);
-                          const isAnyActive = activeBallIdx !== null;
+                          const isHovered = hoveredBattedBallIndex === bBall.origIdx;
+                          const isAnyHovered = hoveredBattedBallIndex !== null;
                           const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
-                          const opacity = isSel ? 1 : (isAnyActive ? 0.22 : 0.8);
+                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.8);
 
                           let endX = bBall.coordX ?? (125 + (Math.random() - 0.5) * 60);
                           let endY = bBall.coordY ?? (80 + (Math.random() - 0.5) * 40);
 
                           return (
-                            <g key={bBall.origIdx} onClick={() => setSelectedBattedBallIndex(isSel ? null : bBall.origIdx)} style={{ cursor: 'pointer' }}>
+                            <g
+                              key={bBall.origIdx}
+                              onMouseEnter={() => setHoveredBattedBallIndex(bBall.origIdx)}
+                              onMouseLeave={() => setHoveredBattedBallIndex(null)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <line
                                 x1="125" y1="205" x2={endX} y2={endY}
-                                stroke={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
-                                strokeWidth={isSel ? 2.8 : 1.3}
+                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                strokeWidth={isHovered ? 2.8 : 1.3}
                                 strokeDasharray={isFoul ? '3 2' : 'none'}
                                 opacity={opacity}
                               />
                               <circle
                                 cx={endX}
                                 cy={endY}
-                                r={isSel ? 7 : 5}
-                                fill={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                r={isHovered ? 7 : 5}
+                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
                                 stroke="#ffffff"
-                                strokeWidth={isSel ? 1.8 : 1.3}
+                                strokeWidth={isHovered ? 1.8 : 1.3}
                                 opacity={opacity}
                               />
                               <text
@@ -993,7 +994,7 @@ export default function AtBatInspectionModal({
                                 y={endY + 2.2}
                                 textAnchor="middle"
                                 fill="#ffffff"
-                                fontSize={isSel ? '6.5' : '5.5'}
+                                fontSize={isHovered ? '6.5' : '5.5'}
                                 fontWeight="900"
                                 fontFamily="'JetBrains Mono', monospace"
                                 opacity={opacity}
@@ -1022,21 +1023,20 @@ export default function AtBatInspectionModal({
                       {(() => {
                         const rawBalls = (targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : []));
                         const sortedBalls = rawBalls.map((b, idx) => ({ ...b, origIdx: idx }));
-                        const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                        if (activeBallIdx !== null) {
+                        if (hoveredBattedBallIndex !== null) {
                           sortedBalls.sort((a, b) => {
-                            if (a.origIdx === activeBallIdx) return 1;
-                            if (b.origIdx === activeBallIdx) return -1;
+                            if (a.origIdx === hoveredBattedBallIndex) return 1;
+                            if (b.origIdx === hoveredBattedBallIndex) return -1;
                             return 0;
                           });
                         }
                         return sortedBalls.map((bBall) => {
                           const isFoul = Boolean(bBall.isFoul);
                           const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
-                          const isSel = (hoveredBattedBallIndex === bBall.origIdx) || (selectedBattedBallIndex === bBall.origIdx);
-                          const isAnyActive = activeBallIdx !== null;
+                          const isHovered = hoveredBattedBallIndex === bBall.origIdx;
+                          const isAnyHovered = hoveredBattedBallIndex !== null;
                           const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
-                          const opacity = isSel ? 1 : (isAnyActive ? 0.22 : 0.85);
+                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.85);
 
                           const dist = bBall.totalDistance || 220;
                           const landX = Math.min(235, Math.max(70, 30 + (dist / 420) * 175));
@@ -1045,20 +1045,25 @@ export default function AtBatInspectionModal({
                           const apexY = 115 - apexH;
 
                           return (
-                            <g key={bBall.origIdx} onClick={() => setSelectedBattedBallIndex(isSel ? null : bBall.origIdx)} style={{ cursor: 'pointer' }}>
+                            <g
+                              key={bBall.origIdx}
+                              onMouseEnter={() => setHoveredBattedBallIndex(bBall.origIdx)}
+                              onMouseLeave={() => setHoveredBattedBallIndex(null)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <path
                                 d={`M 30 112 Q ${apexX} ${apexY} ${landX} 115`}
                                 fill="none"
-                                stroke={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
-                                strokeWidth={isSel ? 3.2 : 1.6}
+                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                strokeWidth={isHovered ? 3.2 : 1.6}
                                 strokeDasharray={isFoul ? '3 2' : 'none'}
                                 opacity={opacity}
                               />
                               <circle
                                 cx={landX}
                                 cy={115}
-                                r={isSel ? 6.5 : 4.5}
-                                fill={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                r={isHovered ? 6.5 : 4.5}
+                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
                                 stroke="#ffffff"
                                 strokeWidth={1.2}
                                 opacity={opacity}
@@ -1067,7 +1072,7 @@ export default function AtBatInspectionModal({
                                 x={landX}
                                 y={127}
                                 textAnchor="middle"
-                                fill={isAnyActive && !isSel ? (isDark ? '#52525b' : '#94a3b8') : c.textHead}
+                                fill={isAnyHovered && !isHovered ? (isDark ? '#52525b' : '#94a3b8') : c.textHead}
                                 fontSize="7"
                                 fontWeight="800"
                                 fontFamily="'JetBrains Mono', monospace"
@@ -1087,28 +1092,29 @@ export default function AtBatInspectionModal({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', paddingTop: '2px' }}>
                   {(targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : [])).map((bBall, idx) => {
                     const isFoul = Boolean(bBall.isFoul);
-                    const isSel = (hoveredBattedBallIndex === idx) || (selectedBattedBallIndex === idx);
-                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                    const isHovered = hoveredBattedBallIndex === idx;
+                    const isAnyHovered = hoveredBattedBallIndex !== null;
                     const ballColor = isFoul ? '#f59e0b' : (bBall.isBallInPlay ? '#10b981' : '#ef4444');
                     return (
                       <button
                         key={idx}
-                        onClick={() => setSelectedBattedBallIndex(isSel ? null : idx)}
+                        onMouseEnter={() => setHoveredBattedBallIndex(idx)}
+                        onMouseLeave={() => setHoveredBattedBallIndex(null)}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
                           padding: '4px 8px',
                           borderRadius: '6px',
-                          backgroundColor: isSel
+                          backgroundColor: isHovered
                             ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)')
                             : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'),
-                          border: `1px solid ${isSel ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
+                          border: `1px solid ${isHovered ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
                           fontSize: '10px',
                           fontWeight: 700,
                           color: isDark ? '#f4f4f5' : '#0f172a',
                           cursor: 'pointer',
-                          opacity: activeBallIdx !== null && !isSel ? 0.35 : 1,
+                          opacity: isAnyHovered && !isHovered ? 0.35 : 1,
                         }}
                       >
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: ballColor }} />

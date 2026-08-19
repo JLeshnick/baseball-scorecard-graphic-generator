@@ -67,7 +67,6 @@ export default function PitcherInspectionModal({
   // Spray perspective: 'spray' | 'elevation'
   const [hitPerspective, setHitPerspective] = useState('spray');
 
-  const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [pitchFilter, setPitchFilter] = useState('all');
@@ -79,7 +78,6 @@ export default function PitcherInspectionModal({
     } else {
       setSelectedInning('all');
     }
-    setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
@@ -627,11 +625,10 @@ export default function PitcherInspectionModal({
                   {/* Batted Balls Sorted on Top */}
                   {(() => {
                     const sortedBalls = allBattedBalls.map((b, idx) => ({ ...b, origIdx: idx }));
-                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                    if (activeBallIdx !== null) {
+                    if (hoveredBattedBallIndex !== null) {
                       sortedBalls.sort((a, b) => {
-                        if (a.origIdx === activeBallIdx) return 1;
-                        if (b.origIdx === activeBallIdx) return -1;
+                        if (a.origIdx === hoveredBattedBallIndex) return 1;
+                        if (b.origIdx === hoveredBattedBallIndex) return -1;
                         return 0;
                       });
                     }
@@ -639,30 +636,29 @@ export default function PitcherInspectionModal({
                       const normX = b.coordX ? ((b.coordX - 125) / 125) * 40 + 50 : 50;
                       const normY = b.coordY ? 88 - ((200 - b.coordY) / 200) * 60 : 50;
                       const isHovered = hoveredBattedBallIndex === b.origIdx;
-                      const isSelected = selectedBattedBallIndex === b.origIdx;
-                      const isActive = isHovered || isSelected;
-                      const isAnyActive = activeBallIdx !== null;
-                      const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.7);
+                      const isAnyHovered = hoveredBattedBallIndex !== null;
+                      const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.7);
 
                       return (
                         <g
                           key={b.origIdx}
-                          onClick={() => setSelectedBattedBallIndex(isSelected ? null : b.origIdx)}
+                          onMouseEnter={() => setHoveredBattedBallIndex(b.origIdx)}
+                          onMouseLeave={() => setHoveredBattedBallIndex(null)}
                           style={{ cursor: 'pointer' }}
                         >
                           <line
                             x1="50" y1="88" x2={normX} y2={normY}
-                            stroke={isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
-                            strokeWidth={isActive ? 2 : 0.8}
+                            stroke={isHovered ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                            strokeWidth={isHovered ? 2 : 0.8}
                             opacity={opacity}
                           />
                           <circle
                             cx={normX}
                             cy={normY}
-                            r={isActive ? 5.5 : 3.5}
-                            fill={isActive ? '#3b82f6' : (isAnyActive ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
+                            r={isHovered ? 5.5 : 3.5}
+                            fill={isHovered ? '#3b82f6' : (isAnyHovered ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
                             stroke="#ffffff"
-                            strokeWidth={isActive ? 1.5 : 1}
+                            strokeWidth={isHovered ? 1.5 : 1}
                             opacity={opacity}
                           />
                           <text
@@ -670,7 +666,7 @@ export default function PitcherInspectionModal({
                             y={normY + 1.2}
                             textAnchor="middle"
                             fill="#ffffff"
-                            fontSize={isActive ? '4.5' : '3.8'}
+                            fontSize={isHovered ? '4.5' : '3.8'}
                             fontWeight="900"
                             opacity={opacity}
                           >
@@ -690,11 +686,10 @@ export default function PitcherInspectionModal({
 
                   {(() => {
                     const sortedBalls = allBattedBalls.map((b, idx) => ({ ...b, origIdx: idx }));
-                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                    if (activeBallIdx !== null) {
+                    if (hoveredBattedBallIndex !== null) {
                       sortedBalls.sort((a, b) => {
-                        if (a.origIdx === activeBallIdx) return 1;
-                        if (b.origIdx === activeBallIdx) return -1;
+                        if (a.origIdx === hoveredBattedBallIndex) return 1;
+                        if (b.origIdx === hoveredBattedBallIndex) return -1;
                         return 0;
                       });
                     }
@@ -704,39 +699,38 @@ export default function PitcherInspectionModal({
                       const apexH = Math.min(50, Math.max(15, (b.launchAngle || 20) * 1.5));
                       const apexY = 82 - apexH;
                       const isHovered = hoveredBattedBallIndex === b.origIdx;
-                      const isSelected = selectedBattedBallIndex === b.origIdx;
-                      const isActive = isHovered || isSelected;
-                      const isAnyActive = activeBallIdx !== null;
-                      const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.7);
+                      const isAnyHovered = hoveredBattedBallIndex !== null;
+                      const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.7);
 
                       return (
                         <g
                           key={b.origIdx}
-                          onClick={() => setSelectedBattedBallIndex(isSelected ? null : b.origIdx)}
+                          onMouseEnter={() => setHoveredBattedBallIndex(b.origIdx)}
+                          onMouseLeave={() => setHoveredBattedBallIndex(null)}
                           style={{ cursor: 'pointer' }}
                         >
                           <path
                             d={`M 12 82 Q ${(12 + endX) / 2} ${apexY} ${endX} 82`}
                             fill="none"
-                            stroke={isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
-                            strokeWidth={isActive ? 2.2 : 1}
+                            stroke={isHovered ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                            strokeWidth={isHovered ? 2.2 : 1}
                             opacity={opacity}
                           />
                           <circle
                             cx={endX}
                             cy={82}
-                            r={isActive ? 5 : 3}
-                            fill={isActive ? '#3b82f6' : (isAnyActive ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
+                            r={isHovered ? 5 : 3}
+                            fill={isHovered ? '#3b82f6' : (isAnyHovered ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
                             stroke="#ffffff"
-                            strokeWidth={isActive ? 1.5 : 0.8}
+                            strokeWidth={isHovered ? 1.5 : 0.8}
                             opacity={opacity}
                           />
                           <text
                             x={endX}
                             y={77}
                             textAnchor="middle"
-                            fill={isActive ? '#3b82f6' : (isDark ? '#a1a1aa' : '#64748b')}
-                            fontSize={isActive ? '4.5' : '3.5'}
+                            fill={isHovered ? '#3b82f6' : (isDark ? '#a1a1aa' : '#64748b')}
+                            fontSize={isHovered ? '4.5' : '3.5'}
                             fontWeight="800"
                             opacity={opacity}
                           >
@@ -805,33 +799,40 @@ export default function PitcherInspectionModal({
                 Batted Balls Allowed ({allBattedBalls.length})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
-                {allBattedBalls.map((b, bIdx) => (
-                  <div
-                    key={bIdx}
-                    onClick={() => setSelectedBattedBallIndex(bIdx)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '6px 8px', borderRadius: '6px',
-                      backgroundColor: selectedBattedBallIndex === bIdx ? (isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.08)') : (isDark ? '#18181b' : '#f8fafc'),
-                      border: `1px solid ${selectedBattedBallIndex === bIdx ? '#3b82f6' : (isDark ? '#27272a' : '#e2e8f0')}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
-                        #{bIdx + 1} {b.playCode || 'Batted Ball'} · {b.batterName} (Inn {b.inning})
+                {allBattedBalls.map((b, bIdx) => {
+                  const isHovered = hoveredBattedBallIndex === bIdx;
+                  const isAnyHovered = hoveredBattedBallIndex !== null;
+                  return (
+                    <div
+                      key={bIdx}
+                      onMouseEnter={() => setHoveredBattedBallIndex(bIdx)}
+                      onMouseLeave={() => setHoveredBattedBallIndex(null)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '6px 8px', borderRadius: '6px',
+                        backgroundColor: isHovered ? (isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.1)') : (isDark ? '#18181b' : '#f8fafc'),
+                        border: `1px solid ${isHovered ? '#3b82f6' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                        cursor: 'pointer',
+                        opacity: isAnyHovered && !isHovered ? 0.4 : 1,
+                        transition: 'all 0.12s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
+                          #{bIdx + 1} {b.playCode || 'Batted Ball'} · {b.batterName} (Inn {b.inning})
+                        </div>
+                        <div style={{ fontSize: '10px', color: isDark ? '#a1a1aa' : '#64748b' }}>
+                          {b.playDesc}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '10px', color: isDark ? '#a1a1aa' : '#64748b' }}>
-                        {b.playDesc}
-                      </div>
+                      {(b.launchSpeed || b.totalDistance) && (
+                        <div style={{ textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 800, color: '#3b82f6' }}>
+                          {b.launchSpeed ? `${b.launchSpeed} MPH` : ''} {b.totalDistance ? `· ${Math.round(b.totalDistance)} FT` : ''}
+                        </div>
+                      )}
                     </div>
-                    {(b.launchSpeed || b.totalDistance) && (
-                      <div style={{ textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 800, color: '#3b82f6' }}>
-                        {b.launchSpeed ? `${b.launchSpeed} MPH` : ''} {b.totalDistance ? `· ${Math.round(b.totalDistance)} FT` : ''}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

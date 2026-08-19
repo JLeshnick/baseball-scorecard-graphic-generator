@@ -125,21 +125,18 @@ export default function Sidebar({
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
   const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
-  const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
     setSelectedMultiPaIndex(0);
-    setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
   }, [inspectedCellKey]);
 
   useEffect(() => {
-    setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
@@ -615,7 +612,6 @@ export default function Sidebar({
                             : (scorecardData.gameInfo.liveGameState?.battedBalls?.length ? scorecardData.gameInfo.liveGameState.battedBalls : (scorecardData.gameInfo.liveGameState?.hitData ? [scorecardData.gameInfo.liveGameState.hitData] : [])));
 
                       const activeHit = (hoveredBattedBallIndex !== null && targetBattedBalls[hoveredBattedBallIndex])
-                        || (selectedBattedBallIndex !== null && targetBattedBalls[selectedBattedBallIndex])
                         || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
 
                       const batterName = isInspectingCell
@@ -699,7 +695,6 @@ export default function Sidebar({
                                         key={pIdx}
                                         onClick={() => {
                                           setSelectedMultiPaIndex(pIdx);
-                                          setSelectedBattedBallIndex(null);
                                           setHoveredBattedBallIndex(null);
                                           setHoveredPitchIdx(null);
                                         }}
@@ -1245,22 +1240,22 @@ export default function Sidebar({
                                         {/* Left Batter Box (RHB) */}
                                         <rect
                                           x="7" y="14" width="15" height="58" rx="2"
-                                          fill={batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
-                                          stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                          strokeWidth={batSide === 'R' ? 1.4 : 0.8}
-                                          strokeDasharray={batSide === 'R' ? 'none' : '2 2'}
+                                          fill={isInspectingCell && batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
+                                          stroke={isInspectingCell && batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                          strokeWidth={isInspectingCell && batSide === 'R' ? 1.4 : 0.8}
+                                          strokeDasharray={isInspectingCell && batSide === 'R' ? 'none' : '2 2'}
                                         />
-                                        <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">RHB</text>
+                                        <text x="14.5" y="45" textAnchor="middle" fill={isInspectingCell && batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">RHB</text>
 
                                         {/* Right Batter Box (LHB) */}
                                         <rect
                                           x="78" y="14" width="15" height="58" rx="2"
-                                          fill={batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
-                                          stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                          strokeWidth={batSide === 'L' ? 1.4 : 0.8}
-                                          strokeDasharray={batSide === 'L' ? 'none' : '2 2'}
+                                          fill={isInspectingCell && batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
+                                          stroke={isInspectingCell && batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                          strokeWidth={isInspectingCell && batSide === 'L' ? 1.4 : 0.8}
+                                          strokeDasharray={isInspectingCell && batSide === 'L' ? 'none' : '2 2'}
                                         />
-                                        <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">LHB</text>
+                                        <text x="85.5" y="45" textAnchor="middle" fill={isInspectingCell && batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">LHB</text>
 
                                         {/* Strike Zone 9-Grid Area */}
                                         <rect
@@ -1578,7 +1573,7 @@ export default function Sidebar({
                             {visualizerTab === 'hit' && (
                               (targetBattedBalls.length > 0 || targetHitData) ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  {/* Hit Spray Header Bar: Shows Enunciated Batted Ball Details on Hover/Select */}
+                                  {/* Hit Spray Header Bar: Shows Enunciated Batted Ball Details on Hover */}
                                   <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1713,11 +1708,10 @@ export default function Sidebar({
                                         {/* Render All Batted Balls (Fouls & Fair Balls) Sorted on Top */}
                                         {(() => {
                                           const sortedBalls = (targetBattedBalls || []).map((b, idx) => ({ ...b, origIdx: idx }));
-                                          const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                                          if (activeBallIdx !== null) {
+                                          if (hoveredBattedBallIndex !== null) {
                                             sortedBalls.sort((a, b) => {
-                                              if (a.origIdx === activeBallIdx) return 1;
-                                              if (b.origIdx === activeBallIdx) return -1;
+                                              if (a.origIdx === hoveredBattedBallIndex) return 1;
+                                              if (b.origIdx === hoveredBattedBallIndex) return -1;
                                               return 0;
                                             });
                                           }
@@ -1728,10 +1722,8 @@ export default function Sidebar({
                                             let tY = typeof ball.coordY === 'number' ? ball.coordY : 80;
 
                                             const isHovered = hoveredBattedBallIndex === ball.origIdx;
-                                            const isSelected = selectedBattedBallIndex === ball.origIdx || (selectedBattedBallIndex === null && ball.origIdx === targetBattedBalls.length - 1);
-                                            const isAnyActive = activeBallIdx !== null;
-                                            const isActive = isHovered || isSelected;
-                                            const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.65);
+                                            const isAnyHovered = hoveredBattedBallIndex !== null;
+                                            const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.75);
 
                                             const isHr = !ball.isFoul && (inspectedPlay?.type === 'hr' || (ball.totalDistance && ball.totalDistance >= 390));
                                             const trajColor = ball.isFoul
@@ -1749,25 +1741,24 @@ export default function Sidebar({
                                                 style={{ cursor: 'pointer' }}
                                                 onMouseEnter={() => setHoveredBattedBallIndex(ball.origIdx)}
                                                 onMouseLeave={() => setHoveredBattedBallIndex(null)}
-                                                onClick={() => setSelectedBattedBallIndex(ball.origIdx)}
                                               >
                                                 {/* Flight Parabolic Arc */}
                                                 <path
                                                   d={`M ${homeX} ${homeY} Q ${midX} ${midY} ${tX} ${tY}`}
                                                   fill="none"
-                                                  stroke={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
-                                                  strokeWidth={isHovered ? 3.6 : (isSelected ? 2.6 : 1.5)}
+                                                  stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  strokeWidth={isHovered ? 3.6 : 1.6}
                                                   strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
                                                   strokeLinecap="round"
                                                   opacity={opacity}
                                                 />
 
-                                                {/* Landing Ring on Selected / Hovered */}
-                                                {isActive && (
+                                                {/* Landing Ring on Hovered */}
+                                                {isHovered && (
                                                   <circle
                                                     cx={tX}
                                                     cy={tY}
-                                                    r={isHovered ? 10.5 : 8}
+                                                    r="10.5"
                                                     fill="none"
                                                     stroke={trajColor}
                                                     strokeWidth="1.6"
@@ -1780,10 +1771,10 @@ export default function Sidebar({
                                                 <circle
                                                   cx={tX}
                                                   cy={tY}
-                                                  r={isHovered ? 6.5 : (isSelected ? 4.8 : 3.5)}
-                                                  fill={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  r={isHovered ? 6.5 : 4}
+                                                  fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
                                                   stroke="#ffffff"
-                                                  strokeWidth={isActive ? 1.8 : 0.8}
+                                                  strokeWidth={isHovered ? 1.8 : 1}
                                                   opacity={opacity}
                                                   style={{
                                                     filter: isHovered
@@ -1799,7 +1790,7 @@ export default function Sidebar({
                                                   y={tY + (isHovered ? 2.2 : 1.8)}
                                                   textAnchor="middle"
                                                   fill="#ffffff"
-                                                  fontSize={isHovered ? '6.5' : (isSelected ? '5.5' : '4.5')}
+                                                  fontSize={isHovered ? '6.5' : '4.5'}
                                                   fontWeight="900"
                                                   fontFamily="'JetBrains Mono', monospace"
                                                   opacity={opacity}
@@ -1846,20 +1837,17 @@ export default function Sidebar({
                                         {/* Trajectory Elevation Arcs for All Batted Balls Sorted on Top */}
                                         {(() => {
                                           const sortedBalls = (targetBattedBalls || []).map((b, idx) => ({ ...b, origIdx: idx }));
-                                          const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
-                                          if (activeBallIdx !== null) {
+                                          if (hoveredBattedBallIndex !== null) {
                                             sortedBalls.sort((a, b) => {
-                                              if (a.origIdx === activeBallIdx) return 1;
-                                              if (b.origIdx === activeBallIdx) return -1;
+                                              if (a.origIdx === hoveredBattedBallIndex) return 1;
+                                              if (b.origIdx === hoveredBattedBallIndex) return -1;
                                               return 0;
                                             });
                                           }
                                           return sortedBalls.map((ball) => {
                                             const isHovered = hoveredBattedBallIndex === ball.origIdx;
-                                            const isSelected = selectedBattedBallIndex === ball.origIdx || (selectedBattedBallIndex === null && ball.origIdx === targetBattedBalls.length - 1);
-                                            const isAnyActive = activeBallIdx !== null;
-                                            const isActive = isHovered || isSelected;
-                                            const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.65);
+                                            const isAnyHovered = hoveredBattedBallIndex !== null;
+                                            const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 0.75);
 
                                             const dist = ball.totalDistance || (ball.isFoul ? 165 : 240);
                                             const landingX = Math.min(238, Math.max(35, 22 + (dist / 420) * 175));
@@ -1879,31 +1867,30 @@ export default function Sidebar({
                                                 style={{ cursor: 'pointer' }}
                                                 onMouseEnter={() => setHoveredBattedBallIndex(ball.origIdx)}
                                                 onMouseLeave={() => setHoveredBattedBallIndex(null)}
-                                                onClick={() => setSelectedBattedBallIndex(ball.origIdx)}
                                               >
                                                 <path
                                                   d={`M 22 108 Q ${apexX} ${apexY} ${landingX} 108`}
                                                   fill="none"
-                                                  stroke={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
-                                                  strokeWidth={isHovered ? 3.6 : (isSelected ? 2.6 : 1.4)}
+                                                  stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  strokeWidth={isHovered ? 3.6 : 1.5}
                                                   strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
                                                   opacity={opacity}
                                                 />
                                                 <circle
                                                   cx={landingX}
                                                   cy={108}
-                                                  r={isHovered ? 6.5 : (isSelected ? 4.8 : 3.5)}
-                                                  fill={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  r={isHovered ? 6.5 : 4}
+                                                  fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
                                                   stroke="#ffffff"
-                                                  strokeWidth={isActive ? 1.8 : 0.8}
+                                                  strokeWidth={isHovered ? 1.8 : 1}
                                                   opacity={opacity}
                                                 />
                                                 <text
                                                   x={landingX}
                                                   y={102}
                                                   textAnchor="middle"
-                                                  fill={isAnyActive && !isActive ? (isDark ? '#52525b' : '#94a3b8') : trajColor}
-                                                  fontSize={isHovered ? '7.5' : (isSelected ? '6.5' : '5.5')}
+                                                  fill={isAnyHovered && !isHovered ? (isDark ? '#52525b' : '#94a3b8') : trajColor}
+                                                  fontSize={isHovered ? '7.5' : '5.5'}
                                                   fontWeight="900"
                                                   fontFamily="'JetBrains Mono', monospace"
                                                   opacity={opacity}
@@ -1970,31 +1957,32 @@ export default function Sidebar({
                                     }}>
                                       {targetBattedBalls.map((b, idx) => {
                                         const isHovered = hoveredBattedBallIndex === idx;
-                                        const isSelected = selectedBattedBallIndex === idx || (selectedBattedBallIndex === null && idx === targetBattedBalls.length - 1);
+                                        const isAnyHovered = hoveredBattedBallIndex !== null;
                                         const isHr = !b.isFoul && (inspectedPlay?.type === 'hr' || (b.totalDistance && b.totalDistance >= 390));
                                         const chipColor = b.isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : '#10b981');
+                                        const opacity = isAnyHovered ? (isHovered ? 1 : 0.35) : 1;
 
                                         return (
                                           <button
                                             key={idx}
                                             onMouseEnter={() => setHoveredBattedBallIndex(idx)}
                                             onMouseLeave={() => setHoveredBattedBallIndex(null)}
-                                            onClick={() => setSelectedBattedBallIndex(idx)}
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
                                               gap: '3.5px',
                                               padding: '2.5px 6px',
                                               borderRadius: '4px',
-                                              backgroundColor: isHovered || isSelected
+                                              backgroundColor: isHovered
                                                 ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)')
                                                 : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'),
-                                              border: `1px solid ${isHovered || isSelected ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
-                                              boxShadow: isHovered || isSelected ? '0 0 0 1px #3b82f6' : 'none',
+                                              border: `1px solid ${isHovered ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
+                                              boxShadow: isHovered ? '0 0 0 1px #3b82f6' : 'none',
                                               fontSize: '9px',
                                               fontWeight: 700,
                                               color: c.textHead,
                                               cursor: 'pointer',
+                                              opacity,
                                               transform: isHovered ? 'scale(1.04)' : 'scale(1)',
                                               transition: 'all 0.12s ease',
                                             }}
