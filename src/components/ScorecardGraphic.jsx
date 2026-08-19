@@ -1423,7 +1423,7 @@ const ScorecardGraphic = ({
               color: t.textSecondary,
               textAlign: 'right',
             }}>
-              {customSubtitle !== undefined ? customSubtitle : `${gameInfo.venue} · ${gameInfo.headline}`}
+              {customSubtitle !== undefined ? customSubtitle : [gameInfo.venue, gameInfo.headline].filter(Boolean).join(' · ')}
             </span>
           </div>
 

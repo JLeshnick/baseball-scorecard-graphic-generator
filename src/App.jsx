@@ -284,13 +284,13 @@ export default function App() {
       const blank = createBlankScorecardData();
       setScorecardData(blank);
       setCustomHeadline(blank.gameInfo.dateDisplay);
-      setCustomSubtitle(`${blank.gameInfo.venue} · ${blank.gameInfo.headline}`);
-      setCustomFooter(`${blank.gameInfo.venue.toUpperCase()} • ${blank.gameInfo.dateDisplay}`);
+      setCustomSubtitle([blank.gameInfo.venue, blank.gameInfo.headline].filter(Boolean).join(' · '));
+      setCustomFooter([(blank.gameInfo.venue || '').toUpperCase(), blank.gameInfo.dateDisplay].filter(Boolean).join(' • '));
       setToastMessage('Reset manual scorecard to a clean blank sheet!');
     } else if (scorecardData) {
       setCustomHeadline(scorecardData.gameInfo.dateDisplay || '');
-      setCustomSubtitle(`${scorecardData.gameInfo.venue || ''} · ${scorecardData.gameInfo.headline || ''}`);
-      setCustomFooter(`${(scorecardData.gameInfo.venue || '').toUpperCase()} • ${scorecardData.gameInfo.dateDisplay || ''}`);
+      setCustomSubtitle([scorecardData.gameInfo.venue, scorecardData.gameInfo.headline].filter(Boolean).join(' · '));
+      setCustomFooter([(scorecardData.gameInfo.venue || '').toUpperCase(), scorecardData.gameInfo.dateDisplay].filter(Boolean).join(' • '));
       setToastMessage('All options reset to default game values!');
     }
     setTimeout(() => setToastMessage(''), 3500);
@@ -335,8 +335,8 @@ export default function App() {
       setLastRefreshedTime(new Date());
       if (!isSilentRefresh) {
         setCustomHeadline(data.gameInfo.dateDisplay || '');
-        setCustomSubtitle(`${data.gameInfo.venue || ''} · ${data.gameInfo.headline || ''}`);
-        setCustomFooter(`${(data.gameInfo.venue || '').toUpperCase()} • ${data.gameInfo.dateDisplay || ''}`);
+        setCustomSubtitle([data.gameInfo.venue, data.gameInfo.headline].filter(Boolean).join(' · '));
+        setCustomFooter([(data.gameInfo.venue || '').toUpperCase(), data.gameInfo.dateDisplay].filter(Boolean).join(' • '));
       }
     } catch (err) {
       console.error(err);
@@ -365,8 +365,8 @@ export default function App() {
     setLiveHalf('away');
     setLiveBatterIdx(0);
     setCustomHeadline(blank.gameInfo.dateDisplay);
-    setCustomSubtitle(`${blank.gameInfo.venue} · ${blank.gameInfo.headline}`);
-    setCustomFooter(`${blank.gameInfo.venue.toUpperCase()} • ${blank.gameInfo.dateDisplay}`);
+    setCustomSubtitle([blank.gameInfo.venue, blank.gameInfo.headline].filter(Boolean).join(' · '));
+    setCustomFooter([(blank.gameInfo.venue || '').toUpperCase(), blank.gameInfo.dateDisplay].filter(Boolean).join(' • '));
     setCustomNotes('');
     setToastMessage('Created new blank scorecard!');
     setTimeout(() => setToastMessage(''), 3500);
@@ -395,8 +395,8 @@ export default function App() {
     setLiveHalf('away');
     setLiveBatterIdx(0);
     setCustomHeadline(liveClone.gameInfo.dateDisplay);
-    setCustomSubtitle(`${liveClone.gameInfo.venue} · ${liveClone.gameInfo.headline}`);
-    setCustomFooter(`${(liveClone.gameInfo.venue || '').toUpperCase()} • ${liveClone.gameInfo.dateDisplay}`);
+    setCustomSubtitle([liveClone.gameInfo.venue, liveClone.gameInfo.headline].filter(Boolean).join(' · '));
+    setCustomFooter([(liveClone.gameInfo.venue || '').toUpperCase(), liveClone.gameInfo.dateDisplay].filter(Boolean).join(' • '));
     setCustomNotes('');
     setToastMessage('Pre-filled lineups & teams from MLB game!');
     setTimeout(() => setToastMessage(''), 3500);
@@ -437,8 +437,8 @@ export default function App() {
       setLiveHalf('away');
       setLiveBatterIdx(0);
       setCustomHeadline(liveClone.gameInfo.dateDisplay);
-      setCustomSubtitle(`${liveClone.gameInfo.venue} · ${liveClone.gameInfo.headline}`);
-      setCustomFooter(`${(liveClone.gameInfo.venue || '').toUpperCase()} • ${liveClone.gameInfo.dateDisplay}`);
+      setCustomSubtitle([liveClone.gameInfo.venue, liveClone.gameInfo.headline].filter(Boolean).join(' · '));
+      setCustomFooter([(liveClone.gameInfo.venue || '').toUpperCase(), liveClone.gameInfo.dateDisplay].filter(Boolean).join(' • '));
       setCustomNotes('');
       setToastMessage(`Loaded: ${liveClone.gameInfo.awayTeam.name} @ ${liveClone.gameInfo.homeTeam.name}!`);
       setTimeout(() => setToastMessage(''), 3500);

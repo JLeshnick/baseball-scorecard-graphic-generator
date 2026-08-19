@@ -132,7 +132,8 @@ export default function Sidebar({
       borderRight: isMobile ? 'none' : `1px solid ${c.border}`,
       display: 'flex',
       flexDirection: 'column',
-      overflowY: 'auto',
+      overflowY: isMobile ? 'auto' : 'scroll',
+      scrollbarGutter: 'stable',
       WebkitOverflowScrolling: 'touch',
       boxSizing: 'border-box',
     }}>
@@ -468,7 +469,7 @@ export default function Sidebar({
                         </span>
                         {lastRefreshedTime && (
                           <span style={{ fontSize: '9.5px', color: c.textMuted }}>
-                            · {lastRefreshedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            · {lastRefreshedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                           </span>
                         )}
                       </div>
@@ -1520,7 +1521,7 @@ export default function Sidebar({
                 key: 'subtitle',
                 value: customSubtitle,
                 setter: setCustomSubtitle,
-                placeholder: scorecardData ? `${scorecardData.gameInfo.venue} · ${scorecardData.gameInfo.headline}` : 'Venue & Matchup',
+                placeholder: scorecardData ? [scorecardData.gameInfo.venue, scorecardData.gameInfo.headline].filter(Boolean).join(' · ') : 'Venue & Matchup',
                 rows: 3
               },
               {
@@ -1536,7 +1537,7 @@ export default function Sidebar({
                 key: 'footer',
                 value: customFooter,
                 setter: setCustomFooter,
-                placeholder: scorecardData ? `${scorecardData.gameInfo.venue.toUpperCase()} • ${scorecardData.gameInfo.dateDisplay}` : 'Venue & Print Footer',
+                placeholder: scorecardData ? [(scorecardData.gameInfo.venue || '').toUpperCase(), scorecardData.gameInfo.dateDisplay].filter(Boolean).join(' • ') : 'Venue & Print Footer',
                 rows: 3
               },
             ].map(field => (
@@ -1577,8 +1578,8 @@ export default function Sidebar({
               onClick={() => {
                 if (scorecardData) {
                   setCustomHeadline(scorecardData.gameInfo.dateDisplay || '');
-                  setCustomSubtitle(`${scorecardData.gameInfo.venue || ''} · ${scorecardData.gameInfo.headline || ''}`);
-                  setCustomFooter(`${(scorecardData.gameInfo.venue || '').toUpperCase()} • ${scorecardData.gameInfo.dateDisplay || ''}`);
+                  setCustomSubtitle([scorecardData.gameInfo.venue, scorecardData.gameInfo.headline].filter(Boolean).join(' · '));
+                  setCustomFooter([(scorecardData.gameInfo.venue || '').toUpperCase(), scorecardData.gameInfo.dateDisplay].filter(Boolean).join(' • '));
                   setCustomNotes('');
                   setToastMessage('Text fields restored to game defaults!');
                   setTimeout(() => setToastMessage(''), 3500);
