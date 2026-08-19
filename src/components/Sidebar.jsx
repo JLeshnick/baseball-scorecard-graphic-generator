@@ -123,7 +123,7 @@ export default function Sidebar({
 
   const [visualizerTab, setVisualizerTab] = useState('strikezone'); // 'strikezone' | 'hit'
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
-  const [hoveredPitchNum, setHoveredPitchNum] = useState(null);
+  const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
@@ -133,13 +133,13 @@ export default function Sidebar({
     setSelectedMultiPaIndex(0);
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
-    setHoveredPitchNum(null);
+    setHoveredPitchIdx(null);
   }, [inspectedCellKey]);
 
   useEffect(() => {
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
-    setHoveredPitchNum(null);
+    setHoveredPitchIdx(null);
   }, [inspectedPitcher]);
 
   if (isMobile && mobileView !== 'controls') return null;
@@ -698,7 +698,7 @@ export default function Sidebar({
                                           setSelectedMultiPaIndex(pIdx);
                                           setSelectedBattedBallIndex(null);
                                           setHoveredBattedBallIndex(null);
-                                          setHoveredPitchNum(null);
+                                          setHoveredPitchIdx(null);
                                         }}
                                         style={{
                                           flex: 1,
@@ -1064,8 +1064,8 @@ export default function Sidebar({
                                   overflow: 'hidden',
                                   whiteSpace: 'nowrap',
                                 }}>
-                                  {hoveredPitchNum ? (() => {
-                                    const hp = targetPitches?.find(p => p.pitchNumber === hoveredPitchNum);
+                                  {hoveredPitchIdx !== null ? (() => {
+                                    const hp = targetPitches?.[hoveredPitchIdx];
                                     if (!hp) return null;
                                     return (
                                       <div style={{
@@ -1133,9 +1133,9 @@ export default function Sidebar({
                                   overflow: 'hidden',
                                 }}>
                                   {viewPerspective === 'front' ? (
-                                    /* Catcher's Eye Front View */
+                                    /* Front Angle Strike Zone (Catcher View) */
                                     <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                                      {/* Left Batter's Box (RHB - catcher's left) */}
+                                      {/* Left Batter Box (RHB) */}
                                       <rect
                                         x="7" y="14" width="15" height="58" rx="2"
                                         fill={batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
@@ -1143,18 +1143,9 @@ export default function Sidebar({
                                         strokeWidth={batSide === 'R' ? 1.4 : 0.8}
                                         strokeDasharray={batSide === 'R' ? 'none' : '2 2'}
                                       />
-                                      <text
-                                        x="14.5" y="45"
-                                        textAnchor="middle"
-                                        fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')}
-                                        fontSize="5.5"
-                                        fontWeight="900"
-                                        fontFamily="'Inter', sans-serif"
-                                      >
-                                        RHB
-                                      </text>
+                                      <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">RHB</text>
 
-                                      {/* Right Batter's Box (LHB - catcher's right) */}
+                                      {/* Right Batter Box (LHB) */}
                                       <rect
                                         x="78" y="14" width="15" height="58" rx="2"
                                         fill={batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
@@ -1162,18 +1153,9 @@ export default function Sidebar({
                                         strokeWidth={batSide === 'L' ? 1.4 : 0.8}
                                         strokeDasharray={batSide === 'L' ? 'none' : '2 2'}
                                       />
-                                      <text
-                                        x="85.5" y="45"
-                                        textAnchor="middle"
-                                        fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')}
-                                        fontSize="5.5"
-                                        fontWeight="900"
-                                        fontFamily="'Inter', sans-serif"
-                                      >
-                                        LHB
-                                      </text>
+                                      <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">LHB</text>
 
-                                      {/* Strike Zone Box */}
+                                      {/* Strike Zone 9-Grid Area */}
                                       <rect
                                         x="26" y="14" width="48" height="58"
                                         fill={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
@@ -1193,77 +1175,76 @@ export default function Sidebar({
                                         strokeWidth="0.8"
                                       />
 
-                                      {(targetPitches || []).map((p, idx) => {
-                                        const isHovered = hoveredPitchNum === p.pitchNumber;
-                                        const clusterOthers = (targetPitches || []).filter(other =>
-                                          other.pitchNumber !== p.pitchNumber &&
-                                          Math.hypot(p.normX - other.normX, (Math.min(70, Math.max(16, p.normY - 4))) - (Math.min(70, Math.max(16, other.normY - 4)))) < 6.5
-                                        );
-                                        const isCluster = clusterOthers.length > 0;
-                                        const cy = Math.min(70, Math.max(16, p.normY - 4));
+                                      {/* Render Pitches with Hovered Pitch Sorted on Top and Background Pitches Dimmed */}
+                                      {(() => {
+                                        const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
+                                        if (hoveredPitchIdx !== null) {
+                                          sortedPitches.sort((a, b) => {
+                                            if (a.origIdx === hoveredPitchIdx) return 1;
+                                            if (b.origIdx === hoveredPitchIdx) return -1;
+                                            return 0;
+                                          });
+                                        }
+                                        return sortedPitches.map((p) => {
+                                          const isHovered = hoveredPitchIdx === p.origIdx;
+                                          const isAnyHovered = hoveredPitchIdx !== null;
+                                          const cy = Math.min(70, Math.max(16, p.normY - 4));
+                                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 1);
+                                          const r = isHovered ? 8 : 5.5;
 
-                                        return (
-                                          <g
-                                            key={idx}
-                                            style={{ cursor: 'pointer' }}
-                                            onMouseEnter={() => setHoveredPitchNum(p.pitchNumber)}
-                                            onMouseLeave={() => setHoveredPitchNum(null)}
-                                          >
-                                            {isCluster && !isHovered && (
-                                              <circle
-                                                cx={p.normX}
-                                                cy={cy}
-                                                r="8.5"
-                                                fill="none"
-                                                stroke={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}
-                                                strokeWidth="0.8"
-                                                strokeDasharray="1.5 1.5"
-                                              />
-                                            )}
-
-                                            {isHovered && (
-                                              <circle
-                                                cx={p.normX}
-                                                cy={cy}
-                                                r="11.5"
-                                                fill="none"
-                                                stroke={p.color}
-                                                strokeWidth="1.8"
-                                                strokeDasharray="2.5 2"
-                                                opacity="0.95"
-                                              />
-                                            )}
-
-                                            <circle
-                                              cx={p.normX}
-                                              cy={cy}
-                                              r={isHovered ? 8 : 5.5}
-                                              fill={p.color}
-                                              stroke="#ffffff"
-                                              strokeWidth={isHovered ? 1.8 : 1.2}
-                                              style={{
-                                                filter: isHovered
-                                                  ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.6))'
-                                                  : 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))',
-                                                transition: 'r 0.15s ease, stroke-width 0.15s ease',
-                                              }}
-                                            />
-
-                                            <text
-                                              x={p.normX}
-                                              y={cy + (isHovered ? 3 : 2.5)}
-                                              textAnchor="middle"
-                                              fill="#ffffff"
-                                              fontSize={isHovered ? '8' : '6.5'}
-                                              fontWeight="900"
-                                              fontFamily="'JetBrains Mono', monospace"
-                                              pointerEvents="none"
+                                          return (
+                                            <g
+                                              key={p.origIdx}
+                                              style={{ cursor: 'pointer' }}
+                                              onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
+                                              onMouseLeave={() => setHoveredPitchIdx(null)}
                                             >
-                                              {p.pitchNumber}
-                                            </text>
-                                          </g>
-                                        );
-                                      })}
+                                              {isHovered && (
+                                                <circle
+                                                  cx={p.normX}
+                                                  cy={cy}
+                                                  r="11.5"
+                                                  fill="none"
+                                                  stroke={p.color}
+                                                  strokeWidth="2"
+                                                  strokeDasharray="2.5 2"
+                                                  opacity="1"
+                                                />
+                                              )}
+
+                                              <circle
+                                                cx={p.normX}
+                                                cy={cy}
+                                                r={r}
+                                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                stroke="#ffffff"
+                                                strokeWidth={isHovered ? 2 : 1.2}
+                                                opacity={opacity}
+                                                style={{
+                                                  filter: isHovered
+                                                    ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.7))'
+                                                    : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                                                  transition: 'r 0.15s ease, stroke-width 0.15s ease',
+                                                }}
+                                              />
+
+                                              <text
+                                                x={p.normX}
+                                                y={cy + (isHovered ? 3 : 2.5)}
+                                                textAnchor="middle"
+                                                fill="#ffffff"
+                                                fontSize={isHovered ? '8' : '6.5'}
+                                                fontWeight="900"
+                                                fontFamily="'JetBrains Mono', monospace"
+                                                opacity={opacity}
+                                                pointerEvents="none"
+                                              >
+                                                {p.pitchNumber}
+                                              </text>
+                                            </g>
+                                          );
+                                        });
+                                      })()}
                                     </svg>
                                   ) : (
                                     /* Side Angle Pitch Flight & Drop Trajectory (Mound -> Plate) */
@@ -1295,59 +1276,73 @@ export default function Sidebar({
                                       <text x="14" y="67" fill={c.textMuted} fontSize="5.5" fontWeight="700">3'</text>
                                       <text x="14" y="37" fill={c.textMuted} fontSize="5.5" fontWeight="700">6'</text>
 
-                                      {/* Pitches Flight Paths */}
-                                      {(targetPitches || []).map((p, idx) => {
-                                        const isHovered = hoveredPitchNum === p.pitchNumber;
-                                        const relX = 32;
-                                        const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
-                                        const plateX = 220;
-                                        const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
-                                        const midX = 126;
-                                        const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
-                                        const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
+                                      {/* Pitches Flight Paths Sorted */}
+                                      {(() => {
+                                        const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
+                                        if (hoveredPitchIdx !== null) {
+                                          sortedPitches.sort((a, b) => {
+                                            if (a.origIdx === hoveredPitchIdx) return 1;
+                                            if (b.origIdx === hoveredPitchIdx) return -1;
+                                            return 0;
+                                          });
+                                        }
+                                        return sortedPitches.map((p) => {
+                                          const isHovered = hoveredPitchIdx === p.origIdx;
+                                          const isAnyHovered = hoveredPitchIdx !== null;
+                                          const relX = 32;
+                                          const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
+                                          const plateX = 220;
+                                          const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
+                                          const midX = 126;
+                                          const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
+                                          const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
+                                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.15 : 0.75);
 
-                                        return (
-                                          <g
-                                            key={idx}
-                                            style={{ cursor: 'pointer' }}
-                                            onMouseEnter={() => setHoveredPitchNum(p.pitchNumber)}
-                                            onMouseLeave={() => setHoveredPitchNum(null)}
-                                          >
-                                            {/* Flight Curve */}
-                                            <path
-                                              d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
-                                              fill="none"
-                                              stroke={p.color}
-                                              strokeWidth={isHovered ? 2.8 : 1.4}
-                                              strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
-                                              opacity={isHovered ? 1 : 0.75}
-                                            />
-
-                                            {/* Plate Crossing Marker */}
-                                            <circle
-                                              cx={plateX}
-                                              cy={plateY}
-                                              r={isHovered ? 6.5 : 4.5}
-                                              fill={p.color}
-                                              stroke="#ffffff"
-                                              strokeWidth={isHovered ? 1.6 : 1}
-                                              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
-                                            />
-                                            <text
-                                              x={plateX}
-                                              y={plateY + 2.2}
-                                              textAnchor="middle"
-                                              fill="#ffffff"
-                                              fontSize={isHovered ? '6.5' : '5.5'}
-                                              fontWeight="900"
-                                              fontFamily="'JetBrains Mono', monospace"
-                                              pointerEvents="none"
+                                          return (
+                                            <g
+                                              key={p.origIdx}
+                                              style={{ cursor: 'pointer' }}
+                                              onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
+                                              onMouseLeave={() => setHoveredPitchIdx(null)}
                                             >
-                                              {p.pitchNumber}
-                                            </text>
-                                          </g>
-                                        );
-                                      })}
+                                              {/* Flight Curve */}
+                                              <path
+                                                d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
+                                                fill="none"
+                                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                strokeWidth={isHovered ? 3.2 : 1.4}
+                                                strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
+                                                opacity={opacity}
+                                              />
+
+                                              {/* Plate Crossing Marker */}
+                                              <circle
+                                                cx={plateX}
+                                                cy={plateY}
+                                                r={isHovered ? 7 : 4.5}
+                                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                stroke="#ffffff"
+                                                strokeWidth={isHovered ? 2 : 1}
+                                                opacity={opacity}
+                                                style={{ filter: isHovered ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.6))' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
+                                              />
+                                              <text
+                                                x={plateX}
+                                                y={plateY + (isHovered ? 2.5 : 2.2)}
+                                                textAnchor="middle"
+                                                fill="#ffffff"
+                                                fontSize={isHovered ? '7' : '5.5'}
+                                                fontWeight="900"
+                                                fontFamily="'JetBrains Mono', monospace"
+                                                opacity={opacity}
+                                                pointerEvents="none"
+                                              >
+                                                {p.pitchNumber}
+                                              </text>
+                                            </g>
+                                          );
+                                        });
+                                      })()}
                                     </svg>
                                   )}
 
@@ -1393,12 +1388,13 @@ export default function Sidebar({
                                     paddingTop: '2px',
                                   }}>
                                     {targetPitches.map((p, idx) => {
-                                      const isHovered = hoveredPitchNum === p.pitchNumber;
+                                      const isHovered = hoveredPitchIdx === idx;
+                                      const isAnyHovered = hoveredPitchIdx !== null;
                                       return (
                                         <div
                                           key={idx}
-                                          onMouseEnter={() => setHoveredPitchNum(p.pitchNumber)}
-                                          onMouseLeave={() => setHoveredPitchNum(null)}
+                                          onMouseEnter={() => setHoveredPitchIdx(idx)}
+                                          onMouseLeave={() => setHoveredPitchIdx(null)}
                                           style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -1414,6 +1410,7 @@ export default function Sidebar({
                                             fontWeight: 700,
                                             color: c.textHead,
                                             cursor: 'pointer',
+                                            opacity: isAnyHovered && !isHovered ? 0.35 : 1,
                                             transform: isHovered ? 'scale(1.04)' : 'scale(1)',
                                             transition: 'all 0.12s ease',
                                           }}
@@ -1575,90 +1572,107 @@ export default function Sidebar({
                                         <rect x="85.5" y="165" width="5" height="5" transform="rotate(45 88 167.5)" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.6" />
                                         <polygon points="125,205 122,202 122,199 128,199 128,202" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.6" />
 
-                                        {/* Render All Batted Balls (Fouls & Fair Balls) */}
-                                        {targetBattedBalls.map((ball, bIdx) => {
-                                          const homeX = 125;
-                                          const homeY = 202;
-                                          let tX = typeof ball.coordX === 'number' ? ball.coordX : 125;
-                                          let tY = typeof ball.coordY === 'number' ? ball.coordY : 80;
+                                        {/* Render All Batted Balls (Fouls & Fair Balls) Sorted on Top */}
+                                        {(() => {
+                                          const sortedBalls = (targetBattedBalls || []).map((b, idx) => ({ ...b, origIdx: idx }));
+                                          const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                                          if (activeBallIdx !== null) {
+                                            sortedBalls.sort((a, b) => {
+                                              if (a.origIdx === activeBallIdx) return 1;
+                                              if (b.origIdx === activeBallIdx) return -1;
+                                              return 0;
+                                            });
+                                          }
+                                          return sortedBalls.map((ball) => {
+                                            const homeX = 125;
+                                            const homeY = 202;
+                                            let tX = typeof ball.coordX === 'number' ? ball.coordX : 125;
+                                            let tY = typeof ball.coordY === 'number' ? ball.coordY : 80;
 
-                                          const isHovered = hoveredBattedBallIndex === bIdx;
-                                          const isSelected = selectedBattedBallIndex === bIdx || (selectedBattedBallIndex === null && bIdx === targetBattedBalls.length - 1);
-                                          const isHr = !ball.isFoul && (inspectedPlay?.type === 'hr' || (ball.totalDistance && ball.totalDistance >= 390));
-                                          const trajColor = ball.isFoul
-                                            ? '#f59e0b'
-                                            : (isHr ? '#8b5cf6' : (ball.isBallInPlay ? '#10b981' : '#ef4444'));
+                                            const isHovered = hoveredBattedBallIndex === ball.origIdx;
+                                            const isSelected = selectedBattedBallIndex === ball.origIdx || (selectedBattedBallIndex === null && ball.origIdx === targetBattedBalls.length - 1);
+                                            const isAnyActive = activeBallIdx !== null;
+                                            const isActive = isHovered || isSelected;
+                                            const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.65);
 
-                                          const midX = (homeX + tX) / 2;
-                                          const angle = ball.launchAngle || (ball.trajectory === 'popup' ? 65 : ball.trajectory === 'fly_ball' ? 32 : ball.trajectory === 'line_drive' ? 16 : 5);
-                                          const heightBoost = Math.max(10, angle * 0.9);
-                                          const midY = Math.min(homeY, tY) - heightBoost;
+                                            const isHr = !ball.isFoul && (inspectedPlay?.type === 'hr' || (ball.totalDistance && ball.totalDistance >= 390));
+                                            const trajColor = ball.isFoul
+                                              ? '#f59e0b'
+                                              : (isHr ? '#8b5cf6' : (ball.isBallInPlay ? '#10b981' : '#ef4444'));
 
-                                          return (
-                                            <g
-                                              key={bIdx}
-                                              style={{ cursor: 'pointer' }}
-                                              onMouseEnter={() => setHoveredBattedBallIndex(bIdx)}
-                                              onMouseLeave={() => setHoveredBattedBallIndex(null)}
-                                              onClick={() => setSelectedBattedBallIndex(bIdx)}
-                                            >
-                                              {/* Flight Parabolic Arc */}
-                                              <path
-                                                d={`M ${homeX} ${homeY} Q ${midX} ${midY} ${tX} ${tY}`}
-                                                fill="none"
-                                                stroke={trajColor}
-                                                strokeWidth={isHovered ? 3.4 : (isSelected ? 2.6 : 1.5)}
-                                                strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
-                                                strokeLinecap="round"
-                                                opacity={isHovered || isSelected ? 1 : 0.65}
-                                              />
+                                            const midX = (homeX + tX) / 2;
+                                            const angle = ball.launchAngle || (ball.trajectory === 'popup' ? 65 : ball.trajectory === 'fly_ball' ? 32 : ball.trajectory === 'line_drive' ? 16 : 5);
+                                            const heightBoost = Math.max(10, angle * 0.9);
+                                            const midY = Math.min(homeY, tY) - heightBoost;
 
-                                              {/* Landing Ring on Selected / Hovered */}
-                                              {(isHovered || isSelected) && (
+                                            return (
+                                              <g
+                                                key={ball.origIdx}
+                                                style={{ cursor: 'pointer' }}
+                                                onMouseEnter={() => setHoveredBattedBallIndex(ball.origIdx)}
+                                                onMouseLeave={() => setHoveredBattedBallIndex(null)}
+                                                onClick={() => setSelectedBattedBallIndex(ball.origIdx)}
+                                              >
+                                                {/* Flight Parabolic Arc */}
+                                                <path
+                                                  d={`M ${homeX} ${homeY} Q ${midX} ${midY} ${tX} ${tY}`}
+                                                  fill="none"
+                                                  stroke={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  strokeWidth={isHovered ? 3.6 : (isSelected ? 2.6 : 1.5)}
+                                                  strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
+                                                  strokeLinecap="round"
+                                                  opacity={opacity}
+                                                />
+
+                                                {/* Landing Ring on Selected / Hovered */}
+                                                {isActive && (
+                                                  <circle
+                                                    cx={tX}
+                                                    cy={tY}
+                                                    r={isHovered ? 10.5 : 8}
+                                                    fill="none"
+                                                    stroke={trajColor}
+                                                    strokeWidth="1.6"
+                                                    strokeDasharray={ball.isFoul ? '2 2' : 'none'}
+                                                    opacity={0.9}
+                                                  />
+                                                )}
+
+                                                {/* Landing Marker Dot */}
                                                 <circle
                                                   cx={tX}
                                                   cy={tY}
-                                                  r={isHovered ? 10 : 8}
-                                                  fill="none"
-                                                  stroke={trajColor}
-                                                  strokeWidth="1.4"
-                                                  strokeDasharray={ball.isFoul ? '2 2' : 'none'}
-                                                  opacity={isHovered ? 0.9 : 0.6}
+                                                  r={isHovered ? 6.5 : (isSelected ? 4.8 : 3.5)}
+                                                  fill={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  stroke="#ffffff"
+                                                  strokeWidth={isActive ? 1.8 : 0.8}
+                                                  opacity={opacity}
+                                                  style={{
+                                                    filter: isHovered
+                                                      ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))'
+                                                      : 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))',
+                                                    transition: 'r 0.15s ease',
+                                                  }}
                                                 />
-                                              )}
 
-                                              {/* Landing Marker Dot */}
-                                              <circle
-                                                cx={tX}
-                                                cy={tY}
-                                                r={isHovered ? 6 : (isSelected ? 4.8 : 3.5)}
-                                                fill={trajColor}
-                                                stroke="#ffffff"
-                                                strokeWidth={isHovered || isSelected ? 1.6 : 0.8}
-                                                style={{
-                                                  filter: isHovered
-                                                    ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))'
-                                                    : 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))',
-                                                  transition: 'r 0.15s ease',
-                                                }}
-                                              />
-
-                                              {/* Pitch Number Label */}
-                                              <text
-                                                x={tX}
-                                                y={tY + (isHovered ? 2.2 : 1.8)}
-                                                textAnchor="middle"
-                                                fill="#ffffff"
-                                                fontSize={isHovered ? '6.5' : (isSelected ? '5.5' : '4.5')}
-                                                fontWeight="900"
-                                                fontFamily="'JetBrains Mono', monospace"
-                                                pointerEvents="none"
-                                              >
-                                                {ball.pitchNumber}
-                                              </text>
-                                            </g>
-                                          );
-                                        })}
+                                                {/* Pitch Number Label */}
+                                                <text
+                                                  x={tX}
+                                                  y={tY + (isHovered ? 2.2 : 1.8)}
+                                                  textAnchor="middle"
+                                                  fill="#ffffff"
+                                                  fontSize={isHovered ? '6.5' : (isSelected ? '5.5' : '4.5')}
+                                                  fontWeight="900"
+                                                  fontFamily="'JetBrains Mono', monospace"
+                                                  opacity={opacity}
+                                                  pointerEvents="none"
+                                                >
+                                                  {ball.pitchNumber}
+                                                </text>
+                                              </g>
+                                            );
+                                          });
+                                        })()}
                                       </svg>
                                     ) : (
                                       /* Side Angle Elevation & Flight Apex Profile */
@@ -1691,60 +1705,77 @@ export default function Sidebar({
                                         <text x="14" y="52" fill={c.textMuted} fontSize="5.5" fontWeight="700">70'</text>
                                         <text x="14" y="22" fill={c.textMuted} fontSize="5.5" fontWeight="700">110'</text>
 
-                                        {/* Trajectory Elevation Arcs for All Batted Balls */}
-                                        {targetBattedBalls.map((ball, bIdx) => {
-                                          const isHovered = hoveredBattedBallIndex === bIdx;
-                                          const isSelected = selectedBattedBallIndex === bIdx || (selectedBattedBallIndex === null && bIdx === targetBattedBalls.length - 1);
-                                          const dist = ball.totalDistance || (ball.isFoul ? 165 : 240);
-                                          const landingX = Math.min(238, Math.max(35, 22 + (dist / 420) * 175));
-                                          const angle = ball.launchAngle ?? (ball.isFoul ? 34 : 22);
-                                          const apexFt = Math.max(8, Math.min(125, (dist * Math.sin(2 * (Math.max(6, angle) * Math.PI / 180))) / 1.7));
-                                          const apexY = Math.max(14, 108 - (apexFt / 110) * 85);
-                                          const apexX = (22 + landingX) / 2;
+                                        {/* Trajectory Elevation Arcs for All Batted Balls Sorted on Top */}
+                                        {(() => {
+                                          const sortedBalls = (targetBattedBalls || []).map((b, idx) => ({ ...b, origIdx: idx }));
+                                          const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                                          if (activeBallIdx !== null) {
+                                            sortedBalls.sort((a, b) => {
+                                              if (a.origIdx === activeBallIdx) return 1;
+                                              if (b.origIdx === activeBallIdx) return -1;
+                                              return 0;
+                                            });
+                                          }
+                                          return sortedBalls.map((ball) => {
+                                            const isHovered = hoveredBattedBallIndex === ball.origIdx;
+                                            const isSelected = selectedBattedBallIndex === ball.origIdx || (selectedBattedBallIndex === null && ball.origIdx === targetBattedBalls.length - 1);
+                                            const isAnyActive = activeBallIdx !== null;
+                                            const isActive = isHovered || isSelected;
+                                            const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.65);
 
-                                          const isHr = !ball.isFoul && (inspectedPlay?.type === 'hr' || dist >= 390);
-                                          const trajColor = ball.isFoul
-                                            ? '#f59e0b'
-                                            : (isHr ? '#8b5cf6' : (ball.isBallInPlay ? '#10b981' : '#ef4444'));
+                                            const dist = ball.totalDistance || (ball.isFoul ? 165 : 240);
+                                            const landingX = Math.min(238, Math.max(35, 22 + (dist / 420) * 175));
+                                            const angle = ball.launchAngle ?? (ball.isFoul ? 34 : 22);
+                                            const apexFt = Math.max(8, Math.min(125, (dist * Math.sin(2 * (Math.max(6, angle) * Math.PI / 180))) / 1.7));
+                                            const apexY = Math.max(14, 108 - (apexFt / 110) * 85);
+                                            const apexX = (22 + landingX) / 2;
 
-                                          return (
-                                            <g
-                                              key={bIdx}
-                                              style={{ cursor: 'pointer' }}
-                                              onMouseEnter={() => setHoveredBattedBallIndex(bIdx)}
-                                              onMouseLeave={() => setHoveredBattedBallIndex(null)}
-                                              onClick={() => setSelectedBattedBallIndex(bIdx)}
-                                            >
-                                              <path
-                                                d={`M 22 108 Q ${apexX} ${apexY} ${landingX} 108`}
-                                                fill="none"
-                                                stroke={trajColor}
-                                                strokeWidth={isHovered ? 3.4 : (isSelected ? 2.6 : 1.4)}
-                                                strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
-                                                opacity={isHovered || isSelected ? 1 : 0.65}
-                                              />
-                                              <circle
-                                                cx={landingX}
-                                                cy={108}
-                                                r={isHovered ? 6 : (isSelected ? 4.8 : 3.5)}
-                                                fill={trajColor}
-                                                stroke="#ffffff"
-                                                strokeWidth={isHovered || isSelected ? 1.6 : 0.8}
-                                              />
-                                              <text
-                                                x={landingX}
-                                                y={102}
-                                                textAnchor="middle"
-                                                fill={trajColor}
-                                                fontSize={isHovered ? '7.5' : (isSelected ? '6.5' : '5.5')}
-                                                fontWeight="900"
-                                                fontFamily="'JetBrains Mono', monospace"
+                                            const isHr = !ball.isFoul && (inspectedPlay?.type === 'hr' || dist >= 390);
+                                            const trajColor = ball.isFoul
+                                              ? '#f59e0b'
+                                              : (isHr ? '#8b5cf6' : (ball.isBallInPlay ? '#10b981' : '#ef4444'));
+
+                                            return (
+                                              <g
+                                                key={ball.origIdx}
+                                                style={{ cursor: 'pointer' }}
+                                                onMouseEnter={() => setHoveredBattedBallIndex(ball.origIdx)}
+                                                onMouseLeave={() => setHoveredBattedBallIndex(null)}
+                                                onClick={() => setSelectedBattedBallIndex(ball.origIdx)}
                                               >
-                                                {ball.pitchNumber}
-                                              </text>
-                                            </g>
-                                          );
-                                        })}
+                                                <path
+                                                  d={`M 22 108 Q ${apexX} ${apexY} ${landingX} 108`}
+                                                  fill="none"
+                                                  stroke={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  strokeWidth={isHovered ? 3.6 : (isSelected ? 2.6 : 1.4)}
+                                                  strokeDasharray={ball.isFoul ? '3.5 2.5' : 'none'}
+                                                  opacity={opacity}
+                                                />
+                                                <circle
+                                                  cx={landingX}
+                                                  cy={108}
+                                                  r={isHovered ? 6.5 : (isSelected ? 4.8 : 3.5)}
+                                                  fill={isAnyActive && !isActive ? (isDark ? '#3f3f46' : '#94a3b8') : trajColor}
+                                                  stroke="#ffffff"
+                                                  strokeWidth={isActive ? 1.8 : 0.8}
+                                                  opacity={opacity}
+                                                />
+                                                <text
+                                                  x={landingX}
+                                                  y={102}
+                                                  textAnchor="middle"
+                                                  fill={isAnyActive && !isActive ? (isDark ? '#52525b' : '#94a3b8') : trajColor}
+                                                  fontSize={isHovered ? '7.5' : (isSelected ? '6.5' : '5.5')}
+                                                  fontWeight="900"
+                                                  fontFamily="'JetBrains Mono', monospace"
+                                                  opacity={opacity}
+                                                >
+                                                  {ball.pitchNumber}
+                                                </text>
+                                              </g>
+                                            );
+                                          });
+                                        })()}
                                       </svg>
                                     )}
                                   </div>

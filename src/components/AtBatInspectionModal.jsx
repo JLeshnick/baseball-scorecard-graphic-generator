@@ -12,7 +12,7 @@ export default function AtBatInspectionModal({
 }) {
   const [visualizerTab, setVisualizerTab] = useState('strikezone'); // 'strikezone' | 'hit'
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
-  const [hoveredPitchNum, setHoveredPitchNum] = useState(null);
+  const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
@@ -22,7 +22,7 @@ export default function AtBatInspectionModal({
     setSelectedMultiPaIndex(0);
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
-    setHoveredPitchNum(null);
+    setHoveredPitchIdx(null);
     setVisualizerTab('strikezone');
     setViewPerspective('front');
   }, [inspectedCellKey]);
@@ -202,7 +202,7 @@ export default function AtBatInspectionModal({
                       setSelectedMultiPaIndex(pIdx);
                       setSelectedBattedBallIndex(null);
                       setHoveredBattedBallIndex(null);
-                      setHoveredPitchNum(null);
+                      setHoveredPitchIdx(null);
                     }}
                     style={{
                       flex: 1,
@@ -405,8 +405,8 @@ export default function AtBatInspectionModal({
                   height: '22px',
                   overflow: 'hidden',
                 }}>
-                  {hoveredPitchNum ? (() => {
-                    const hp = targetPitches.find(p => p.pitchNumber === hoveredPitchNum);
+                  {hoveredPitchIdx !== null ? (() => {
+                    const hp = targetPitches[hoveredPitchIdx];
                     if (!hp) return null;
                     return (
                       <div style={{
@@ -493,42 +493,58 @@ export default function AtBatInspectionModal({
                       {/* Home Plate */}
                       <polygon points="26,82 74,82 74,87 50,96 26,87" fill={isDark ? '#27272a' : '#d1d5db'} stroke={isDark ? '#3f3f46' : '#9ca3af'} strokeWidth="0.8" />
 
-                      {/* Plotted Pitches */}
-                      {targetPitches.map((p, idx) => {
-                        const isHovered = hoveredPitchNum === p.pitchNumber;
-                        const cy = Math.min(70, Math.max(16, p.normY - 4));
-                        return (
-                          <g
-                            key={idx}
-                            onClick={() => setHoveredPitchNum(isHovered ? null : p.pitchNumber)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {isHovered && (
-                              <circle cx={p.normX} cy={cy} r="11.5" fill="none" stroke={p.color} strokeWidth="1.8" strokeDasharray="2.5 2" />
-                            )}
-                            <circle
-                              cx={p.normX}
-                              cy={cy}
-                              r={isHovered ? 8 : 6}
-                              fill={p.color}
-                              stroke="#ffffff"
-                              strokeWidth={isHovered ? 1.8 : 1.2}
-                              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}
-                            />
-                            <text
-                              x={p.normX}
-                              y={cy + 2.5}
-                              textAnchor="middle"
-                              fill="#ffffff"
-                              fontSize={isHovered ? '8' : '6.5'}
-                              fontWeight="900"
-                              fontFamily="'JetBrains Mono', monospace"
+                      {/* Plotted Pitches Sorted on Top */}
+                      {(() => {
+                        const sortedPitches = targetPitches.map((p, idx) => ({ ...p, origIdx: idx }));
+                        if (hoveredPitchIdx !== null) {
+                          sortedPitches.sort((a, b) => {
+                            if (a.origIdx === hoveredPitchIdx) return 1;
+                            if (b.origIdx === hoveredPitchIdx) return -1;
+                            return 0;
+                          });
+                        }
+                        return sortedPitches.map((p) => {
+                          const isHovered = hoveredPitchIdx === p.origIdx;
+                          const isAnyHovered = hoveredPitchIdx !== null;
+                          const cy = Math.min(70, Math.max(16, p.normY - 4));
+                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 1);
+                          const r = isHovered ? 8 : 6;
+
+                          return (
+                            <g
+                              key={p.origIdx}
+                              onClick={() => setHoveredPitchIdx(isHovered ? null : p.origIdx)}
+                              style={{ cursor: 'pointer' }}
                             >
-                              {p.pitchNumber}
-                            </text>
-                          </g>
-                        );
-                      })}
+                              {isHovered && (
+                                <circle cx={p.normX} cy={cy} r="11.5" fill="none" stroke={p.color} strokeWidth="2" strokeDasharray="2.5 2" />
+                              )}
+                              <circle
+                                cx={p.normX}
+                                cy={cy}
+                                r={r}
+                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                stroke="#ffffff"
+                                strokeWidth={isHovered ? 2 : 1.2}
+                                opacity={opacity}
+                                style={{ filter: isHovered ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))' }}
+                              />
+                              <text
+                                x={p.normX}
+                                y={cy + (isHovered ? 3 : 2.5)}
+                                textAnchor="middle"
+                                fill="#ffffff"
+                                fontSize={isHovered ? '8' : '6.5'}
+                                fontWeight="900"
+                                fontFamily="'JetBrains Mono', monospace"
+                                opacity={opacity}
+                              >
+                                {p.pitchNumber}
+                              </text>
+                            </g>
+                          );
+                        });
+                      })()}
                     </svg>
                   ) : (
                     /* Side Angle Pitch Flight & Drop Trajectory */
@@ -549,33 +565,62 @@ export default function AtBatInspectionModal({
                       <text x="14" y="67" fill={c.textMuted} fontSize="5.5" fontWeight="700">3'</text>
                       <text x="14" y="37" fill={c.textMuted} fontSize="5.5" fontWeight="700">6'</text>
 
-                      {targetPitches.map((p, idx) => {
-                        const isHovered = hoveredPitchNum === p.pitchNumber;
-                        const relX = 32;
-                        const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
-                        const plateX = 220;
-                        const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
-                        const midX = 126;
-                        const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
-                        const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
+                      {(() => {
+                        const sortedPitches = targetPitches.map((p, idx) => ({ ...p, origIdx: idx }));
+                        if (hoveredPitchIdx !== null) {
+                          sortedPitches.sort((a, b) => {
+                            if (a.origIdx === hoveredPitchIdx) return 1;
+                            if (b.origIdx === hoveredPitchIdx) return -1;
+                            return 0;
+                          });
+                        }
+                        return sortedPitches.map((p) => {
+                          const isHovered = hoveredPitchIdx === p.origIdx;
+                          const isAnyHovered = hoveredPitchIdx !== null;
+                          const relX = 32;
+                          const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
+                          const plateX = 220;
+                          const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
+                          const midX = 126;
+                          const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
+                          const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
+                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.15 : 0.8);
 
-                        return (
-                          <g key={idx} onClick={() => setHoveredPitchNum(isHovered ? null : p.pitchNumber)} style={{ cursor: 'pointer' }}>
-                            <path
-                              d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
-                              fill="none"
-                              stroke={p.color}
-                              strokeWidth={isHovered ? 2.8 : 1.5}
-                              strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
-                              opacity={isHovered ? 1 : 0.8}
-                            />
-                            <circle cx={plateX} cy={plateY} r={isHovered ? 6.5 : 4.5} fill={p.color} stroke="#ffffff" strokeWidth="1.2" />
-                            <text x={plateX} y={plateY + 2.2} textAnchor="middle" fill="#ffffff" fontSize="5.5" fontWeight="900" fontFamily="'JetBrains Mono', monospace">
-                              {p.pitchNumber}
-                            </text>
-                          </g>
-                        );
-                      })}
+                          return (
+                            <g key={p.origIdx} onClick={() => setHoveredPitchIdx(isHovered ? null : p.origIdx)} style={{ cursor: 'pointer' }}>
+                              <path
+                                d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
+                                fill="none"
+                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                strokeWidth={isHovered ? 3.2 : 1.5}
+                                strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
+                                opacity={opacity}
+                              />
+                              <circle
+                                cx={plateX}
+                                cy={plateY}
+                                r={isHovered ? 7 : 4.5}
+                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                stroke="#ffffff"
+                                strokeWidth={isHovered ? 1.8 : 1.2}
+                                opacity={opacity}
+                              />
+                              <text
+                                x={plateX}
+                                y={plateY + (isHovered ? 2.5 : 2.2)}
+                                textAnchor="middle"
+                                fill="#ffffff"
+                                fontSize={isHovered ? '7' : '5.5'}
+                                fontWeight="900"
+                                fontFamily="'JetBrains Mono', monospace"
+                                opacity={opacity}
+                              >
+                                {p.pitchNumber}
+                              </text>
+                            </g>
+                          );
+                        });
+                      })()}
                     </svg>
                   )}
                 </div>
@@ -583,11 +628,12 @@ export default function AtBatInspectionModal({
                 {/* Pitch Chips List */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', paddingTop: '2px' }}>
                   {targetPitches.map((p, idx) => {
-                    const isHovered = hoveredPitchNum === p.pitchNumber;
+                    const isHovered = hoveredPitchIdx === idx;
+                    const isAnyHovered = hoveredPitchIdx !== null;
                     return (
                       <button
                         key={idx}
-                        onClick={() => setHoveredPitchNum(isHovered ? null : p.pitchNumber)}
+                        onClick={() => setHoveredPitchIdx(isHovered ? null : idx)}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -602,10 +648,11 @@ export default function AtBatInspectionModal({
                           fontWeight: 700,
                           color: isDark ? '#f4f4f5' : '#0f172a',
                           cursor: 'pointer',
+                          opacity: isAnyHovered && !isHovered ? 0.35 : 1,
                         }}
                       >
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.color }} />
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: p.color }}>#{p.pitchNumber}</span>
+                        <span>#{p.pitchNumber}</span>
                         {p.speed && <span style={{ color: c.textMuted }}>{p.speed}</span>}
                         <span>{p.pitchTypeName || p.pitchType}</span>
                       </button>
@@ -696,32 +743,63 @@ export default function AtBatInspectionModal({
                       <text x="125" y="16" textAnchor="middle" fill={c.textMuted} fontSize="6.5" fontWeight="800">400'</text>
                       <text x="218" y="90" fill={c.textMuted} fontSize="6" fontWeight="700">330'</text>
 
-                      {/* Batted Balls Spray */}
-                      {(targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : [])).map((bBall, idx) => {
-                        const isFoul = Boolean(bBall.isFoul);
-                        const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
-                        const isSel = (hoveredBattedBallIndex === idx) || (selectedBattedBallIndex === idx);
-                        const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
+                      {/* Batted Balls Spray Sorted on Top */}
+                      {(() => {
+                        const rawBalls = (targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : []));
+                        const sortedBalls = rawBalls.map((b, idx) => ({ ...b, origIdx: idx }));
+                        const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                        if (activeBallIdx !== null) {
+                          sortedBalls.sort((a, b) => {
+                            if (a.origIdx === activeBallIdx) return 1;
+                            if (b.origIdx === activeBallIdx) return -1;
+                            return 0;
+                          });
+                        }
+                        return sortedBalls.map((bBall) => {
+                          const isFoul = Boolean(bBall.isFoul);
+                          const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
+                          const isSel = (hoveredBattedBallIndex === bBall.origIdx) || (selectedBattedBallIndex === bBall.origIdx);
+                          const isAnyActive = activeBallIdx !== null;
+                          const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
+                          const opacity = isSel ? 1 : (isAnyActive ? 0.22 : 0.8);
 
-                        let endX = bBall.coordX ?? (125 + (Math.random() - 0.5) * 60);
-                        let endY = bBall.coordY ?? (80 + (Math.random() - 0.5) * 40);
+                          let endX = bBall.coordX ?? (125 + (Math.random() - 0.5) * 60);
+                          let endY = bBall.coordY ?? (80 + (Math.random() - 0.5) * 40);
 
-                        return (
-                          <g key={idx} onClick={() => setSelectedBattedBallIndex(isSel ? null : idx)} style={{ cursor: 'pointer' }}>
-                            <line
-                              x1="125" y1="205" x2={endX} y2={endY}
-                              stroke={ballColor}
-                              strokeWidth={isSel ? 2.5 : 1.3}
-                              strokeDasharray={isFoul ? '3 2' : 'none'}
-                              opacity={isSel ? 1 : 0.8}
-                            />
-                            <circle cx={endX} cy={endY} r={isSel ? 7 : 5} fill={ballColor} stroke="#ffffff" strokeWidth="1.3" />
-                            <text x={endX} y={endY + 2.2} textAnchor="middle" fill="#ffffff" fontSize="5.5" fontWeight="900" fontFamily="'JetBrains Mono', monospace">
-                              {bBall.pitchNumber || idx + 1}
-                            </text>
-                          </g>
-                        );
-                      })}
+                          return (
+                            <g key={bBall.origIdx} onClick={() => setSelectedBattedBallIndex(isSel ? null : bBall.origIdx)} style={{ cursor: 'pointer' }}>
+                              <line
+                                x1="125" y1="205" x2={endX} y2={endY}
+                                stroke={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                strokeWidth={isSel ? 2.8 : 1.3}
+                                strokeDasharray={isFoul ? '3 2' : 'none'}
+                                opacity={opacity}
+                              />
+                              <circle
+                                cx={endX}
+                                cy={endY}
+                                r={isSel ? 7 : 5}
+                                fill={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                stroke="#ffffff"
+                                strokeWidth={isSel ? 1.8 : 1.3}
+                                opacity={opacity}
+                              />
+                              <text
+                                x={endX}
+                                y={endY + 2.2}
+                                textAnchor="middle"
+                                fill="#ffffff"
+                                fontSize={isSel ? '6.5' : '5.5'}
+                                fontWeight="900"
+                                fontFamily="'JetBrains Mono', monospace"
+                                opacity={opacity}
+                              >
+                                {bBall.pitchNumber || bBall.origIdx + 1}
+                              </text>
+                            </g>
+                          );
+                        });
+                      })()}
                     </svg>
                   ) : (
                     /* Side Elevation Profile */
@@ -736,36 +814,67 @@ export default function AtBatInspectionModal({
                       <rect x="200" y="85" width="4" height="30" fill={isDark ? '#52525b' : '#94a3b8'} rx="1" />
                       <text x="202" y="80" textAnchor="middle" fill={c.textMuted} fontSize="6" fontWeight="800">10' Wall</text>
 
-                      {/* Trajectory Parabola */}
-                      {(targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : [])).map((bBall, idx) => {
-                        const isFoul = Boolean(bBall.isFoul);
-                        const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
-                        const isSel = (hoveredBattedBallIndex === idx) || (selectedBattedBallIndex === idx);
-                        const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
+                      {/* Trajectory Parabola Sorted on Top */}
+                      {(() => {
+                        const rawBalls = (targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : []));
+                        const sortedBalls = rawBalls.map((b, idx) => ({ ...b, origIdx: idx }));
+                        const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                        if (activeBallIdx !== null) {
+                          sortedBalls.sort((a, b) => {
+                            if (a.origIdx === activeBallIdx) return 1;
+                            if (b.origIdx === activeBallIdx) return -1;
+                            return 0;
+                          });
+                        }
+                        return sortedBalls.map((bBall) => {
+                          const isFoul = Boolean(bBall.isFoul);
+                          const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (bBall.totalDistance && bBall.totalDistance >= 390));
+                          const isSel = (hoveredBattedBallIndex === bBall.origIdx) || (selectedBattedBallIndex === bBall.origIdx);
+                          const isAnyActive = activeBallIdx !== null;
+                          const ballColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (bBall.isBallInPlay ? '#10b981' : '#ef4444'));
+                          const opacity = isSel ? 1 : (isAnyActive ? 0.22 : 0.85);
 
-                        const dist = bBall.totalDistance || 220;
-                        const landX = Math.min(235, Math.max(70, 30 + (dist / 420) * 175));
-                        const apexH = Math.min(95, Math.max(15, (bBall.launchSpeed ? bBall.launchSpeed * 0.7 : 50)));
-                        const apexX = (30 + landX) / 2;
-                        const apexY = 115 - apexH;
+                          const dist = bBall.totalDistance || 220;
+                          const landX = Math.min(235, Math.max(70, 30 + (dist / 420) * 175));
+                          const apexH = Math.min(95, Math.max(15, (bBall.launchSpeed ? bBall.launchSpeed * 0.7 : 50)));
+                          const apexX = (30 + landX) / 2;
+                          const apexY = 115 - apexH;
 
-                        return (
-                          <g key={idx} onClick={() => setSelectedBattedBallIndex(isSel ? null : idx)} style={{ cursor: 'pointer' }}>
-                            <path
-                              d={`M 30 112 Q ${apexX} ${apexY} ${landX} 115`}
-                              fill="none"
-                              stroke={ballColor}
-                              strokeWidth={isSel ? 3 : 1.6}
-                              strokeDasharray={isFoul ? '3 2' : 'none'}
-                              opacity={isSel ? 1 : 0.85}
-                            />
-                            <circle cx={landX} cy={115} r={isSel ? 6.5 : 4.5} fill={ballColor} stroke="#ffffff" strokeWidth="1.2" />
-                            <text x={landX} y={127} textAnchor="middle" fill={c.textHead} fontSize="7" fontWeight="800" fontFamily="'JetBrains Mono', monospace">
-                              {dist}'
-                            </text>
-                          </g>
-                        );
-                      })}
+                          return (
+                            <g key={bBall.origIdx} onClick={() => setSelectedBattedBallIndex(isSel ? null : bBall.origIdx)} style={{ cursor: 'pointer' }}>
+                              <path
+                                d={`M 30 112 Q ${apexX} ${apexY} ${landX} 115`}
+                                fill="none"
+                                stroke={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                strokeWidth={isSel ? 3.2 : 1.6}
+                                strokeDasharray={isFoul ? '3 2' : 'none'}
+                                opacity={opacity}
+                              />
+                              <circle
+                                cx={landX}
+                                cy={115}
+                                r={isSel ? 6.5 : 4.5}
+                                fill={isAnyActive && !isSel ? (isDark ? '#3f3f46' : '#94a3b8') : ballColor}
+                                stroke="#ffffff"
+                                strokeWidth={1.2}
+                                opacity={opacity}
+                              />
+                              <text
+                                x={landX}
+                                y={127}
+                                textAnchor="middle"
+                                fill={isAnyActive && !isSel ? (isDark ? '#52525b' : '#94a3b8') : c.textHead}
+                                fontSize="7"
+                                fontWeight="800"
+                                fontFamily="'JetBrains Mono', monospace"
+                                opacity={opacity}
+                              >
+                                {dist}'
+                              </text>
+                            </g>
+                          );
+                        });
+                      })()}
                     </svg>
                   )}
                 </div>
@@ -775,6 +884,7 @@ export default function AtBatInspectionModal({
                   {(targetBattedBalls.length > 0 ? targetBattedBalls : (targetHitData ? [targetHitData] : [])).map((bBall, idx) => {
                     const isFoul = Boolean(bBall.isFoul);
                     const isSel = (hoveredBattedBallIndex === idx) || (selectedBattedBallIndex === idx);
+                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
                     const ballColor = isFoul ? '#f59e0b' : (bBall.isBallInPlay ? '#10b981' : '#ef4444');
                     return (
                       <button
@@ -794,6 +904,7 @@ export default function AtBatInspectionModal({
                           fontWeight: 700,
                           color: isDark ? '#f4f4f5' : '#0f172a',
                           cursor: 'pointer',
+                          opacity: activeBallIdx !== null && !isSel ? 0.35 : 1,
                         }}
                       >
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: ballColor }} />

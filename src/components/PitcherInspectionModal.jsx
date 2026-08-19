@@ -68,6 +68,8 @@ export default function PitcherInspectionModal({
   const [hitPerspective, setHitPerspective] = useState('spray');
 
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
+  const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
+  const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
 
   // Sync selected inning when inspectedPitcher changes
   useEffect(() => {
@@ -77,6 +79,8 @@ export default function PitcherInspectionModal({
       setSelectedInning('all');
     }
     setSelectedBattedBallIndex(null);
+    setHoveredBattedBallIndex(null);
+    setHoveredPitchIdx(null);
   }, [inspectedPitcher]);
 
   // Extract all innings pitched
@@ -324,19 +328,57 @@ export default function PitcherInspectionModal({
                   <line x1="25" y1="52.6" x2="75" y2="52.6" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
                   <polygon points="25,80 75,80 75,85 50,94 25,85" fill={isDark ? '#27272a' : '#cbd5e1'} stroke={isDark ? '#3f3f46' : '#94a3b8'} strokeWidth="0.8" />
 
-                  {/* Plotted Pitches */}
-                  {allPitches.map((p, pIdx) => {
-                    const cx = p.normX ?? 50;
-                    const cy = Math.min(74, Math.max(12, (p.normY ?? 40) - 2));
-                    return (
-                      <g key={pIdx}>
-                        <circle cx={cx} cy={cy} r="4" fill={p.color || '#3b82f6'} stroke="#ffffff" strokeWidth="1" />
-                        <text x={cx} y={cy + 1.6} textAnchor="middle" fill="#ffffff" fontSize="4.5" fontWeight="900">
-                          {p.pitchNumber || (pIdx + 1)}
-                        </text>
-                      </g>
-                    );
-                  })}
+                  {/* Plotted Pitches Sorted on Top */}
+                  {(() => {
+                    const sortedPitches = allPitches.map((p, idx) => ({ ...p, origIdx: idx }));
+                    if (hoveredPitchIdx !== null) {
+                      sortedPitches.sort((a, b) => {
+                        if (a.origIdx === hoveredPitchIdx) return 1;
+                        if (b.origIdx === hoveredPitchIdx) return -1;
+                        return 0;
+                      });
+                    }
+                    return sortedPitches.map((p) => {
+                      const cx = p.normX ?? 50;
+                      const cy = Math.min(74, Math.max(12, (p.normY ?? 40) - 2));
+                      const isHovered = hoveredPitchIdx === p.origIdx;
+                      const isAnyHovered = hoveredPitchIdx !== null;
+                      const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 1);
+                      const r = isHovered ? 6 : 4;
+
+                      return (
+                        <g
+                          key={p.origIdx}
+                          onClick={() => setHoveredPitchIdx(isHovered ? null : p.origIdx)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {isHovered && (
+                            <circle cx={cx} cy={cy} r="8.5" fill="none" stroke={p.color || '#3b82f6'} strokeWidth="1.6" strokeDasharray="2 1.5" />
+                          )}
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={r}
+                            fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : (p.color || '#3b82f6')}
+                            stroke="#ffffff"
+                            strokeWidth={isHovered ? 1.6 : 1}
+                            opacity={opacity}
+                          />
+                          <text
+                            x={cx}
+                            y={cy + (isHovered ? 2 : 1.6)}
+                            textAnchor="middle"
+                            fill="#ffffff"
+                            fontSize={isHovered ? '5.5' : '4.5'}
+                            fontWeight="900"
+                            opacity={opacity}
+                          >
+                            {p.pitchNumber || (p.origIdx + 1)}
+                          </text>
+                        </g>
+                      );
+                    });
+                  })()}
                 </svg>
               ) : (
                 /* Side Flight Arc (Mound to Plate) */
@@ -348,27 +390,61 @@ export default function PitcherInspectionModal({
                   {/* Strike Zone Window */}
                   <rect x="83" y="38" width="6" height="36" fill={isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)'} stroke="#3b82f6" strokeWidth="0.8" strokeDasharray="1 1" />
 
-                  {/* Pitches Flight Trajectories */}
-                  {allPitches.map((p, pIdx) => {
-                    const startY = 32 + (pIdx % 4) * 2;
-                    const endY = Math.min(74, Math.max(38, 38 + ((p.normY || 40) * 0.36)));
-                    const ctrlY = startY - 4;
-                    return (
-                      <g key={pIdx}>
-                        <path
-                          d={`M 12 ${startY} Q 50 ${ctrlY} 86 ${endY}`}
-                          fill="none"
-                          stroke={p.color || '#3b82f6'}
-                          strokeWidth="1.2"
-                          opacity={0.8}
-                        />
-                        <circle cx="86" cy={endY} r="3.5" fill={p.color || '#3b82f6'} stroke="#ffffff" strokeWidth="0.8" />
-                        <text x="86" y={endY + 1.4} textAnchor="middle" fill="#ffffff" fontSize="4" fontWeight="900">
-                          {p.pitchNumber || (pIdx + 1)}
-                        </text>
-                      </g>
-                    );
-                  })}
+                  {/* Pitches Flight Trajectories Sorted on Top */}
+                  {(() => {
+                    const sortedPitches = allPitches.map((p, idx) => ({ ...p, origIdx: idx }));
+                    if (hoveredPitchIdx !== null) {
+                      sortedPitches.sort((a, b) => {
+                        if (a.origIdx === hoveredPitchIdx) return 1;
+                        if (b.origIdx === hoveredPitchIdx) return -1;
+                        return 0;
+                      });
+                    }
+                    return sortedPitches.map((p) => {
+                      const isHovered = hoveredPitchIdx === p.origIdx;
+                      const isAnyHovered = hoveredPitchIdx !== null;
+                      const startY = 32 + (p.origIdx % 4) * 2;
+                      const endY = Math.min(74, Math.max(38, 38 + ((p.normY || 40) * 0.36)));
+                      const ctrlY = startY - 4;
+                      const opacity = isHovered ? 1 : (isAnyHovered ? 0.15 : 0.8);
+
+                      return (
+                        <g
+                          key={p.origIdx}
+                          onClick={() => setHoveredPitchIdx(isHovered ? null : p.origIdx)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <path
+                            d={`M 12 ${startY} Q 50 ${ctrlY} 86 ${endY}`}
+                            fill="none"
+                            stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : (p.color || '#3b82f6')}
+                            strokeWidth={isHovered ? 2.5 : 1.2}
+                            opacity={opacity}
+                          />
+                          <circle
+                            cx="86"
+                            cy={endY}
+                            r={isHovered ? 5 : 3.5}
+                            fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : (p.color || '#3b82f6')}
+                            stroke="#ffffff"
+                            strokeWidth={isHovered ? 1.5 : 0.8}
+                            opacity={opacity}
+                          />
+                          <text
+                            x="86"
+                            y={endY + (isHovered ? 1.8 : 1.4)}
+                            textAnchor="middle"
+                            fill="#ffffff"
+                            fontSize={isHovered ? '5' : '4'}
+                            fontWeight="900"
+                            opacity={opacity}
+                          >
+                            {p.pitchNumber || (p.origIdx + 1)}
+                          </text>
+                        </g>
+                      );
+                    });
+                  })()}
                 </svg>
               )
             ) : (
@@ -384,21 +460,62 @@ export default function PitcherInspectionModal({
                   {/* Infield diamond */}
                   <polygon points="50,88 38,76 50,64 62,76" fill="none" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" />
 
-                  {/* Batted Balls */}
-                  {allBattedBalls.map((b, bIdx) => {
-                    const normX = b.coordX ? ((b.coordX - 125) / 125) * 40 + 50 : 50;
-                    const normY = b.coordY ? 88 - ((200 - b.coordY) / 200) * 60 : 50;
-                    const isSelected = selectedBattedBallIndex === bIdx;
-                    return (
-                      <g key={bIdx} onClick={() => setSelectedBattedBallIndex(bIdx)} style={{ cursor: 'pointer' }}>
-                        <line x1="50" y1="88" x2={normX} y2={normY} stroke={isSelected ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')} strokeWidth={isSelected ? 1.5 : 0.8} />
-                        <circle cx={normX} cy={normY} r={isSelected ? 4.5 : 3.5} fill={isSelected ? '#3b82f6' : '#ef4444'} stroke="#ffffff" strokeWidth="1" />
-                        <text x={normX} y={normY + 1.2} textAnchor="middle" fill="#ffffff" fontSize="3.8" fontWeight="900">
-                          {bIdx + 1}
-                        </text>
-                      </g>
-                    );
-                  })}
+                  {/* Batted Balls Sorted on Top */}
+                  {(() => {
+                    const sortedBalls = allBattedBalls.map((b, idx) => ({ ...b, origIdx: idx }));
+                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                    if (activeBallIdx !== null) {
+                      sortedBalls.sort((a, b) => {
+                        if (a.origIdx === activeBallIdx) return 1;
+                        if (b.origIdx === activeBallIdx) return -1;
+                        return 0;
+                      });
+                    }
+                    return sortedBalls.map((b) => {
+                      const normX = b.coordX ? ((b.coordX - 125) / 125) * 40 + 50 : 50;
+                      const normY = b.coordY ? 88 - ((200 - b.coordY) / 200) * 60 : 50;
+                      const isHovered = hoveredBattedBallIndex === b.origIdx;
+                      const isSelected = selectedBattedBallIndex === b.origIdx;
+                      const isActive = isHovered || isSelected;
+                      const isAnyActive = activeBallIdx !== null;
+                      const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.7);
+
+                      return (
+                        <g
+                          key={b.origIdx}
+                          onClick={() => setSelectedBattedBallIndex(isSelected ? null : b.origIdx)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <line
+                            x1="50" y1="88" x2={normX} y2={normY}
+                            stroke={isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                            strokeWidth={isActive ? 2 : 0.8}
+                            opacity={opacity}
+                          />
+                          <circle
+                            cx={normX}
+                            cy={normY}
+                            r={isActive ? 5.5 : 3.5}
+                            fill={isActive ? '#3b82f6' : (isAnyActive ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
+                            stroke="#ffffff"
+                            strokeWidth={isActive ? 1.5 : 1}
+                            opacity={opacity}
+                          />
+                          <text
+                            x={normX}
+                            y={normY + 1.2}
+                            textAnchor="middle"
+                            fill="#ffffff"
+                            fontSize={isActive ? '4.5' : '3.8'}
+                            fontWeight="900"
+                            opacity={opacity}
+                          >
+                            {b.origIdx + 1}
+                          </text>
+                        </g>
+                      );
+                    });
+                  })()}
                 </svg>
               ) : (
                 /* Elevation Arc */
@@ -407,24 +524,64 @@ export default function PitcherInspectionModal({
                   <line x1="88" y1="62" x2="88" y2="82" stroke={isDark ? '#ef4444' : '#f87171'} strokeWidth="1.5" />
                   <text x="88" y="58" textAnchor="middle" fill={isDark ? '#ef4444' : '#dc2626'} fontSize="3.5" fontWeight="800">WALL 10'</text>
 
-                  {allBattedBalls.map((b, bIdx) => {
-                    const dist = b.totalDistance || 250;
-                    const endX = Math.min(88, 12 + (dist / 450) * 76);
-                    const apexH = Math.min(50, Math.max(15, (b.launchAngle || 20) * 1.5));
-                    const apexY = 82 - apexH;
-                    const isSelected = selectedBattedBallIndex === bIdx;
-                    return (
-                      <g key={bIdx} onClick={() => setSelectedBattedBallIndex(bIdx)} style={{ cursor: 'pointer' }}>
-                        <path
-                          d={`M 12 82 Q ${(12 + endX) / 2} ${apexY} ${endX} 82`}
-                          fill="none"
-                          stroke={isSelected ? '#3b82f6' : '#ef4444'}
-                          strokeWidth={isSelected ? 2 : 1.2}
-                        />
-                        <circle cx={endX} cy="82" r={isSelected ? 4 : 3} fill={isSelected ? '#3b82f6' : '#ef4444'} stroke="#ffffff" strokeWidth="0.8" />
-                      </g>
-                    );
-                  })}
+                  {(() => {
+                    const sortedBalls = allBattedBalls.map((b, idx) => ({ ...b, origIdx: idx }));
+                    const activeBallIdx = hoveredBattedBallIndex !== null ? hoveredBattedBallIndex : selectedBattedBallIndex;
+                    if (activeBallIdx !== null) {
+                      sortedBalls.sort((a, b) => {
+                        if (a.origIdx === activeBallIdx) return 1;
+                        if (b.origIdx === activeBallIdx) return -1;
+                        return 0;
+                      });
+                    }
+                    return sortedBalls.map((b) => {
+                      const dist = b.totalDistance || 250;
+                      const endX = Math.min(88, 12 + (dist / 450) * 76);
+                      const apexH = Math.min(50, Math.max(15, (b.launchAngle || 20) * 1.5));
+                      const apexY = 82 - apexH;
+                      const isHovered = hoveredBattedBallIndex === b.origIdx;
+                      const isSelected = selectedBattedBallIndex === b.origIdx;
+                      const isActive = isHovered || isSelected;
+                      const isAnyActive = activeBallIdx !== null;
+                      const opacity = isActive ? 1 : (isAnyActive ? 0.22 : 0.7);
+
+                      return (
+                        <g
+                          key={b.origIdx}
+                          onClick={() => setSelectedBattedBallIndex(isSelected ? null : b.origIdx)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <path
+                            d={`M 12 82 Q ${(12 + endX) / 2} ${apexY} ${endX} 82`}
+                            fill="none"
+                            stroke={isActive ? '#3b82f6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                            strokeWidth={isActive ? 2.2 : 1}
+                            opacity={opacity}
+                          />
+                          <circle
+                            cx={endX}
+                            cy={82}
+                            r={isActive ? 5 : 3}
+                            fill={isActive ? '#3b82f6' : (isAnyActive ? (isDark ? '#3f3f46' : '#94a3b8') : '#ef4444')}
+                            stroke="#ffffff"
+                            strokeWidth={isActive ? 1.5 : 0.8}
+                            opacity={opacity}
+                          />
+                          <text
+                            x={endX}
+                            y={77}
+                            textAnchor="middle"
+                            fill={isActive ? '#3b82f6' : (isDark ? '#a1a1aa' : '#64748b')}
+                            fontSize={isActive ? '4.5' : '3.5'}
+                            fontWeight="800"
+                            opacity={opacity}
+                          >
+                            {b.origIdx + 1}
+                          </text>
+                        </g>
+                      );
+                    });
+                  })()}
                 </svg>
               )
             )}
