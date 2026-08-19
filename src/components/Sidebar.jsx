@@ -611,6 +611,15 @@ export default function Sidebar({
                             ? (inspectedPlay?.battedBalls?.length ? inspectedPlay.battedBalls : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : []))
                             : (scorecardData.gameInfo.liveGameState?.battedBalls?.length ? scorecardData.gameInfo.liveGameState.battedBalls : (scorecardData.gameInfo.liveGameState?.hitData ? [scorecardData.gameInfo.liveGameState.hitData] : [])));
 
+                      const totalPitchesCount = targetPitches?.length || 0;
+                      const totalStrikesCount = (targetPitches || []).filter(p => p.isStrike || p.resultType === 'strike' || p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('strike') || p.callDesc?.toLowerCase().includes('foul')).length;
+                      const totalBallsCount = (targetPitches || []).filter(p => p.isBall || p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball')).length;
+                      const totalFoulsCount = (targetPitches || []).filter(p => p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('foul')).length;
+
+                      const totalHitsCount = (targetBattedBalls || []).filter(b => !b.isFoul && (b.isBallInPlay || b.playCode === '1B' || b.playCode === '2B' || b.playCode === '3B' || b.playCode === 'HR' || b.playCode === 'hr')).length;
+                      const totalFoulsHitCount = (targetBattedBalls || []).filter(b => Boolean(b.isFoul)).length;
+                      const totalOutsHitCount = (targetBattedBalls || []).filter(b => !b.isFoul && !b.isBallInPlay && b.playCode !== '1B' && b.playCode !== '2B' && b.playCode !== '3B' && b.playCode !== 'HR' && b.playCode !== 'hr').length;
+
                       const activeHit = (hoveredBattedBallIndex !== null && targetBattedBalls[hoveredBattedBallIndex])
                         || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
 
@@ -973,7 +982,7 @@ export default function Sidebar({
                                   transition: 'all 0.15s ease',
                                 }}
                               >
-                                Pitches ({targetPitches?.length || 0}P)
+                                Pitches {totalPitchesCount > 0 ? `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)` : '(0P)'}
                               </button>
                               <button
                                 onClick={() => setVisualizerTab('hit')}
@@ -991,7 +1000,7 @@ export default function Sidebar({
                                   transition: 'all 0.15s ease',
                                 }}
                               >
-                                Hit/Foul Spray {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B)` : (targetHitData?.launchSpeed ? `(${targetHitData.launchSpeed} MPH)` : '')}
+                                Hit/Foul Spray {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : (targetHitData?.launchSpeed ? `(${targetHitData.launchSpeed} MPH)` : '')}
                               </button>
                             </div>
 
@@ -1128,21 +1137,23 @@ export default function Sidebar({
                                           whiteSpace: 'nowrap',
                                           textOverflow: 'ellipsis',
                                         }}>
-                                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound -> Plate'} {isFilterActive ? `(${matchingCount}/${targetPitches?.length || 0}P)` : `(${targetPitches?.length || 0}P)`}
+                                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound -> Plate'} {isFilterActive ? `(${matchingCount}/${totalPitchesCount}P)` : `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)`}
                                         </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700, flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 800, flexShrink: 0 }}>
                                           <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
                                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                            Strike
+                                            {totalStrikesCount}S
                                           </span>
                                           <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
                                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                            Ball
+                                            {totalBallsCount}B
                                           </span>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                            Foul
-                                          </span>
+                                          {totalFoulsCount > 0 && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
+                                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
+                                              {totalFoulsCount}F
+                                            </span>
+                                          )}
                                         </div>
                                       </>
                                     )}
@@ -1621,21 +1632,23 @@ export default function Sidebar({
                                           whiteSpace: 'nowrap',
                                           textOverflow: 'ellipsis',
                                         }}>
-                                          {viewPerspective === 'front' ? 'Field Spray' : 'Elevation Arc'} {targetBattedBalls?.length ? `(${targetBattedBalls.length}B)` : '(0B)'}
+                                          {viewPerspective === 'front' ? 'Field Spray' : 'Elevation Arc'} {targetBattedBalls?.length ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : '(0B)'}
                                         </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700, flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 800, flexShrink: 0 }}>
                                           <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
                                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                            Hit
+                                            {totalHitsCount}H
                                           </span>
                                           <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
                                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                            Foul
+                                            {totalFoulsHitCount}F
                                           </span>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                            Out
-                                          </span>
+                                          {totalOutsHitCount > 0 && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
+                                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
+                                              {totalOutsHitCount}O
+                                            </span>
+                                          )}
                                         </div>
                                       </>
                                     )}

@@ -44,6 +44,15 @@ export default function AtBatInspectionModal({
     ? inspectedPlay.battedBalls
     : (targetHitData ? [targetHitData] : []);
 
+  const totalPitchesCount = targetPitches.length;
+  const totalStrikesCount = targetPitches.filter(p => p.isStrike || p.resultType === 'strike' || p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('strike') || p.callDesc?.toLowerCase().includes('foul')).length;
+  const totalBallsCount = targetPitches.filter(p => p.isBall || p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball')).length;
+  const totalFoulsCount = targetPitches.filter(p => p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('foul')).length;
+
+  const totalHitsCount = targetBattedBalls.filter(b => !b.isFoul && (b.isBallInPlay || b.playCode === '1B' || b.playCode === '2B' || b.playCode === '3B' || b.playCode === 'HR' || b.playCode === 'hr')).length;
+  const totalFoulsHitCount = targetBattedBalls.filter(b => Boolean(b.isFoul)).length;
+  const totalOutsHitCount = targetBattedBalls.filter(b => !b.isFoul && !b.isBallInPlay && b.playCode !== '1B' && b.playCode !== '2B' && b.playCode !== '3B' && b.playCode !== 'HR' && b.playCode !== 'hr').length;
+
   const activeHit = (hoveredBattedBallIndex !== null && targetBattedBalls[hoveredBattedBallIndex])
     || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
 
@@ -311,7 +320,9 @@ export default function AtBatInspectionModal({
                 }}
               >
                 <span>Pitches</span>
-                <span style={{ fontSize: '10px', opacity: 0.8 }}>({targetPitches.length}P)</span>
+                <span style={{ fontSize: '10px', opacity: 0.8 }}>
+                  {totalPitchesCount > 0 ? `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)` : '(0P)'}
+                </span>
               </button>
               <button
                 onClick={() => setVisualizerTab('hit')}
@@ -334,7 +345,7 @@ export default function AtBatInspectionModal({
               >
                 <span>Hit Spray</span>
                 <span style={{ fontSize: '10px', opacity: 0.8 }}>
-                  {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B)` : (targetHitData?.launchSpeed ? `(${targetHitData.launchSpeed} MPH)` : '')}
+                  {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : (targetHitData?.launchSpeed ? `(${targetHitData.launchSpeed} MPH)` : '')}
                 </span>
               </button>
             </div>
@@ -442,21 +453,23 @@ export default function AtBatInspectionModal({
                     return (
                       <>
                         <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
-                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound → Plate'} {isFilterActive ? `(${matchingCount}/${targetPitches.length}P)` : `(${targetPitches.length}P)`}
+                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound → Plate'} {isFilterActive ? `(${matchingCount}/${totalPitchesCount}P)` : `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)`}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 700 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 800 }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                            Strike
+                            {totalStrikesCount}S
                           </span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                            Ball
+                            {totalBallsCount}B
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                            Foul
-                          </span>
+                          {totalFoulsCount > 0 && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                              {totalFoulsCount}F
+                            </span>
+                          )}
                         </div>
                       </>
                     );
@@ -895,21 +908,23 @@ export default function AtBatInspectionModal({
                   })() : (
                     <>
                       <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
-                        {viewPerspective === 'front' ? 'Field Spray Chart' : 'Elevation Profile'}
+                        {viewPerspective === 'front' ? 'Field Spray Chart' : 'Elevation Profile'} {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : '(0B)'}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 700 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 800 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          Hit
+                          {totalHitsCount}H
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                          Foul
+                          {totalFoulsHitCount}F
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                          Out
-                        </span>
+                        {totalOutsHitCount > 0 && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                            {totalOutsHitCount}O
+                          </span>
+                        )}
                       </div>
                     </>
                   )}

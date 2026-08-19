@@ -147,6 +147,14 @@ export default function PitcherInspectionModal({
     }));
   });
 
+  const allStrikesCount = allPitches.filter(p => p.isStrike || p.resultType === 'strike' || p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('strike') || p.callDesc?.toLowerCase().includes('foul')).length;
+  const allBallsCount = allPitches.filter(p => p.isBall || p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball')).length;
+  const allFoulsCount = allPitches.filter(p => p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('foul')).length;
+
+  const allHitsAllowedCount = allBattedBalls.filter(b => !b.isFoul && (b.isBallInPlay || b.playCode === '1B' || b.playCode === '2B' || b.playCode === '3B' || b.playCode === 'HR' || b.playCode === 'hr')).length;
+  const allFoulsAllowedCount = allBattedBalls.filter(b => Boolean(b.isFoul)).length;
+  const allOutsAllowedCount = allBattedBalls.filter(b => !b.isFoul && !b.isBallInPlay && b.playCode !== '1B' && b.playCode !== '2B' && b.playCode !== '3B' && b.playCode !== 'HR' && b.playCode !== 'hr').length;
+
   const pitcherDisplayName = formatPlayerName(pitcher?.fullName || pitcher?.name || 'Pitcher');
   const ks = pitcher?.strikeouts?.length || 0;
 
@@ -255,7 +263,7 @@ export default function PitcherInspectionModal({
                 boxShadow: visualizerMode === 'pitches' ? '0 2px 6px rgba(0,0,0,0.1)' : 'none',
               }}
             >
-              🎯 Pitches ({allPitches.length})
+              🎯 Pitches {allPitches.length > 0 ? `(${allPitches.length}P · ${allStrikesCount}S ${allBallsCount}B)` : '(0P)'}
             </button>
             <button
               onClick={() => setVisualizerMode('spray')}
@@ -267,7 +275,7 @@ export default function PitcherInspectionModal({
                 boxShadow: visualizerMode === 'spray' ? '0 2px 6px rgba(0,0,0,0.1)' : 'none',
               }}
             >
-              ⚾ Hits Allowed ({allBattedBalls.length})
+              ⚾ Hits Allowed {allBattedBalls.length > 0 ? `(${allBattedBalls.length}B · ${allHitsAllowedCount}H ${allFoulsAllowedCount}F)` : '(0B)'}
             </button>
           </div>
 
