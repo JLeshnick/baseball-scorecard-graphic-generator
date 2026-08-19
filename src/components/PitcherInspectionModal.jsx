@@ -330,11 +330,10 @@ export default function PitcherInspectionModal({
             return (
               <div style={{
                 display: 'flex',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 gap: '3px',
-                overflowX: 'auto',
                 padding: '1px 0 2px 0',
-                scrollbarWidth: 'none',
               }}>
                 <button
                   onClick={() => setPitchFilter('all')}

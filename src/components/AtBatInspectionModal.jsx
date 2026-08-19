@@ -499,11 +499,10 @@ export default function AtBatInspectionModal({
                   return (
                     <div style={{
                       display: 'flex',
+                      flexWrap: 'wrap',
                       alignItems: 'center',
                       gap: '3px',
-                      overflowX: 'auto',
-                      padding: '1px 0 3px 0',
-                      scrollbarWidth: 'none',
+                      padding: '1px 0 2px 0',
                     }}>
                       <button
                         onClick={() => setPitchFilter('all')}
