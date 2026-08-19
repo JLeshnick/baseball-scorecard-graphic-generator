@@ -224,7 +224,7 @@ export default function PitcherInspectionModal({
                 {pitcherDisplayName}
               </div>
               <div style={{ fontSize: '11px', color: isDark ? '#a1a1aa' : '#64748b' }}>
-                {teamName || (teamKey === 'home' ? 'Home Pitcher' : 'Away Pitcher')} · {selectedInning !== 'all' ? `Inning ${selectedInning}` : 'All Outing'} · {pitcher?.ip || '0.0'} IP · {pitcher?.totalPitches ? `${pitcher.totalPitches} Pitches` : ''} · {ks} K
+                {selectedInning !== 'all' ? `Inn ${selectedInning}` : 'Full Outing'} · {allPitches.length}P ({allStrikesCount}S {allBallsCount}B) · {pitcher?.ip || '0.0'} IP · {ks} K
               </div>
             </div>
           </div>

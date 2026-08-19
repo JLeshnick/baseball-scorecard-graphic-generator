@@ -244,7 +244,7 @@ describe('Sidebar Component & Visualizer Tests', () => {
     );
 
     // Should display Pitcher Header with inning scope
-    expect(screen.getByText(/AWAY PITCHER · INN 1/i)).toBeDefined();
+    expect(screen.getByText(/INN 1/i)).toBeDefined();
     expect(screen.getAllByText(/Jack Flaherty/i).length).toBeGreaterThan(0);
 
     // Visualizer Mode Buttons

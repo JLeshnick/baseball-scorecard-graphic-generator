@@ -655,32 +655,56 @@ export default function Sidebar({
                         }}>
                           {/* Top Header: Inspected Pitcher vs Inspected Cell vs Live Count */}
                           {isInspectingPitcher ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <span style={{
-                                fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                padding: '2px 5px', borderRadius: '4px',
-                                backgroundColor: inspectedPitcher.teamKey === 'away' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                color: inspectedPitcher.teamKey === 'away' ? '#3b82f6' : '#ef4444',
-                              }}>
-                                {`${inspectedPitcher.teamKey === 'away' ? 'AWAY' : 'HOME'} PITCHER${inspectedPitcher.inning ? ` · INN ${inspectedPitcher.inning}` : ' · ALL'}`}
-                              </span>
-                              <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                {inspectedPitcher.pitcher?.number ? `#${inspectedPitcher.pitcher.number} ` : ''}{pitcherName}
-                              </span>
-                            </div>
-                          ) : isInspectingCell ? (
-                            <>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <span style={{
                                   fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
                                   padding: '2px 5px', borderRadius: '4px',
-                                  backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                  backgroundColor: inspectedPitcher.teamKey === 'away' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: inspectedPitcher.teamKey === 'away' ? '#3b82f6' : '#ef4444',
                                 }}>
-                                  {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                  {inspectedPitcher.inning ? `INN ${inspectedPitcher.inning}` : 'FULL OUTING'}
                                 </span>
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                  {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
+                                <span style={{ fontSize: '10.5px', fontWeight: 800, color: c.textHead }}>
+                                  {inspectedPitcher.pitcher?.number ? `#${inspectedPitcher.pitcher.number} ` : ''}{pitcherName}
                                 </span>
+                              </div>
+                              {totalPitchesCount > 0 && (
+                                <span style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: '9.5px',
+                                  fontWeight: 800,
+                                  color: '#3b82f6',
+                                }}>
+                                  {totalPitchesCount}P · {totalStrikesCount}S {totalBallsCount}B
+                                </span>
+                              )}
+                            </div>
+                          ) : isInspectingCell ? (
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{
+                                    fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                    padding: '2px 5px', borderRadius: '4px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                  }}>
+                                    {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                  </span>
+                                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: c.textHead }}>
+                                    {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
+                                  </span>
+                                </div>
+                                {totalPitchesCount > 0 && (
+                                  <span style={{
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: '9.5px',
+                                    fontWeight: 800,
+                                    color: '#3b82f6',
+                                  }}>
+                                    {totalPitchesCount}P · {totalStrikesCount}S {totalBallsCount}B
+                                  </span>
+                                )}
                               </div>
 
                               {/* Multi-PA Selector when player batted multiple times in this inning */}
@@ -811,17 +835,25 @@ export default function Sidebar({
                           {isInspectingPitcher ? (
                             <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitcher:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherName}</span>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Strike Rate:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>
+                                  {totalPitchesCount > 0 ? `${Math.round((totalStrikesCount / totalPitchesCount) * 100)}%` : '0%'} ({totalStrikesCount} Strikes / {totalBallsCount} Balls)
+                                </span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>Scope:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{inspectedPitcher?.inning ? `Inning ${inspectedPitcher.inning}` : 'All Outing'}</span>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Batted Balls:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>
+                                  {targetBattedBalls.length > 0 ? `${targetBattedBalls.length} In Play (${totalHitsCount}H · ${totalFoulsHitCount}F${totalOutsHitCount > 0 ? ` · ${totalOutsHitCount}O` : ''})` : '0 In Play'}
+                                </span>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitches / Hits:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{`${targetPitches.length} Pitches · ${targetBattedBalls.length} Balls in Play`}</span>
-                              </div>
+                              {inspectedPitcher.pitcher && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontWeight: 700, color: c.textHead }}>Pitching Line:</span>
+                                  <span style={{ fontWeight: 600, color: c.textMain }}>
+                                    {inspectedPitcher.pitcher.ip || '0.0'} IP · {inspectedPitcher.pitcher.strikeouts?.length || 0} K · {inspectedPitcher.pitcher.walks ?? 0} BB · {inspectedPitcher.pitcher.earnedRuns ?? 0} ER
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           ) : (batterName || pitcherName || playDesc) && (
                             <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
