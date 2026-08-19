@@ -408,73 +408,28 @@ export default function AtBatInspectionModal({
             {visualizerTab === 'strikezone' && (
               <>
                 {/* Strike Zone Visualizer Header Info */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  height: '22px',
-                  overflow: 'hidden',
-                }}>
-                  {hoveredPitchIdx !== null ? (() => {
-                    const hp = targetPitches[hoveredPitchIdx];
-                    if (!hp) return null;
-                    return (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        fontSize: '10.5px',
-                        fontWeight: 800,
-                        color: isDark ? '#f4f4f5' : '#0f172a',
-                      }}>
-                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                        {hp.speed && <span>{hp.speed} MPH</span>}
-                        <span>{hp.pitchTypeName || hp.pitchType}</span>
-                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                      </div>
-                    );
-                  })() : (() => {
-                    const isFilterActive = pitchFilter !== 'all';
-                    const matchesPitchFilter = (p, filter) => {
-                      if (!filter || filter === 'all') return true;
-                      if (filter === 'first_pitch') return p.pitchNumber === 1;
-                      if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
-                      if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
-                      if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
-                      if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
-                      if (filter.startsWith('type:')) {
-                        const targetType = filter.replace('type:', '');
-                        return p.pitchType === targetType || p.pitchTypeName === targetType;
-                      }
-                      return true;
-                    };
-                    const matchingCount = isFilterActive ? targetPitches.filter(p => matchesPitchFilter(p, pitchFilter)).length : targetPitches.length;
-                    return (
-                      <>
-                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
-                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound → Plate'} {isFilterActive ? `(${matchingCount}/${totalPitchesCount}P)` : `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)`}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 800 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                            {totalStrikesCount}S
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                            {totalBallsCount}B
-                          </span>
-                          {totalFoulsCount > 0 && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                              {totalFoulsCount}F
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                {hoveredPitchIdx !== null && (() => {
+                  const hp = targetPitches[hoveredPitchIdx];
+                  if (!hp) return null;
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '10.5px',
+                      fontWeight: 800,
+                      color: isDark ? '#f4f4f5' : '#0f172a',
+                      height: '22px',
+                      overflow: 'hidden',
+                    }}>
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                      {hp.speed && <span>{hp.speed} MPH</span>}
+                      <span>{hp.pitchTypeName || hp.pitchType}</span>
+                      <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                    </div>
+                  );
+                })()}
 
                 {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
                 {(() => {
@@ -819,6 +774,39 @@ export default function AtBatInspectionModal({
                       })()}
                     </svg>
                   )}
+
+                  {/* In-Canvas Floating Pitch Legend */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '3px 7px',
+                    borderRadius: '5px',
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)',
+                    backdropFilter: 'blur(2px)',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    letterSpacing: '0.02em',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                      Strike
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                      Ball
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                      Foul
+                    </span>
+                  </div>
                 </div>
 
                 {/* Pitch Chips List */}
@@ -885,48 +873,21 @@ export default function AtBatInspectionModal({
                   height: '22px',
                   overflow: 'hidden',
                 }}>
-                  {activeHit ? (() => {
-                    const isFoul = Boolean(activeHit.isFoul);
-                    const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (activeHit.totalDistance && activeHit.totalDistance >= 390));
-                    const bColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'));
-                    return (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        fontSize: '10.5px',
-                        fontWeight: 800,
-                        color: isDark ? '#f4f4f5' : '#0f172a',
-                      }}>
-                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: bColor, flexShrink: 0 }} />
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: bColor }}>#{activeHit.pitchNumber}</span>
-                        {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
-                        {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
-                        <span style={{ color: c.textMuted }}>({isFoul ? 'Foul' : (inspectedPlay?.code || 'In Play')})</span>
-                      </div>
-                    );
-                  })() : (
-                    <>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
-                        {viewPerspective === 'front' ? 'Field Spray Chart' : 'Elevation Profile'} {targetBattedBalls.length > 0 ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : '(0B)'}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 800 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          {totalHitsCount}H
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                          {totalFoulsHitCount}F
-                        </span>
-                        {totalOutsHitCount > 0 && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                            {totalOutsHitCount}O
-                          </span>
-                        )}
-                      </div>
-                    </>
+                  {hoveredBattedBallIndex !== null && activeHit && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '10.5px',
+                      fontWeight: 800,
+                      color: isDark ? '#f4f4f5' : '#0f172a',
+                    }}>
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
+                      {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
+                      {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
+                      <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul' : (inspectedPlay?.code || 'In Play')})</span>
+                    </div>
                   )}
                 </div>
 
@@ -1100,6 +1061,39 @@ export default function AtBatInspectionModal({
                       })()}
                     </svg>
                   )}
+
+                  {/* In-Canvas Floating Hit Legend */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '3px 7px',
+                    borderRadius: '5px',
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)',
+                    backdropFilter: 'blur(2px)',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    letterSpacing: '0.02em',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                      Hit
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                      Foul
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                      Out
+                    </span>
+                  </div>
                 </div>
 
                 {/* Batted Ball Detail Pills */}

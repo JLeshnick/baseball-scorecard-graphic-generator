@@ -1124,72 +1124,32 @@ export default function Sidebar({
 
                               return (
                                 <>
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    height: '20px',
-                                    minHeight: '20px',
-                                    maxHeight: '20px',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                  }}>
-                                    {hoveredPitchIdx !== null ? (() => {
-                                      const hp = targetPitches?.[hoveredPitchIdx];
-                                      if (!hp) return null;
-                                      return (
-                                        <div style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          fontSize: '9.5px',
-                                          fontWeight: 800,
-                                          color: c.textHead,
-                                          overflow: 'hidden',
-                                          whiteSpace: 'nowrap',
-                                          textOverflow: 'ellipsis',
-                                        }}>
-                                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
-                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                                          {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
-                                          <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
-                                          <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                                          {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '8.5px' }}>{hp.breakVertical}" drop</span>}
-                                        </div>
-                                      );
-                                    })() : (
-                                      <>
-                                        <span style={{
-                                          fontSize: '9px',
-                                          fontWeight: 800,
-                                          textTransform: 'uppercase',
-                                          letterSpacing: '0.04em',
-                                          color: isInspecting ? '#3b82f6' : c.textMuted,
-                                          overflow: 'hidden',
-                                          whiteSpace: 'nowrap',
-                                          textOverflow: 'ellipsis',
-                                        }}>
-                                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound -> Plate'} {isFilterActive ? `(${matchingCount}/${totalPitchesCount}P)` : `(${totalPitchesCount}P · ${totalStrikesCount}S ${totalBallsCount}B)`}
-                                        </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 800, flexShrink: 0 }}>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                            {totalStrikesCount}S
-                                          </span>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                            {totalBallsCount}B
-                                          </span>
-                                          {totalFoulsCount > 0 && (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
-                                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                              {totalFoulsCount}F
-                                            </span>
-                                          )}
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
+                                  {hoveredPitchIdx !== null && (() => {
+                                    const hp = targetPitches?.[hoveredPitchIdx];
+                                    if (!hp) return null;
+                                    return (
+                                      <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '9.5px',
+                                        fontWeight: 800,
+                                        color: c.textHead,
+                                        height: '18px',
+                                        minHeight: '18px',
+                                        overflow: 'hidden',
+                                        whiteSpace: 'nowrap',
+                                        textOverflow: 'ellipsis',
+                                      }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                                        {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
+                                        <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
+                                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                                        {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '8.5px' }}>{hp.breakVertical}" drop</span>}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
                                   {targetPitches && targetPitches.length > 1 && (
@@ -1549,6 +1509,39 @@ export default function Sidebar({
                                         </div>
                                       </div>
                                     )}
+
+                                    {/* In-Canvas Floating Pitch Legend */}
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: '4px',
+                                      right: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      padding: '2px 5px',
+                                      borderRadius: '4px',
+                                      backgroundColor: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)',
+                                      backdropFilter: 'blur(2px)',
+                                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                                      fontSize: '7.5px',
+                                      fontWeight: 800,
+                                      letterSpacing: '0.02em',
+                                      pointerEvents: 'none',
+                                      zIndex: 10,
+                                    }}>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                                        Strike
+                                      </span>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                                        Ball
+                                      </span>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                                        Foul
+                                      </span>
+                                    </div>
                                   </div>
 
                                   {/* Pitch Sequence Chips */}
@@ -1616,75 +1609,28 @@ export default function Sidebar({
                               (targetBattedBalls.length > 0 || targetHitData) ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   {/* Hit Spray Header Bar: Shows Enunciated Batted Ball Details on Hover */}
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    height: '20px',
-                                    minHeight: '20px',
-                                    maxHeight: '20px',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                  }}>
-                                    {activeHit ? (() => {
-                                      const isFoul = Boolean(activeHit.isFoul);
-                                      const isHr = !isFoul && (inspectedPlay?.type === 'hr' || (activeHit.totalDistance && activeHit.totalDistance >= 390));
-                                      const bColor = isFoul ? '#f59e0b' : (isHr ? '#8b5cf6' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'));
-                                      const trajName = activeHit.trajectory ? activeHit.trajectory.replace('_', ' ') : (isFoul ? 'Foul' : 'In Play');
-
-                                      return (
-                                        <div style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          fontSize: '9.5px',
-                                          fontWeight: 800,
-                                          color: c.textHead,
-                                          overflow: 'hidden',
-                                          whiteSpace: 'nowrap',
-                                          textOverflow: 'ellipsis',
-                                        }}>
-                                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: bColor, flexShrink: 0 }} />
-                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: bColor }}>#{activeHit.pitchNumber}</span>
-                                          {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
-                                          {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
-                                          <span style={{ color: c.textHead, textTransform: 'capitalize' }}>{trajName}</span>
-                                          <span style={{ color: c.textMuted }}>({isFoul ? 'Foul Ball' : (inspectedPlay?.code || 'In Play')})</span>
-                                        </div>
-                                      );
-                                    })() : (
-                                      <>
-                                        <span style={{
-                                          fontSize: '9px',
-                                          fontWeight: 800,
-                                          textTransform: 'uppercase',
-                                          letterSpacing: '0.04em',
-                                          color: isInspecting ? '#3b82f6' : c.textMuted,
-                                          overflow: 'hidden',
-                                          whiteSpace: 'nowrap',
-                                          textOverflow: 'ellipsis',
-                                        }}>
-                                          {viewPerspective === 'front' ? 'Field Spray' : 'Elevation Arc'} {targetBattedBalls?.length ? `(${targetBattedBalls.length}B · ${totalHitsCount}H ${totalFoulsHitCount}F)` : '(0B)'}
-                                        </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 800, flexShrink: 0 }}>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                            {totalHitsCount}H
-                                          </span>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
-                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                            {totalFoulsHitCount}F
-                                          </span>
-                                          {totalOutsHitCount > 0 && (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
-                                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                              {totalOutsHitCount}O
-                                            </span>
-                                          )}
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
+                                  {hoveredBattedBallIndex !== null && activeHit && (
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '9.5px',
+                                      fontWeight: 800,
+                                      color: c.textHead,
+                                      height: '18px',
+                                      minHeight: '18px',
+                                      overflow: 'hidden',
+                                      whiteSpace: 'nowrap',
+                                      textOverflow: 'ellipsis',
+                                    }}>
+                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
+                                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
+                                      {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
+                                      {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
+                                      <span style={{ color: c.textHead, textTransform: 'capitalize' }}>{activeHit.trajectory ? activeHit.trajectory.replace('_', ' ') : (activeHit.isFoul ? 'Foul' : 'In Play')}</span>
+                                      <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul Ball' : (inspectedPlay?.code || 'In Play')})</span>
+                                    </div>
+                                  )}
 
                                   {/* Field Graphic: Field Spray Top vs Side Elevation Profile */}
                                   <div style={{
@@ -1947,6 +1893,39 @@ export default function Sidebar({
                                         })()}
                                       </svg>
                                     )}
+
+                                    {/* In-Canvas Floating Hit Legend */}
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: '4px',
+                                      right: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      padding: '2px 5px',
+                                      borderRadius: '4px',
+                                      backgroundColor: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)',
+                                      backdropFilter: 'blur(2px)',
+                                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                                      fontSize: '7.5px',
+                                      fontWeight: 800,
+                                      letterSpacing: '0.02em',
+                                      pointerEvents: 'none',
+                                      zIndex: 10,
+                                    }}>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                                        Hit
+                                      </span>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                                        Foul
+                                      </span>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
+                                        <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                                        Out
+                                      </span>
+                                    </div>
                                   </div>
 
                                   {/* Statcast Batted Ball Metrics Dashboard (for active/selected ball) */}

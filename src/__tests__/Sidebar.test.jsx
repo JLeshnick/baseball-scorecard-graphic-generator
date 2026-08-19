@@ -108,7 +108,8 @@ describe('Sidebar Component & Visualizer Tests', () => {
     fireEvent.click(pitchesTabBtn);
     const frontAngleBtn = screen.getByRole('button', { name: /Catcher Front/i });
     fireEvent.click(frontAngleBtn);
-    expect(screen.getByText(/Strike Zone/i)).toBeDefined();
+    expect(screen.getByText(/RHB/i)).toBeDefined();
+    expect(screen.getAllByText(/Strike/i).length).toBeGreaterThan(0);
   });
 
   it('renders multi-at-bat switching buttons when player batted multiple times in an inning', () => {

@@ -441,6 +441,55 @@ export default function PitcherInspectionModal({
             );
           })()}
 
+          {/* Hover info bar on pitch/batted ball selection */}
+          {visualizerMode === 'pitches' && hoveredPitchIdx !== null && (() => {
+            const hp = allPitches[hoveredPitchIdx];
+            if (!hp) return null;
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                color: isDark ? '#f4f4f5' : '#0f172a',
+                height: '20px',
+                overflow: 'hidden',
+              }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber || hoveredPitchIdx + 1}</span>
+                {hp.speed && <span>{hp.speed} MPH</span>}
+                <span>{hp.pitchTypeName || hp.pitchType}</span>
+                <span style={{ color: isDark ? '#a1a1aa' : '#64748b' }}>({hp.callDesc})</span>
+              </div>
+            );
+          })()}
+
+          {visualizerMode === 'spray' && hoveredBattedBallIndex !== null && (() => {
+            const hb = allBattedBalls[hoveredBattedBallIndex];
+            if (!hb) return null;
+            const isFoul = Boolean(hb.isFoul);
+            const bColor = isFoul ? '#f59e0b' : (hb.isBallInPlay ? '#10b981' : '#ef4444');
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                color: isDark ? '#f4f4f5' : '#0f172a',
+                height: '20px',
+                overflow: 'hidden',
+              }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: bColor, flexShrink: 0 }} />
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: bColor }}>#{hb.pitchNumber || hoveredBattedBallIndex + 1}</span>
+                {hb.launchSpeed && <span style={{ color: '#3b82f6' }}>{hb.launchSpeed} MPH</span>}
+                {hb.totalDistance && <span style={{ color: '#10b981' }}>({hb.totalDistance} FT)</span>}
+                <span style={{ color: isDark ? '#a1a1aa' : '#64748b' }}>({isFoul ? 'Foul Ball' : (hb.callDesc || 'In Play')})</span>
+              </div>
+            );
+          })()}
+
           {/* VISUALIZER CANVAS */}
           <div style={{
             width: '100%',
@@ -784,6 +833,58 @@ export default function PitcherInspectionModal({
                 </svg>
               )
             )}
+
+            {/* In-Canvas Floating Legend */}
+            <div style={{
+              position: 'absolute',
+              bottom: '6px',
+              right: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 7px',
+              borderRadius: '5px',
+              backgroundColor: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(2px)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+              fontSize: '8.5px',
+              fontWeight: 800,
+              letterSpacing: '0.02em',
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}>
+              {visualizerMode === 'pitches' ? (
+                <>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                    Strike
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                    Ball
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                    Foul
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                    Hit
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                    Foul
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                    Out
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Pitches List or Batted Balls List */}
