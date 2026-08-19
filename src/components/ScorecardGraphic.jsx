@@ -574,8 +574,8 @@ const ScorecardGraphic = ({
         }))
       : teamData.pitchers;
 
-    const POS_COL_W = 20;
-    const NAME_COL_W = 126;
+    const POS_COL_W = 18;
+    const NAME_COL_W = 108;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 48;
 
@@ -670,21 +670,22 @@ const ScorecardGraphic = ({
               {battersToRender.map((b, bIdx) => {
                 const nameStr = b.name || '';
                 const nameLen = nameStr.length;
-                let batterFontSize = '11px';
-                let letterSpacing = '0.01em';
-                if (nameLen > 18) {
-                  batterFontSize = '8px';
+                let batterFontSize = '10.5px';
+                let letterSpacing = '0em';
+                if (nameLen > 15) {
+                  batterFontSize = '7px';
+                  letterSpacing = '-0.03em';
+                } else if (nameLen > 12) {
+                  batterFontSize = '7.5px';
                   letterSpacing = '-0.02em';
-                } else if (nameLen > 15) {
+                } else if (nameLen > 9) {
                   batterFontSize = '8.5px';
                   letterSpacing = '-0.01em';
-                } else if (nameLen > 12) {
+                } else if (nameLen > 6) {
                   batterFontSize = '9.5px';
-                } else if (nameLen > 9) {
-                  batterFontSize = '10.5px';
                 }
                 if (t.isHandwritten) {
-                  batterFontSize = nameLen > 16 ? '9.5px' : nameLen > 12 ? '11px' : '12.5px';
+                  batterFontSize = nameLen > 14 ? '8.5px' : nameLen > 10 ? '10px' : '11.5px';
                 }
 
                 return (
@@ -1032,21 +1033,21 @@ const ScorecardGraphic = ({
 
                           {/* Stats summary row: IP • H • R • ER • BB • K */}
                           <div style={{
-                            fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
+                            fontFamily: t.fontMono, fontSize: '7px', fontWeight: 700,
                             color: t.textMuted, whiteSpace: 'nowrap',
                             display: 'flex', alignItems: 'center', gap: '2px', opacity: 0.95, flexWrap: 'nowrap',
                           }}>
                             <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
                             <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong> H</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong>H</span>
                             <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong> R</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong>R</span>
                             <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong> ER</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong>ER</span>
                             <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong> BB</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong>BB</span>
                             <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong> K</span>
+                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong>K</span>
                           </div>
                         </div>
                       </td>
