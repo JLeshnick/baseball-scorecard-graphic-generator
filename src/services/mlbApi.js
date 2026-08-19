@@ -409,7 +409,7 @@ export function processMLBData(data, gamePkOverride) {
   const statusDetailed = gameData.status?.detailedState || 'Final';
   const abstractState = gameData.status?.abstractGameState || '';
   const isFinal = abstractState === 'Final' || statusDetailed === 'Final' || statusDetailed === 'Game Over' || statusDetailed === 'Completed Early';
-  const isLive = abstractState === 'Live' || statusDetailed === 'In Progress' || statusDetailed.includes('Inning');
+  const isLive = !isFinal && (abstractState === 'Live' || statusDetailed === 'In Progress' || statusDetailed.includes('Inning'));
 
   let statusDisplay = 'FINAL';
   if (isLive) {
@@ -940,7 +940,7 @@ export function processMLBData(data, gamePkOverride) {
   let liveActiveCell = null;
   let liveGameState = null;
 
-  if (isLive || (linescore && (linescore.balls !== undefined || linescore.outs !== undefined))) {
+  if (isLive && !isFinal) {
     const currentPlay = liveData.plays?.currentPlay;
     const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
     const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
@@ -1052,6 +1052,64 @@ export function processMLBData(data, gamePkOverride) {
     };
   }
 
+  // Extract the very last at-bat of the game (for default inspection on completed games)
+  let lastAtBat = null;
+  if (liveData.plays?.allPlays && liveData.plays.allPlays.length > 0) {
+    for (let i = liveData.plays.allPlays.length - 1; i >= 0; i--) {
+      const p = liveData.plays.allPlays[i];
+      const bId = p.matchup?.batter?.id;
+      const inn = p.about?.inning;
+      const isTop = p.about?.isTopInning;
+      const teamKey = isTop ? 'away' : 'home';
+      const teamData = isTop ? awayData : homeData;
+      const teamName = isTop ? awayTeam.name : homeTeam.name;
+
+      if (bId && inn) {
+        let batterObj = null;
+        let bIdx = 0;
+        if (teamData?.batters) {
+          bIdx = teamData.batters.findIndex(b => String(b.id) === String(bId));
+          if (bIdx >= 0) {
+            batterObj = teamData.batters[bIdx];
+          } else {
+            teamData.batters.forEach((b, idx) => {
+              if (b.substitutes) {
+                const sub = b.substitutes.find(s => String(s.id) === String(bId));
+                if (sub) {
+                  batterObj = sub;
+                  bIdx = idx;
+                }
+              }
+            });
+          }
+        }
+        if (!batterObj) {
+          batterObj = {
+            id: bId,
+            name: extractLastNameGlobal(p.matchup?.batter?.fullName || ''),
+            fullName: p.matchup?.batter?.fullName || '',
+            jerseyNumber: playerMap[`ID${bId}`]?.jerseyNumber || '—',
+            batSide: p.matchup?.batSide?.code || 'R',
+          };
+        }
+
+        const playList = batterInningPlays[bId]?.[inn] || [];
+        const currentPlay = playList.length > 0 ? playList[playList.length - 1] : null;
+
+        lastAtBat = {
+          teamKey,
+          teamName,
+          batterIndex: Math.max(0, bIdx),
+          batter: batterObj,
+          inning: inn,
+          currentPlay,
+          cellKey: `${bId}_${inn}`,
+        };
+        break;
+      }
+    }
+  }
+
   return {
     gameInfo: {
       gamePk,
@@ -1076,6 +1134,7 @@ export function processMLBData(data, gamePkOverride) {
       statusDetailed,
       liveActiveCell,
       liveGameState,
+      lastAtBat,
     },
     awayData,
     homeData

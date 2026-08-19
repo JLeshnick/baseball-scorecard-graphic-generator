@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { getScorecardTheme } from '../utils/themeProvider';
 
 /**
@@ -41,6 +42,7 @@ const ScorecardGraphic = ({
   isInteractive = false,
   isExporting = false,
   isAdvancedMode = false,
+  isMobile = false,
 }) => {
   if (!data) return null;
 
@@ -895,8 +897,8 @@ const ScorecardGraphic = ({
                         >
                           {renderPlayCell(play, isHome, cellKey)}
 
-                          {/* Selected At-Bat Floating Pitch Popover on Graphic */}
-                          {isSelected && !isExporting && currentPlayObj && currentPlayPitches.length > 0 && (
+                          {/* Selected At-Bat Floating Pitch Popover on Graphic (Mobile Only: on Desktop the Sidebar displays the full pitch visualizer without covering cells) */}
+                          {isSelected && isMobile && !isExporting && currentPlayObj && currentPlayPitches.length > 0 && (
                             <div
                               onClick={(e) => e.stopPropagation()}
                               style={{
@@ -905,8 +907,8 @@ const ScorecardGraphic = ({
                                 left: '50%',
                                 transform: 'translateX(-50%)',
                                 zIndex: 120,
-                                minWidth: '145px',
-                                maxWidth: '175px',
+                                minWidth: '150px',
+                                maxWidth: '180px',
                                 padding: '6px 8px',
                                 backgroundColor: isDark ? '#18181b' : '#ffffff',
                                 border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
@@ -918,16 +920,46 @@ const ScorecardGraphic = ({
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <span style={{ fontSize: '8.5px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
-                                  {currentPlayObj.code} ({currentPlayPitches.length}P)
-                                </span>
-                                <span style={{
-                                  fontSize: '7.5px', fontWeight: 800, padding: '1px 3px', borderRadius: '3px',
-                                  backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                  color: batSide === 'L' ? '#3b82f6' : '#ef4444',
-                                }}>
-                                  {batSide === 'L' ? 'LHB' : 'RHB'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '8.5px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
+                                    {currentPlayObj.code} ({currentPlayPitches.length}P)
+                                  </span>
+                                  <span style={{
+                                    fontSize: '7.5px', fontWeight: 800, padding: '1px 3px', borderRadius: '3px',
+                                    backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: batSide === 'L' ? '#3b82f6' : '#ef4444',
+                                  }}>
+                                    {batSide === 'L' ? 'LHB' : 'RHB'}
+                                  </span>
+                                </div>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCellClick({
+                                      teamKey: isHome ? 'home' : 'away',
+                                      teamName: teamInfo.name,
+                                      batterIndex: bIdx,
+                                      batter: b,
+                                      inning: n,
+                                      currentPlay: currentPlayObj,
+                                      cellKey,
+                                    });
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '16px', height: '16px',
+                                    borderRadius: '50%',
+                                    border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
+                                    backgroundColor: isDark ? '#27272a' : '#f1f5f9',
+                                    color: isDark ? '#a1a1aa' : '#64748b',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                  }}
+                                  title="Close popover"
+                                >
+                                  <X style={{ width: '10px', height: '10px' }} />
+                                </button>
                               </div>
                               {currentPlayObj.pitcherName && (
                                 <div style={{ fontSize: '7.5px', color: isDark ? '#a1a1aa' : '#64748b', marginBottom: '3px' }}>

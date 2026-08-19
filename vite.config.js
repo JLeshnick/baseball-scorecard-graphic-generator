@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   base: '/baseball-scorecard-graphic-generator/',
   server: {
+    host: true,
     port: 3000,
     open: false,
   }

@@ -335,7 +335,11 @@ export default function App() {
       setRawGameData(data._rawData || null);
       setLastRefreshedTime(new Date());
       if (!isSilentRefresh) {
-        setInspectedCell(null);
+        if (!data.gameInfo.isLive && data.gameInfo.lastAtBat) {
+          setInspectedCell(data.gameInfo.lastAtBat);
+        } else {
+          setInspectedCell(null);
+        }
         setCustomHeadline(data.gameInfo.dateDisplay || '');
         setCustomSubtitle([data.gameInfo.venue, data.gameInfo.headline].filter(Boolean).join(' · '));
         setCustomFooter([(data.gameInfo.venue || '').toUpperCase(), data.gameInfo.dateDisplay].filter(Boolean).join(' • '));
@@ -1068,6 +1072,7 @@ export default function App() {
                     isInteractive={!exporting}
                     isExporting={exporting}
                     isAdvancedMode={isAdvancedMode}
+                    isMobile={isMobile}
                   />
                 </div>
               </div>

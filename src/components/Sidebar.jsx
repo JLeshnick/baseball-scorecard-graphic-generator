@@ -733,7 +733,7 @@ export default function Sidebar({
                             <div style={{
                               position: 'relative',
                               width: '100%',
-                              height: '118px',
+                              height: '130px',
                               backgroundColor: isDark ? '#050507' : '#f4f3f0',
                               borderRadius: '6px',
                               border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
@@ -829,16 +829,47 @@ export default function Sidebar({
                                   </g>
                                 ))}
                               </svg>
+
+                              {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
+                              {isInspecting && !inspectedPlay && (
+                                <div style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  backgroundColor: isDark ? 'rgba(9, 9, 11, 0.82)' : 'rgba(255, 255, 255, 0.86)',
+                                  backdropFilter: 'blur(3.5px)',
+                                  WebkitBackdropFilter: 'blur(3.5px)',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '12px',
+                                  textAlign: 'center',
+                                  zIndex: 10,
+                                }}>
+                                  <div style={{
+                                    fontSize: '11.5px',
+                                    fontWeight: 800,
+                                    color: c.textHead,
+                                    marginBottom: '3px',
+                                    letterSpacing: '0.02em',
+                                  }}>
+                                    No Plate Appearance
+                                  </div>
+                                  <div style={{ fontSize: '9.5px', color: c.textMuted, maxWidth: '200px', lineHeight: 1.35 }}>
+                                    #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name} did not bat in Inning {inspectedCell.inning}.
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
-                            {/* Pitch Sequence Chips */}
+                            {/* Pitch Sequence Chips (Freely wrapping, no inner scrolling required) */}
                             {targetPitches && targetPitches.length > 0 ? (
                               <div style={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
-                                gap: '3px',
-                                maxHeight: '52px',
-                                overflowY: 'auto',
+                                gap: '3.5px',
+                                paddingTop: '2px',
                               }}>
                                 {targetPitches.map((p, idx) => (
                                   <div
@@ -846,10 +877,10 @@ export default function Sidebar({
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
-                                      gap: '3px',
-                                      padding: '2px 5px',
+                                      gap: '3.5px',
+                                      padding: '2.5px 6px',
                                       borderRadius: '4px',
-                                      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
+                                      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6',
                                       border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
                                       fontSize: '9px',
                                       fontWeight: 700,
@@ -868,9 +899,11 @@ export default function Sidebar({
                                 ))}
                               </div>
                             ) : (
-                              <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
-                                {isInspecting ? (inspectedPlay ? 'No pitch coordinate data recorded for this play.' : 'No plate appearance recorded for this cell.') : 'Awaiting pitch sequence...'}
-                              </div>
+                              !isInspecting && (
+                                <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
+                                  Awaiting pitch sequence...
+                                </div>
+                              )
                             )}
                           </div>
                         </div>
