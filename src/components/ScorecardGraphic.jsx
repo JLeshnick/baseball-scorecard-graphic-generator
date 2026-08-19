@@ -995,7 +995,7 @@ const ScorecardGraphic = ({
                               borderRight: `1.5px solid ${t.borderStrong}`,
                               verticalAlign: 'middle',
                               cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
-                              backgroundColor: isPitcherActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                              backgroundColor: isPitcherActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
                               boxShadow: isPitcherActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
                               transition: 'all 0.12s ease',
                             }}
@@ -1084,7 +1084,7 @@ const ScorecardGraphic = ({
                               borderLeft: `1px solid ${t.borderLight}`,
                               verticalAlign: 'middle',
                               cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
-                              backgroundColor: isInningActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.18)') : undefined,
+                              backgroundColor: isInningActive ? (isDark ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.18)') : undefined,
                               boxShadow: isInningActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
                               transition: 'all 0.12s ease',
                             }}
