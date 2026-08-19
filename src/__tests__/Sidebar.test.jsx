@@ -110,4 +110,62 @@ describe('Sidebar Component & Visualizer Tests', () => {
     fireEvent.click(frontAngleBtn);
     expect(screen.getByText(/Strike Zone/i)).toBeDefined();
   });
+
+  it('renders multi-at-bat switching buttons when player batted multiple times in an inning', () => {
+    const multiCell = {
+      ...mockInspectedCell,
+      plays: [
+        {
+          code: '1B',
+          description: 'Single to left field',
+          pitches: [
+            { pitchNumber: 1, speed: 92.5, pitchType: 'FF', callDesc: 'Ball', color: '#10b981', normX: 20, normY: 20 }
+          ],
+          hitData: { launchSpeed: 95.0, launchAngle: 12, totalDistance: 240, trajectory: 'line_drive', coordX: 80, coordY: 100 },
+        },
+        {
+          code: 'HR',
+          description: '3-Run Home run to right center',
+          pitches: [
+            { pitchNumber: 1, speed: 84.1, pitchType: 'SL', callDesc: 'In Play', color: '#3b82f6', normX: 50, normY: 50 }
+          ],
+          hitData: { launchSpeed: 106.2, launchAngle: 30, totalDistance: 418, trajectory: 'fly_ball', coordX: 190, coordY: 45 },
+        }
+      ]
+    };
+
+    render(
+      <Sidebar
+        isMobile={false}
+        mobileView="controls"
+        c={mockColors}
+        isDark={false}
+        activeTab="game"
+        setActiveTab={vi.fn()}
+        tabStyle={vi.fn()}
+        scoringMode="mlb"
+        setScoringMode={vi.fn()}
+        scorecardData={mockScorecardData}
+        setScorecardData={vi.fn()}
+        inspectedCell={multiCell}
+        setInspectedCell={vi.fn()}
+        selectedGamePk={123456}
+        setSelectedGamePk={vi.fn()}
+      />
+    );
+
+    // Both at-bat buttons should appear
+    expect(screen.getByText(/At-Bat:/i)).toBeDefined();
+    const pa1Btn = screen.getByRole('button', { name: /①.*1B/i });
+    const pa2Btn = screen.getByRole('button', { name: /②.*HR/i });
+    expect(pa1Btn).toBeDefined();
+    expect(pa2Btn).toBeDefined();
+
+    // Default is 1st at-bat (Single)
+    expect(screen.getByText(/Single to left field/i)).toBeDefined();
+
+    // Click 2nd at-bat
+    fireEvent.click(pa2Btn);
+    expect(screen.getByText(/3-Run Home run to right center/i)).toBeDefined();
+  });
 });

@@ -856,6 +856,7 @@ const ScorecardGraphic = ({
                           key={n}
                           onClick={hasInteractiveClick ? (e) => {
                             e.stopPropagation();
+                            const playArray = Array.isArray(play) ? play : (play ? [play] : []);
                             onCellClick({
                               teamKey: isHome ? 'home' : 'away',
                               teamName: teamInfo.name,
@@ -863,6 +864,7 @@ const ScorecardGraphic = ({
                               batter: b,
                               inning: n,
                               currentPlay: currentPlayObj,
+                              plays: playArray,
                               cellKey,
                             });
                           } : undefined}

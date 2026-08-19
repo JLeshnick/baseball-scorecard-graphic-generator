@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   ChevronDown,
@@ -124,6 +124,15 @@ export default function Sidebar({
   const [hoveredPitchNum, setHoveredPitchNum] = useState(null);
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
+  const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
+
+  const inspectedCellKey = inspectedCell?.cellKey || null;
+  useEffect(() => {
+    setSelectedMultiPaIndex(0);
+    setSelectedBattedBallIndex(null);
+    setHoveredBattedBallIndex(null);
+    setHoveredPitchNum(null);
+  }, [inspectedCellKey]);
 
   if (isMobile && mobileView !== 'controls') return null;
 
@@ -542,8 +551,16 @@ export default function Sidebar({
 
                     {/* Live Count & Bases & Strike Zone (Active Game OR Inspected Cell) */}
                     {(scorecardData.gameInfo.liveGameState || inspectedCell) && (() => {
-                      const inspectedPlay = inspectedCell?.currentPlay ? (Array.isArray(inspectedCell.currentPlay) ? inspectedCell.currentPlay[0] : inspectedCell.currentPlay) : null;
                       const isInspecting = Boolean(inspectedCell);
+                      const inspectedPlaysArray = inspectedCell?.plays?.length
+                        ? inspectedCell.plays
+                        : (Array.isArray(inspectedCell?.currentPlay)
+                            ? inspectedCell.currentPlay
+                            : (inspectedCell?.currentPlay ? [inspectedCell.currentPlay] : []));
+                      const activeMultiIndex = (selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
+                      const inspectedPlay = isInspecting
+                        ? (inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null)
+                        : null;
                       const targetPitches = isInspecting
                         ? (inspectedPlay?.pitches || [])
                         : (scorecardData.gameInfo.liveGameState?.pitches || []);
@@ -586,31 +603,79 @@ export default function Sidebar({
                         }}>
                           {/* Top Header: Live Count vs Inspected Cell */}
                           {isInspecting ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{
-                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                  padding: '2px 5px', borderRadius: '4px',
-                                  backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
-                                }}>
-                                  {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
-                                </span>
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                  {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
-                                </span>
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{
+                                    fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                    padding: '2px 5px', borderRadius: '4px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                  }}>
+                                    {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                  </span>
+                                  <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
+                                    {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => { setInspectedCell(null); setSelectedBattedBallIndex(null); }}
+                                  style={{
+                                    padding: '2px 6px', fontSize: '9px', fontWeight: 700,
+                                    borderRadius: '4px', border: `1px solid ${c.border}`,
+                                    backgroundColor: isDark ? '#27272a' : '#e5e7eb',
+                                    color: c.textMain, cursor: 'pointer',
+                                  }}
+                                >
+                                  Clear
+                                </button>
                               </div>
-                              <button
-                                onClick={() => { setInspectedCell(null); setSelectedBattedBallIndex(null); }}
-                                style={{
-                                  padding: '2px 6px', fontSize: '9px', fontWeight: 700,
-                                  borderRadius: '4px', border: `1px solid ${c.border}`,
-                                  backgroundColor: isDark ? '#27272a' : '#e5e7eb',
-                                  color: c.textMain, cursor: 'pointer',
-                                }}
-                              >
-                                Clear
-                              </button>
-                            </div>
+
+                              {/* Multi-PA Selector when player batted multiple times in this inning */}
+                              {inspectedPlaysArray.length > 1 && (
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', gap: '4px',
+                                  backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                  padding: '3px', borderRadius: '6px',
+                                  border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                                }}>
+                                  <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted, paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                                    At-Bat:
+                                  </span>
+                                  {inspectedPlaysArray.map((p, pIdx) => {
+                                    const isCur = pIdx === activeMultiIndex;
+                                    const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : '③';
+                                    const playCode = p?.code || `PA ${pIdx + 1}`;
+                                    const pitchCount = p?.pitches?.length || 0;
+                                    return (
+                                      <button
+                                        key={pIdx}
+                                        onClick={() => {
+                                          setSelectedMultiPaIndex(pIdx);
+                                          setSelectedBattedBallIndex(null);
+                                          setHoveredBattedBallIndex(null);
+                                          setHoveredPitchNum(null);
+                                        }}
+                                        style={{
+                                          flex: 1,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                                          padding: '4px 6px', borderRadius: '5px', cursor: 'pointer',
+                                          border: `1px solid ${isCur ? '#3b82f6' : 'transparent'}`,
+                                          backgroundColor: isCur ? (isDark ? '#1e3a8a' : '#eff6ff') : 'transparent',
+                                          color: isCur ? (isDark ? '#93c5fd' : '#1d4ed8') : c.textMuted,
+                                          fontWeight: isCur ? 800 : 600,
+                                          fontSize: '10px',
+                                          transition: 'all 0.15s ease',
+                                        }}
+                                      >
+                                        <span>{seqSymbol}</span>
+                                        <span>{playCode}</span>
+                                        <span style={{ fontSize: '8.5px', opacity: 0.75 }}>({pitchCount}P)</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             /* Live Balls/Strikes/Outs and Bases Diamond */
                             scorecardData.gameInfo.liveGameState && (
