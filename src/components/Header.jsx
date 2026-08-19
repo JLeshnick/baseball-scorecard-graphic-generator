@@ -337,13 +337,13 @@ export default function Header({
 
         {/* GitHub Link (Visible on Desktop and Mobile) */}
         <a
-          href="https://github.com/JLeshnick/baseball-scorecard-graphic-generator"
+          href="https://github.com/JLeshnick/baseball-scorecard-studio"
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => {
             if (isMobile) {
               e.preventDefault();
-              window.open("https://github.com/JLeshnick/baseball-scorecard-graphic-generator", "_blank");
+              window.open("https://github.com/JLeshnick/baseball-scorecard-studio", "_blank");
             }
           }}
           style={{

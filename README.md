@@ -127,8 +127,8 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 
 ```bash
 # Clone the repository
-git clone https://github.com/JLeshnick/baseball-scorecard-graphic-generator.git
-cd baseball-scorecard-graphic-generator
+git clone https://github.com/JLeshnick/baseball-scorecard-studio.git
+cd baseball-scorecard-studio
 
 # Install dependencies
 npm install

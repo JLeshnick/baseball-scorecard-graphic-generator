@@ -931,37 +931,6 @@ export default function App() {
             }}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
-            onTouchStart={(e) => {
-              if (e.touches.length === 1) {
-                setIsDragging(true);
-                dragStartRef.current = { x: e.touches[0].clientX - panOffset.x, y: e.touches[0].clientY - panOffset.y };
-              } else if (e.touches.length === 2) {
-                setIsDragging(false);
-                const dist = Math.hypot(
-                  e.touches[0].clientX - e.touches[1].clientX,
-                  e.touches[0].clientY - e.touches[1].clientY
-                );
-                pinchStartDistRef.current = dist;
-                pinchStartScaleRef.current = userZoomScale !== null ? userZoomScale : fitScale;
-              }
-            }}
-            onTouchMove={(e) => {
-              if (e.touches.length === 1 && isDragging) {
-                setPanOffset({ x: e.touches[0].clientX - dragStartRef.current.x, y: e.touches[0].clientY - dragStartRef.current.y });
-              } else if (e.touches.length === 2 && pinchStartDistRef.current) {
-                const dist = Math.hypot(
-                  e.touches[0].clientX - e.touches[1].clientX,
-                  e.touches[0].clientY - e.touches[1].clientY
-                );
-                const ratio = dist / pinchStartDistRef.current;
-                const nextScale = Math.min(3.0, Math.max(0.2, (pinchStartScaleRef.current || fitScale) * ratio));
-                setUserZoomScale(Math.round(nextScale * 100) / 100);
-              }
-            }}
-            onTouchEnd={() => {
-              setIsDragging(false);
-              pinchStartDistRef.current = null;
-            }}
             style={{
               flex: 1,
               height: '100%',
