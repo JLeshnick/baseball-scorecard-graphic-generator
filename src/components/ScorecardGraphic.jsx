@@ -574,8 +574,8 @@ const ScorecardGraphic = ({
         }))
       : teamData.pitchers;
 
-    const POS_COL_W = 32;
-    const NAME_COL_W = 126;
+    const POS_COL_W = 20;
+    const NAME_COL_W = 148;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 48;
 
@@ -672,20 +672,19 @@ const ScorecardGraphic = ({
                 const nameLen = nameStr.length;
                 let batterFontSize = '11px';
                 let letterSpacing = '0.01em';
-                if (nameLen > 16) {
-                  batterFontSize = '7.5px';
-                  letterSpacing = '-0.03em';
-                } else if (nameLen > 13) {
+                if (nameLen > 18) {
                   batterFontSize = '8px';
                   letterSpacing = '-0.02em';
-                } else if (nameLen > 10) {
-                  batterFontSize = '9px';
+                } else if (nameLen > 15) {
+                  batterFontSize = '8.5px';
                   letterSpacing = '-0.01em';
-                } else if (nameLen > 7) {
-                  batterFontSize = '10px';
+                } else if (nameLen > 12) {
+                  batterFontSize = '9.5px';
+                } else if (nameLen > 9) {
+                  batterFontSize = '10.5px';
                 }
                 if (t.isHandwritten) {
-                  batterFontSize = nameLen > 14 ? '9px' : nameLen > 10 ? '11px' : '12.5px';
+                  batterFontSize = nameLen > 16 ? '9.5px' : nameLen > 12 ? '11px' : '12.5px';
                 }
 
                 return (
@@ -720,19 +719,19 @@ const ScorecardGraphic = ({
                     <td style={{
                       textAlign: 'center',
                       verticalAlign: 'middle',
-                      padding: '2px 1px',
+                      padding: '2px 0',
                       borderRight: `1px solid ${t.borderLight}`,
                       backgroundColor: t.tableRowAlt,
-                      verticalAlign: 'middle',
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
                         <span style={{
                           display: 'inline-block',
                           fontFamily: t.fontMono,
                           fontWeight: 800,
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: accentColor,
                           letterSpacing: '0.02em',
+                          lineHeight: 1,
                         }}>
                           {b.position}
                         </span>
@@ -994,32 +993,48 @@ const ScorecardGraphic = ({
                         }}
                         title={!isExporting && onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '15px', height: '15px', borderRadius: '50%',
-                              backgroundColor: p.number && p.number.trim() ? color : 'transparent',
-                              color: text,
-                              fontSize: '7px', fontWeight: 800,
-                              fontFamily: t.fontMono, flexShrink: 0,
-                            }}>
-                              {p.number}
-                            </span>
-                            <span style={{
-                              fontFamily: t.fontHeader, fontWeight: 700,
-                              fontSize: p.name && p.name.length > 11 ? '9.5px' : '11px', letterSpacing: '0.02em',
-                              color: t.textPrimary, whiteSpace: 'nowrap',
-                            }}>
-                              {p.name}
-                            </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: '15px', height: '15px', borderRadius: '50%',
+                                backgroundColor: p.number && p.number.trim() ? color : 'transparent',
+                                color: text,
+                                fontSize: '7px', fontWeight: 800,
+                                fontFamily: t.fontMono, flexShrink: 0,
+                              }}>
+                                {p.number}
+                              </span>
+                              <span style={{
+                                fontFamily: t.fontHeader, fontWeight: 700,
+                                fontSize: p.name && p.name.length > 13 ? '9px' : '10.5px', letterSpacing: '0.02em',
+                                color: t.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              }}>
+                                {p.name}
+                              </span>
+                            </div>
+
+                            {/* Total Pitches Pill on Top-Right of cell */}
+                            {!isBlankMode && p.totalPitches != null && (
+                              <span style={{
+                                fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 900,
+                                color: t.textPrimary,
+                                backgroundColor: t.borderLight, padding: '1px 4px', borderRadius: '3px',
+                                display: 'inline-flex', alignItems: 'center', gap: '1px',
+                                flexShrink: 0,
+                              }}>
+                                <span>{p.totalPitches}</span>
+                                <span style={{ opacity: 0.75 }}>P</span>
+                              </span>
+                            )}
                           </div>
-                          {/* Stats summary row: IP H R ER BB K and Total Pitches (P) */}
+
+                          {/* Stats summary row: IP • H • R • ER • BB • K */}
                           <div style={{
                             fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
                             color: t.textMuted, whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.95, flexWrap: 'nowrap',
-                            marginTop: '2px',
+                            display: 'flex', alignItems: 'center', gap: '3px', opacity: 0.95, flexWrap: 'nowrap',
                           }}>
                             <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
                             <span style={{ opacity: 0.35 }}>•</span>
@@ -1032,14 +1047,6 @@ const ScorecardGraphic = ({
                             <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong> BB</span>
                             <span style={{ opacity: 0.35 }}>•</span>
                             <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong> K</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span style={{
-                              color: t.textPrimary, fontWeight: 900,
-                              backgroundColor: t.borderLight, padding: '1px 5px', borderRadius: '3px',
-                              display: 'inline-flex', alignItems: 'center', gap: '2px',
-                            }}>
-                              {isBlankMode ? '—' : (p.totalPitches != null ? <><span>{p.totalPitches}</span><span style={{ opacity: 0.75 }}>P</span></> : '—')}
-                            </span>
                           </div>
                         </div>
                       </td>
