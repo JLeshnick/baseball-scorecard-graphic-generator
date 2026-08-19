@@ -487,7 +487,8 @@ export default function App() {
       setActiveTab('game');
       setInspectedPitcher(null);
       setInspectedCell(prev => {
-        const targetKey = `batter-${batterCtx.teamKey}-${batterCtx.batter?.id ?? batterCtx.batterIndex}`;
+        const batterId = batterCtx.batter?.id ?? (batterCtx.isSub ? `sub-${batterCtx.batterIndex}-${batterCtx.batter?.name}` : batterCtx.batterIndex);
+        const targetKey = `batter-${batterCtx.teamKey}-${batterId}`;
         if (prev?.cellKey === targetKey) {
           return null;
         }

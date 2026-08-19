@@ -558,26 +558,20 @@ export default function Sidebar({
                       </div>
                     </div>
 
-                    {/* Interactive Statcast Breakdown Hint Card */}
-                    {scoringMode === 'mlb' && !inspectedCell && !inspectedPitcher && (
+                    {/* Interactive Statcast Breakdown Hint Card — always visible in MLB mode */}
+                    {scoringMode === 'mlb' && (
                       <div style={{
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '8px',
-                        padding: '9px 11px',
+                        padding: '8px 11px',
                         borderRadius: '8px',
-                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
-                        border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.07)' : 'rgba(59, 130, 246, 0.04)',
+                        border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.13)'}`,
                       }}>
-                        <Sparkles style={{ width: '14px', height: '14px', color: '#3b82f6', flexShrink: 0, marginTop: '1.5px' }} />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: 800, color: c.textHead, letterSpacing: '0.01em' }}>
-                            Interactive Statcast Visualizer
-                          </div>
-                          <div style={{ fontSize: '10px', color: c.textMuted, lineHeight: 1.35 }}>
-                            Click any <strong>at-bat cell</strong>, <strong>batter</strong>, or <strong>pitcher</strong> on the scorecard to inspect pitch sequences, command, and spray charts.
-                          </div>
+                        <Sparkles style={{ width: '13px', height: '13px', color: '#3b82f6', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ fontSize: '9.5px', color: c.textMuted, lineHeight: 1.35 }}>
+                          Click any <strong style={{ color: c.textHead }}>at-bat cell</strong>, <strong style={{ color: c.textHead }}>batter</strong>, or <strong style={{ color: c.textHead }}>pitcher name</strong> to inspect pitch sequences, command, and spray charts.
                         </div>
                       </div>
                     )}
@@ -753,38 +747,6 @@ export default function Sidebar({
                                   </span>
                                 )}
                               </div>
-
-                              {/* Full-game batter: show PA breakdown instead of scope selector */}
-                              {isFullGameBatter && inspectedPlaysArray.length > 0 && (
-                                <div style={{
-                                  display: 'flex', alignItems: 'center', gap: '4px',
-                                  flexWrap: 'wrap',
-                                  padding: '2px 0 1px',
-                                }}>
-                                  {inspectedPlaysArray.map((p, pIdx) => {
-                                    const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : pIdx === 2 ? '③' : pIdx === 3 ? '④' : '⑤';
-                                    const playCode = p?.code || `PA ${pIdx + 1}`;
-                                    const pitchCount = p?.pitches?.length || 0;
-                                    return (
-                                      <span key={pIdx} style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '2px',
-                                        fontSize: '8.5px', fontWeight: 700,
-                                        color: c.textMuted,
-                                        padding: '2px 5px', borderRadius: '4px',
-                                        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                                        border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                                        whiteSpace: 'nowrap',
-                                      }}>
-                                        <span style={{ opacity: 0.7 }}>{seqSymbol}</span>
-                                        <span style={{ fontWeight: 800, color: c.textHead }}>Inn {p.inning}</span>
-                                        <span>·</span>
-                                        <span>{playCode}</span>
-                                        <span style={{ opacity: 0.6, fontSize: '7.5px' }}>({pitchCount}P)</span>
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              )}
 
                               {/* Multi-PA selector only for same-inning multiple PAs (non-full-game) */}
                               {!isFullGameBatter && inspectedPlaysArray.length > 1 && (

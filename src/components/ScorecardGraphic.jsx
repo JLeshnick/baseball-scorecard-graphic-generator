@@ -802,37 +802,47 @@ const ScorecardGraphic = ({
                               </span>
                             </div>
 
-                            {/* Substitutes in this slot */}
-                            {b.substitutes && b.substitutes.map((sub, sIdx) => (
-                              <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px', opacity: 0.9 }}>
-                                <span style={{
-                                  fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono,
-                                  color: accentColor,
-                                }}>
-                                  {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
-                                </span>
-                                <span style={{
-                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                  width: '13px', height: '13px', borderRadius: '50%',
-                                  backgroundColor: t.borderLight,
-                                  color: t.textPrimary,
-                                  fontSize: '6.5px', fontWeight: 800,
-                                  fontFamily: t.fontMono,
-                                  flexShrink: 0,
-                                }}>
-                                  {sub.jerseyNumber || '—'}
-                                </span>
-                                <span style={{
-                                  fontSize: '9px', fontWeight: 700,
-                                  fontFamily: t.fontHeader,
-                                  color: t.textPrimary,
-                                  letterSpacing: '0.01em',
-                                  textTransform: 'uppercase',
-                                }}>
-                                  {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
-                                </span>
-                              </div>
-                            ))}
+                            {/* Substitutes in this slot — clickable for full-game breakdown */}
+                            {b.substitutes && b.substitutes.map((sub, sIdx) => {
+                              const subKey = `batter-${isHome ? 'home' : 'away'}-${sub.id ?? ('sub-' + bIdx + '-' + sIdx)}`;
+                              const isSubActive = activeCellKey === subKey;
+                              return (
+                                <div
+                                  key={sIdx}
+                                  onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: sub, teamName: teamInfo.name, isSub: true }) : undefined}
+                                  className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
+                                  title={!isExporting && onBatterClick ? `Inspect #${sub.jerseyNumber} ${sub.name} Full Game Visuals` : undefined}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px',
+                                    cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
+                                    backgroundColor: isSubActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                                    boxShadow: isSubActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                                    borderRadius: '3px',
+                                    transition: 'all 0.12s ease',
+                                  }}
+                                >
+                                  <span style={{ fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono, color: accentColor }}>
+                                    {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
+                                  </span>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '13px', height: '13px', borderRadius: '50%',
+                                    backgroundColor: isSubActive ? '#3b82f6' : t.borderLight,
+                                    color: isSubActive ? '#ffffff' : t.textPrimary,
+                                    fontSize: '6.5px', fontWeight: 800, fontFamily: t.fontMono, flexShrink: 0,
+                                  }}>
+                                    {sub.jerseyNumber || '—'}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '9px', fontWeight: 700, fontFamily: t.fontHeader,
+                                    color: isSubActive ? (isDark ? '#93c5fd' : '#1d4ed8') : t.textPrimary,
+                                    letterSpacing: '0.01em', textTransform: 'uppercase',
+                                  }}>
+                                    {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </td>
                       );
