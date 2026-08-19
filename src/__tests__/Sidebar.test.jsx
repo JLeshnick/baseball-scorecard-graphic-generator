@@ -88,18 +88,26 @@ describe('Sidebar Component & Visualizer Tests', () => {
     expect(screen.getByText(/Scored Run/i)).toBeDefined();
 
     // Mode Selector buttons
-    const hitTabBtn = screen.getByRole('button', { name: /Hit Spray/i });
+    const hitTabBtn = screen.getByRole('button', { name: /Hit\/Foul Spray/i });
     expect(hitTabBtn).toBeDefined();
+
+    // Perspective Selector buttons
+    const sideAngleBtn = screen.getByRole('button', { name: /Side Flight Arc/i });
+    expect(sideAngleBtn).toBeDefined();
+    fireEvent.click(sideAngleBtn);
+    expect(screen.getByText(/Mound \(54'\)/i)).toBeDefined();
 
     // Switch to Hit Spray
     fireEvent.click(hitTabBtn);
     expect(screen.getByText(/Exit Velocity/i)).toBeDefined();
     expect(screen.getAllByText(/108.9 MPH/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/403 FT/i)).toBeDefined();
+    expect(screen.getAllByText(/403.*FT/i).length).toBeGreaterThan(0);
 
-    // Switch back to Pitches
+    // Switch back to Pitches Catcher Front
     const pitchesTabBtn = screen.getByRole('button', { name: /Pitches/i });
     fireEvent.click(pitchesTabBtn);
+    const frontAngleBtn = screen.getByRole('button', { name: /Catcher Front/i });
+    fireEvent.click(frontAngleBtn);
     expect(screen.getByText(/Strike Zone/i)).toBeDefined();
   });
 });
