@@ -625,6 +625,64 @@ export function processMLBData(data, gamePkOverride) {
           parsed.outAtBaseEvent = outAtBaseEvent || 'OUT';
         }
 
+        // Determine the batter's human-readable fate at the end of the half-inning
+        let fateType = 'retired'; // 'scored', 'lob', 'base_out', 'retired'
+        let fateBadge = '';
+        let fateText = '';
+
+        if (parsed.type === 'hr' || endInningBases >= 4) {
+          fateType = 'scored';
+          fateBadge = 'Scored Run';
+          if (parsed.type === 'hr') {
+            fateText = 'Scored on Home Run';
+          } else if (atBatBases >= 4) {
+            fateText = 'Scored on inside-the-park play';
+          } else {
+            fateText = `Reached ${atBatBases > 0 ? atBatBases + 'B' : 'base'}, advanced and scored run`;
+          }
+        } else if (outAtBase) {
+          fateType = 'base_out';
+          const baseName = outAtBase === 4 ? 'Home' : `${outAtBase}B`;
+          if (outAtBaseEvent === 'CS') {
+            fateBadge = `CS at ${baseName}`;
+            fateText = `Caught stealing at ${baseName}`;
+          } else if (outAtBaseEvent === 'PO') {
+            fateBadge = `Picked Off (${baseName})`;
+            fateText = `Picked off at ${baseName}`;
+          } else {
+            fateBadge = `Out at ${baseName}`;
+            fateText = `Put out on basepaths at ${baseName}`;
+          }
+        } else if (endInningBases >= 1) {
+          fateType = 'lob';
+          const baseName = endInningBases === 3 ? '3rd Base' : endInningBases === 2 ? '2nd Base' : '1st Base';
+          fateBadge = endInningBases >= 2 ? `Left on ${endInningBases}B (RISP)` : `Left on 1B`;
+          if (endInningBases > atBatBases) {
+            fateText = `Reached ${atBatBases > 0 ? atBatBases + 'B' : 'base'}, advanced to ${baseName}, stranded at end of inning`;
+          } else {
+            fateText = `Stranded on ${baseName} at the end of the inning`;
+          }
+        } else {
+          fateType = 'retired';
+          const outNum = play.count?.outs ? `Out #${play.count.outs}` : 'Out recorded';
+          if (parsed.type === 'k') {
+            fateBadge = parsed.isLooking ? 'Struck Out Looking' : 'Struck Out';
+            fateText = parsed.isLooking ? `Struck out looking (${outNum})` : `Struck out swinging (${outNum})`;
+          } else if (parsed.code?.includes('DP')) {
+            fateBadge = 'Double Play';
+            fateText = `Hit into double play (${outNum})`;
+          } else {
+            fateBadge = 'Retired';
+            fateText = `Retired on ${parsed.code || 'play'} (${outNum})`;
+          }
+        }
+
+        parsed.inningFate = {
+          type: fateType,
+          badge: fateBadge,
+          text: fateText,
+        };
+
         batterInningPlays[batterId][inn].push(parsed);
       });
     });

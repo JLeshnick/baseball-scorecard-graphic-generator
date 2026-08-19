@@ -723,6 +723,85 @@ export default function Sidebar({
                                   </div>
                                 </div>
                               )}
+
+                              {/* Inning Fate (what happened to the batter by the end of the inning) */}
+                              {inspectedPlay?.inningFate && (
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  marginTop: '1px',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: isDark
+                                    ? (inspectedPlay.inningFate.type === 'scored'
+                                        ? 'rgba(16, 185, 129, 0.12)'
+                                        : inspectedPlay.inningFate.type === 'base_out'
+                                        ? 'rgba(239, 68, 68, 0.12)'
+                                        : inspectedPlay.inningFate.type === 'lob'
+                                        ? 'rgba(245, 158, 11, 0.12)'
+                                        : 'rgba(255, 255, 255, 0.04)')
+                                    : (inspectedPlay.inningFate.type === 'scored'
+                                        ? 'rgba(16, 185, 129, 0.08)'
+                                        : inspectedPlay.inningFate.type === 'base_out'
+                                        ? 'rgba(239, 68, 68, 0.08)'
+                                        : inspectedPlay.inningFate.type === 'lob'
+                                        ? 'rgba(245, 158, 11, 0.08)'
+                                        : 'rgba(0, 0, 0, 0.03)'),
+                                  border: `1px solid ${
+                                    inspectedPlay.inningFate.type === 'scored'
+                                      ? (isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.25)')
+                                      : inspectedPlay.inningFate.type === 'base_out'
+                                      ? (isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.25)')
+                                      : inspectedPlay.inningFate.type === 'lob'
+                                      ? (isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.25)')
+                                      : (isDark ? '#27272a' : '#e5e7eb')
+                                  }`,
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{
+                                      fontSize: '8.5px',
+                                      fontWeight: 800,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.04em',
+                                      color: inspectedPlay.inningFate.type === 'scored'
+                                        ? '#10b981'
+                                        : inspectedPlay.inningFate.type === 'base_out'
+                                        ? '#ef4444'
+                                        : inspectedPlay.inningFate.type === 'lob'
+                                        ? '#f59e0b'
+                                        : c.textMuted,
+                                    }}>
+                                      Inning Fate
+                                    </span>
+                                    <span style={{
+                                      fontSize: '8px',
+                                      fontWeight: 800,
+                                      padding: '1px 4px',
+                                      borderRadius: '3px',
+                                      backgroundColor: inspectedPlay.inningFate.type === 'scored'
+                                        ? 'rgba(16, 185, 129, 0.2)'
+                                        : inspectedPlay.inningFate.type === 'base_out'
+                                        ? 'rgba(239, 68, 68, 0.2)'
+                                        : inspectedPlay.inningFate.type === 'lob'
+                                        ? 'rgba(245, 158, 11, 0.2)'
+                                        : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+                                      color: inspectedPlay.inningFate.type === 'scored'
+                                        ? '#10b981'
+                                        : inspectedPlay.inningFate.type === 'base_out'
+                                        ? '#ef4444'
+                                        : inspectedPlay.inningFate.type === 'lob'
+                                        ? '#f59e0b'
+                                        : c.textHead,
+                                    }}>
+                                      {inspectedPlay.inningFate.badge}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '9.5px', fontWeight: 600, color: c.textHead, lineHeight: 1.35 }}>
+                                    {inspectedPlay.inningFate.text}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
