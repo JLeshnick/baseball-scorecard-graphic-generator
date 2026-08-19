@@ -846,14 +846,6 @@ export default function Sidebar({
                                   {targetBattedBalls.length > 0 ? `${targetBattedBalls.length} In Play (${totalHitsCount}H · ${totalFoulsHitCount}F${totalOutsHitCount > 0 ? ` · ${totalOutsHitCount}O` : ''})` : '0 In Play'}
                                 </span>
                               </div>
-                              {inspectedPitcher.pitcher && (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontWeight: 700, color: c.textHead }}>Pitching Line:</span>
-                                  <span style={{ fontWeight: 600, color: c.textMain }}>
-                                    {inspectedPitcher.pitcher.ip || '0.0'} IP · {inspectedPitcher.pitcher.strikeouts?.length || 0} K · {inspectedPitcher.pitcher.walks ?? 0} BB · {inspectedPitcher.pitcher.earnedRuns ?? 0} ER
-                                  </span>
-                                </div>
-                              )}
                             </div>
                           ) : (batterName || pitcherName || playDesc) && (
                             <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
@@ -1124,33 +1116,6 @@ export default function Sidebar({
 
                               return (
                                 <>
-                                  {hoveredPitchIdx !== null && (() => {
-                                    const hp = targetPitches?.[hoveredPitchIdx];
-                                    if (!hp) return null;
-                                    return (
-                                      <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        fontSize: '9.5px',
-                                        fontWeight: 800,
-                                        color: c.textHead,
-                                        height: '18px',
-                                        minHeight: '18px',
-                                        overflow: 'hidden',
-                                        whiteSpace: 'nowrap',
-                                        textOverflow: 'ellipsis',
-                                      }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
-                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                                        {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
-                                        <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
-                                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                                        {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '8.5px' }}>{hp.breakVertical}" drop</span>}
-                                      </div>
-                                    );
-                                  })()}
-
                                   {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
                                   {targetPitches && targetPitches.length > 1 && (
                                     <div style={{
@@ -1510,6 +1475,40 @@ export default function Sidebar({
                                       </div>
                                     )}
 
+                                    {/* In-Canvas Floating Pitch Tooltip on Hover */}
+                                    {hoveredPitchIdx !== null && (() => {
+                                      const hp = targetPitches?.[hoveredPitchIdx];
+                                      if (!hp) return null;
+                                      return (
+                                        <div style={{
+                                          position: 'absolute',
+                                          top: '4px',
+                                          left: '6px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '2px 5px',
+                                          borderRadius: '4px',
+                                          backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)',
+                                          backdropFilter: 'blur(3px)',
+                                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+                                          fontSize: '8.5px',
+                                          fontWeight: 800,
+                                          color: c.textHead,
+                                          pointerEvents: 'none',
+                                          zIndex: 15,
+                                          boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                                        }}>
+                                          <span style={{ width: '5.5px', height: '5.5px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                                          {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
+                                          <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
+                                          <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                                          {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '7.5px' }}>{hp.breakVertical}" drop</span>}
+                                        </div>
+                                      );
+                                    })()}
+
                                     {/* In-Canvas Floating Pitch Legend */}
                                     <div style={{
                                       position: 'absolute',
@@ -1608,30 +1607,6 @@ export default function Sidebar({
                             {visualizerTab === 'hit' && (
                               (targetBattedBalls.length > 0 || targetHitData) ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  {/* Hit Spray Header Bar: Shows Enunciated Batted Ball Details on Hover */}
-                                  {hoveredBattedBallIndex !== null && activeHit && (
-                                    <div style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      fontSize: '9.5px',
-                                      fontWeight: 800,
-                                      color: c.textHead,
-                                      height: '18px',
-                                      minHeight: '18px',
-                                      overflow: 'hidden',
-                                      whiteSpace: 'nowrap',
-                                      textOverflow: 'ellipsis',
-                                    }}>
-                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
-                                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
-                                      {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
-                                      {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
-                                      <span style={{ color: c.textHead, textTransform: 'capitalize' }}>{activeHit.trajectory ? activeHit.trajectory.replace('_', ' ') : (activeHit.isFoul ? 'Foul' : 'In Play')}</span>
-                                      <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul Ball' : (inspectedPlay?.code || 'In Play')})</span>
-                                    </div>
-                                  )}
-
                                   {/* Field Graphic: Field Spray Top vs Side Elevation Profile */}
                                   <div style={{
                                     position: 'relative',
@@ -1892,6 +1867,36 @@ export default function Sidebar({
                                           });
                                         })()}
                                       </svg>
+                                    )}
+
+                                    {/* In-Canvas Floating Hit Tooltip on Hover */}
+                                    {hoveredBattedBallIndex !== null && activeHit && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        left: '6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 5px',
+                                        borderRadius: '4px',
+                                        backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)',
+                                        backdropFilter: 'blur(3px)',
+                                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+                                        fontSize: '8.5px',
+                                        fontWeight: 800,
+                                        color: c.textHead,
+                                        pointerEvents: 'none',
+                                        zIndex: 15,
+                                        boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                                      }}>
+                                        <span style={{ width: '5.5px', height: '5.5px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
+                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
+                                        {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
+                                        {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
+                                        <span style={{ color: c.textHead, textTransform: 'capitalize' }}>{activeHit.trajectory ? activeHit.trajectory.replace('_', ' ') : (activeHit.isFoul ? 'Foul' : 'In Play')}</span>
+                                        <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul Ball' : (inspectedPlay?.code || 'In Play')})</span>
+                                      </div>
                                     )}
 
                                     {/* In-Canvas Floating Hit Legend */}

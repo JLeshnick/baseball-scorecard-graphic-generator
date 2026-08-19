@@ -407,30 +407,6 @@ export default function AtBatInspectionModal({
             {/* TAB 1: Strike Zone Visualizer */}
             {visualizerTab === 'strikezone' && (
               <>
-                {/* Strike Zone Visualizer Header Info */}
-                {hoveredPitchIdx !== null && (() => {
-                  const hp = targetPitches[hoveredPitchIdx];
-                  if (!hp) return null;
-                  return (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '10.5px',
-                      fontWeight: 800,
-                      color: isDark ? '#f4f4f5' : '#0f172a',
-                      height: '22px',
-                      overflow: 'hidden',
-                    }}>
-                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                      {hp.speed && <span>{hp.speed} MPH</span>}
-                      <span>{hp.pitchTypeName || hp.pitchType}</span>
-                      <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                    </div>
-                  );
-                })()}
-
                 {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
                 {(() => {
                   const matchesPitchFilter = (p, filter) => {
@@ -775,6 +751,39 @@ export default function AtBatInspectionModal({
                     </svg>
                   )}
 
+                  {/* In-Canvas Floating Pitch Tooltip on Hover */}
+                  {hoveredPitchIdx !== null && (() => {
+                    const hp = targetPitches[hoveredPitchIdx];
+                    if (!hp) return null;
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '3px 7px',
+                        borderRadius: '5px',
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)',
+                        backdropFilter: 'blur(3px)',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+                        fontSize: '9.5px',
+                        fontWeight: 800,
+                        color: isDark ? '#f4f4f5' : '#0f172a',
+                        pointerEvents: 'none',
+                        zIndex: 15,
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                        {hp.speed && <span>{hp.speed} MPH</span>}
+                        <span>{hp.pitchTypeName || hp.pitchType}</span>
+                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                      </div>
+                    );
+                  })()}
+
                   {/* In-Canvas Floating Pitch Legend */}
                   <div style={{
                     position: 'absolute',
@@ -866,31 +875,6 @@ export default function AtBatInspectionModal({
             {/* TAB 2: Hit & Foul Spray Visualizer */}
             {visualizerTab === 'hit' && (
               <>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  height: '22px',
-                  overflow: 'hidden',
-                }}>
-                  {hoveredBattedBallIndex !== null && activeHit && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '10.5px',
-                      fontWeight: 800,
-                      color: isDark ? '#f4f4f5' : '#0f172a',
-                    }}>
-                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
-                      {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
-                      {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
-                      <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul' : (inspectedPlay?.code || 'In Play')})</span>
-                    </div>
-                  )}
-                </div>
-
                 {/* Field Visualizer Canvas */}
                 <div style={{
                   position: 'relative',
@@ -1060,6 +1044,35 @@ export default function AtBatInspectionModal({
                         });
                       })()}
                     </svg>
+                  )}
+
+                  {/* In-Canvas Floating Hit Tooltip on Hover */}
+                  {hoveredBattedBallIndex !== null && activeHit && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      left: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 7px',
+                      borderRadius: '5px',
+                      backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)',
+                      backdropFilter: 'blur(3px)',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+                      fontSize: '9.5px',
+                      fontWeight: 800,
+                      color: isDark ? '#f4f4f5' : '#0f172a',
+                      pointerEvents: 'none',
+                      zIndex: 15,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444'), flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: activeHit.isFoul ? '#f59e0b' : (activeHit.isBallInPlay ? '#10b981' : '#ef4444') }}>#{activeHit.pitchNumber}</span>
+                      {activeHit.launchSpeed && <span style={{ color: '#3b82f6' }}>{activeHit.launchSpeed} MPH</span>}
+                      {activeHit.totalDistance && <span style={{ color: '#10b981' }}>({activeHit.totalDistance} FT)</span>}
+                      <span style={{ color: c.textMuted }}>({activeHit.isFoul ? 'Foul' : (inspectedPlay?.code || 'In Play')})</span>
+                    </div>
                   )}
 
                   {/* In-Canvas Floating Hit Legend */}
