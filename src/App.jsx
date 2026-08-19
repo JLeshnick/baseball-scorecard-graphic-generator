@@ -11,6 +11,7 @@ import PlayEntryModal from './components/PlayEntryModal';
 import RosterEditModal from './components/RosterEditModal';
 import SavedGamesModal from './components/SavedGamesModal';
 import PitcherEditModal from './components/PitcherEditModal';
+import ScoringGuide from './components/ScoringGuide';
 import {
   createBlankScorecardData,
   createScorecardFromMlbGame,
@@ -101,6 +102,10 @@ export default function App() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportQuality, setExportQuality] = useState(4);
   const [gameSelectOpen, setGameSelectOpen] = useState(false);
+
+  // Scoring Guide States
+  const [guidePinned, setGuidePinned] = useState(false);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   // Live Scorebook State
   const [scoringMode, setScoringMode] = useState('mlb');
@@ -826,6 +831,12 @@ export default function App() {
         activeScale={activeScale}
         handleGlobalReset={handleGlobalReset}
         setAppTheme={setAppTheme}
+        onOpenGuide={() => {
+          if (isMobile) setGuideModalOpen(true);
+          else setGuidePinned(p => !p);
+        }}
+        guidePinned={guidePinned}
+        onTogglePinGuide={() => setGuidePinned(p => !p)}
       />
 
       {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
@@ -883,6 +894,8 @@ export default function App() {
           autoCalculateStats={autoCalculateStats}
           setAutoCalculateStats={setAutoCalculateStats}
           handleGlobalReset={handleGlobalReset}
+          guidePinned={guidePinned}
+          onTogglePinGuide={() => setGuidePinned(p => !p)}
         />
 
         {/* ── CANVAS AREA ───────────────────────────────────────────────── */}
@@ -1047,6 +1060,16 @@ export default function App() {
           </main>
         )}
 
+        {/* Pinned Scoring Guide (Desktop) */}
+        {!isMobile && guidePinned && (
+          <ScoringGuide
+            isPinned={true}
+            onTogglePin={() => setGuidePinned(false)}
+            onClose={() => setGuidePinned(false)}
+            isDark={isDark}
+          />
+        )}
+
       </div>
 
       {/* ── MODALS ──────────────────────────────────────────────────────── */}
@@ -1096,6 +1119,16 @@ export default function App() {
           setTimeout(() => setToastMessage(''), 3500);
         }}
       />
+
+      {/* Scoring Guide Modal */}
+      {guideModalOpen && (
+        <ScoringGuide
+          isModal={true}
+          onClose={() => setGuideModalOpen(false)}
+          onTogglePin={!isMobile ? () => { setGuidePinned(true); setGuideModalOpen(false); } : null}
+          isDark={isDark}
+        />
+      )}
 
       {/* TOAST NOTIFICATION */}
       {toastMessage && (

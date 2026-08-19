@@ -474,12 +474,26 @@ export function processMLBData(data, gamePkOverride) {
         // Base reached from own at-bat
         let atBatBases = parsed.bases || 0;
         if (parsed.type === 'hr') atBatBases = 4;
+        let outAtBase = null;
+        let outAtBaseEvent = null;
 
         if (play.runners) {
           play.runners.forEach(r => {
-            if (r.details?.runner?.id === batterId && !r.movement?.isOut) {
-              const reached = baseToNum(r.movement?.end);
-              if (reached > atBatBases) atBatBases = reached;
+            if (r.details?.runner?.id === batterId) {
+              if (!r.movement?.isOut) {
+                const reached = baseToNum(r.movement?.end);
+                if (reached > atBatBases) atBatBases = reached;
+              } else {
+                const ob = baseToNum(r.movement?.outBase || r.movement?.end);
+                // Only flag out on own at-bat if thrown out attempting 2B, 3B, or Home (e.g. stretching a hit)
+                if (ob >= 2) {
+                  outAtBase = ob;
+                  const descLower = (play.result?.description || '').toLowerCase();
+                  if (descLower.includes('caught stealing') || r.details?.event === 'Caught Stealing') outAtBaseEvent = 'CS';
+                  else if (descLower.includes('picked off') || r.details?.event === 'Pickoff') outAtBaseEvent = 'PO';
+                  else outAtBaseEvent = 'OUT';
+                }
+              }
             }
           });
         }
@@ -495,6 +509,15 @@ export function processMLBData(data, gamePkOverride) {
                   if (!r.movement?.isOut) {
                     const reached = baseToNum(r.movement?.end);
                     if (reached > endInningBases) endInningBases = reached;
+                  } else {
+                    const ob = baseToNum(r.movement?.outBase || r.movement?.end || r.movement?.start) || 1;
+                    if (ob > 0) {
+                      outAtBase = ob;
+                      const subDesc = (subPlay.result?.description || '').toLowerCase();
+                      if (subDesc.includes('caught stealing') || r.details?.event === 'Caught Stealing') outAtBaseEvent = 'CS';
+                      else if (subDesc.includes('picked off') || r.details?.event === 'Pickoff') outAtBaseEvent = 'PO';
+                      else outAtBaseEvent = 'OUT';
+                    }
                   }
                 }
               });
@@ -504,6 +527,10 @@ export function processMLBData(data, gamePkOverride) {
 
         parsed.atBatBases = atBatBases;
         parsed.bases = Math.max(parsed.bases || 0, endInningBases);
+        if (outAtBase && (atBatBases >= 1 || outAtBase >= 2)) {
+          parsed.outAtBase = outAtBase;
+          parsed.outAtBaseEvent = outAtBaseEvent || 'OUT';
+        }
 
         batterInningPlays[batterId][inn].push(parsed);
       });

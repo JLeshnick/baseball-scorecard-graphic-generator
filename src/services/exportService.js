@@ -36,6 +36,10 @@ export async function captureGraphic(graphicEl, orientation = 'portrait', totalI
   clone.style.mozOsxFontSmoothing = 'grayscale';
   clone.style.textRendering = 'optimizeLegibility';
 
+  // Strip interactive rows, buttons, and no-export markers
+  const noExportElements = clone.querySelectorAll('.interactive-add-pitcher-row, .no-export, [data-interactive-only]');
+  noExportElements.forEach(el => el.remove());
+
   // Strip any interactive selection highlights, focus outlines, and live indicator dots from the clone
   const highlightedElements = clone.querySelectorAll('td, th, div, span, tr');
   highlightedElements.forEach(elem => {
@@ -45,7 +49,7 @@ export async function captureGraphic(graphicEl, orientation = 'portrait', totalI
     if (elem.style.backgroundColor && (elem.style.backgroundColor.includes('59, 130, 246') || elem.style.backgroundColor.includes('239, 68, 68'))) {
       elem.style.backgroundColor = 'transparent';
     }
-    elem.classList.remove('live-active-atbat-cell', 'interactive-diamond-cell', 'interactive-roster-cell');
+    elem.classList.remove('live-active-atbat-cell', 'interactive-diamond-cell', 'interactive-roster-cell', 'interactive-add-pitcher-row');
     elem.style.outline = 'none';
     elem.style.animation = 'none';
   });

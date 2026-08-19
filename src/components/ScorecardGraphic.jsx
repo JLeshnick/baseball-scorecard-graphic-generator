@@ -246,6 +246,29 @@ const ScorecardGraphic = ({
       </span>
     ) : null;
 
+    const baseOutBadge = play.outAtBase ? (
+      <span
+        style={{
+          position: 'absolute',
+          top: '2px',
+          right: '2px',
+          fontSize: '6.5px',
+          fontWeight: 900,
+          fontFamily: t.fontMono,
+          lineHeight: 1,
+          padding: '1px 3px',
+          borderRadius: '2px',
+          backgroundColor: '#ef4444',
+          color: '#ffffff',
+          zIndex: 3,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
+        }}
+        title={`Out on basepaths: ${play.outAtBaseEvent || 'OUT'} at ${play.outAtBase === 4 ? 'HOME' : play.outAtBase + 'B'}`}
+      >
+        {play.outAtBaseEvent === 'CS' ? 'CS' : play.outAtBaseEvent === 'PO' ? 'PO' : '✕'} {play.outAtBase === 4 ? 'HP' : `${play.outAtBase}B`}
+      </span>
+    ) : null;
+
     if (type === 'hit' || type === 'hr' || type === 'walk' || (bases && bases >= 1) || (atBatBases && atBatBases >= 1)) {
       const isHR = type === 'hr';
 
@@ -269,11 +292,14 @@ const ScorecardGraphic = ({
       const b3Solid = isHR || (showEndInningBases && endInningReach >= 3 && 3 > atBatReach);
       const b4Solid = isHR || (showEndInningBases && endInningReach >= 4 && 4 > atBatReach);
 
+      const outAtBase = play.outAtBase;
+
       return (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
           {renderEraserOverlay(cellKey)}
           {extraEventBadge}
           {subLetterBadge}
+          {baseOutBadge}
           <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
             <polygon
               points="20,37 37,20 20,3 3,20"
@@ -293,6 +319,29 @@ const ScorecardGraphic = ({
 
             {b4Solid && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b4Dash && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
+
+            {/* Out on Basepaths Cross Marks */}
+            {outAtBase === 1 && (
+              <text x="37" y="24" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="900">✕</text>
+            )}
+            {outAtBase === 2 && (
+              <>
+                <line x1="37" y1="20" x2="28.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="28.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+              </>
+            )}
+            {outAtBase === 3 && (
+              <>
+                <line x1="20" y1="3" x2="11.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="11.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+              </>
+            )}
+            {outAtBase === 4 && (
+              <>
+                <line x1="3" y1="20" x2="11.5" y2="28.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="11.5" y="31" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+              </>
+            )}
           </svg>
           <span style={{
             position: 'absolute',
@@ -326,6 +375,7 @@ const ScorecardGraphic = ({
           {renderEraserOverlay(cellKey)}
           {extraEventBadge}
           {subLetterBadge}
+          {baseOutBadge}
           <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
             <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
           </svg>
@@ -352,6 +402,7 @@ const ScorecardGraphic = ({
         {renderEraserOverlay(cellKey)}
         {extraEventBadge}
         {subLetterBadge}
+        {baseOutBadge}
         <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
           <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
         </svg>
@@ -384,16 +435,39 @@ const ScorecardGraphic = ({
       return (
         <div style={{
           display: 'flex', width: '100%', height: '100%',
-          alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden'
+          alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden',
+          position: 'relative',
         }}>
+          {/* Multi-PA badge */}
+          <span style={{
+            position: 'absolute', top: '1px', left: '50%', transform: 'translateX(-50%)',
+            fontSize: '5.5px', fontWeight: 900, fontFamily: t.fontMono,
+            color: t.textMuted, opacity: 0.85, pointerEvents: 'none', zIndex: 4,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
+            backgroundColor: t.tableHeaderBg, padding: '0 3px', borderRadius: '2px',
+            border: `0.5px solid ${t.borderLight}`,
+          }}>
+            {playOrArray.length}x PA
+          </span>
+
           {playOrArray.map((p, idx) => (
             <div
               key={idx}
               style={{
                 flex: 1, height: '100%', minWidth: 0,
-                borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderLight}` : 'none'
+                borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderStrong}` : 'none',
+                position: 'relative',
               }}
             >
+              {/* Sequence number */}
+              <span style={{
+                position: 'absolute', top: '1px', left: '1.5px',
+                fontSize: '6px', fontWeight: 900, fontFamily: t.fontMono,
+                color: isHome ? t.homeColor : t.awayColor,
+                opacity: 0.9, zIndex: 4, pointerEvents: 'none',
+              }}>
+                {idx === 0 ? '①' : idx === 1 ? '②' : '③'}
+              </span>
               {renderSinglePlayCell(p, isHome, `${cellKey}_multi_${idx}`)}
             </div>
           ))}
@@ -1013,7 +1087,7 @@ const ScorecardGraphic = ({
 
                 {/* Interactive Add Pitcher button in manual mode */}
                 {!isExporting && isInteractive && onPitcherClick && (
-                  <tr style={{ backgroundColor: t.tableRowAlt, borderTop: `1px dashed ${t.borderLight}` }}>
+                  <tr className="interactive-add-pitcher-row no-export" data-interactive-only="true" style={{ backgroundColor: t.tableRowAlt, borderTop: `1px dashed ${t.borderLight}` }}>
                     <td
                       colSpan={innings.length + 1}
                       onClick={() => onPitcherClick({

@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  BookOpen,
 } from 'lucide-react';
 
 const GithubIcon = ({ style }) => (
@@ -43,6 +44,9 @@ export default function Header({
   activeScale,
   handleGlobalReset,
   setAppTheme,
+  onOpenGuide,
+  guidePinned,
+  onTogglePinGuide,
 }) {
   return (
     <header
@@ -292,6 +296,28 @@ export default function Header({
             Reset
           </button>
         )}
+
+        {/* Scoring Guide Button */}
+        <button
+          onClick={onOpenGuide}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: isMobile ? '0 8px' : '0 10px',
+            height: isMobile ? '32px' : '34px',
+            borderRadius: '6px',
+            border: `1px solid ${guidePinned ? (isDark ? '#6366f1' : '#4f46e5') : c.border}`,
+            backgroundColor: guidePinned ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(79,70,229,0.1)') : c.bgCard,
+            color: guidePinned ? (isDark ? '#818cf8' : '#4f46e5') : c.textMuted,
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title="Scoring Notation Guide & Legend"
+          onMouseEnter={e => { if (!guidePinned) e.currentTarget.style.color = c.textHead; }}
+          onMouseLeave={e => { if (!guidePinned) e.currentTarget.style.color = c.textMuted; }}
+        >
+          <BookOpen style={{ width: '13px', height: '13px' }} />
+          {!isMobile && <span>Guide</span>}
+        </button>
 
         {/* Light / Dark Mode Toggle */}
         <button

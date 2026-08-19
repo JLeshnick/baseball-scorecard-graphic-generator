@@ -18,6 +18,8 @@ import {
 import { POSTER_THEMES } from '../utils/constants';
 import { useAppStore } from '../store/useAppStore';
 
+import ScoringGuide from './ScoringGuide';
+
 export default function Sidebar({
   isMobile,
   mobileView,
@@ -64,6 +66,8 @@ export default function Sidebar({
   setAutoCalculateStats,
   // Reset handler
   handleGlobalReset,
+  guidePinned,
+  onTogglePinGuide,
 }) {
   // Read and write directly to Zustand store for all display & custom text options!
   const theme = useAppStore(s => s.theme);
@@ -129,7 +133,7 @@ export default function Sidebar({
       <div style={{
         display: 'flex',
         borderBottom: `1px solid ${c.border}`,
-        padding: '0 8px',
+        padding: '0 4px',
         gap: '0',
       }}>
         {[
@@ -137,6 +141,7 @@ export default function Sidebar({
           { id: 'style', label: 'Theme' },
           { id: 'data', label: 'Data' },
           { id: 'text', label: 'Text' },
+          { id: 'guide', label: 'Guide' },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle(tab.id)}>
             {tab.label}
@@ -1467,6 +1472,17 @@ export default function Sidebar({
               <RotateCcw style={{ width: '12px', height: '12px', color: c.accent }} />
               Restore Default Game Text
             </button>
+          </div>
+        )}
+
+        {/* ── GUIDE TAB ──────────────────────────────────────────────── */}
+        {activeTab === 'guide' && (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '400px' }}>
+            <ScoringGuide
+              isDark={isDark}
+              isPinned={guidePinned}
+              onTogglePin={!isMobile ? onTogglePinGuide : null}
+            />
           </div>
         )}
 
