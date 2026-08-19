@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: '/baseball-scorecard-graphic-generator/',
+  base: './',
   server: {
     host: true,
     port: 3000,
