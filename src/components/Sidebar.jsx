@@ -636,8 +636,8 @@ export default function Sidebar({
                           </div>
                         )}
 
-                        {/* Live Strike Zone & Pitches for Current At-Bat */}
-                        {scorecardData.gameInfo.liveGameState.pitches && scorecardData.gameInfo.liveGameState.pitches.length > 0 && (
+                        {/* Live Strike Zone & Pitches for Current At-Bat (Always visible during active game) */}
+                        {scorecardData.gameInfo.liveGameState && (
                           <div style={{
                             display: 'flex', flexDirection: 'column', gap: '6px',
                             borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`,
@@ -645,7 +645,7 @@ export default function Sidebar({
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: c.textMuted }}>
-                                Strike Zone & Pitches ({scorecardData.gameInfo.liveGameState.pitches.length})
+                                Strike Zone {scorecardData.gameInfo.liveGameState.pitches?.length ? `(${scorecardData.gameInfo.liveGameState.pitches.length} Pitches)` : '(0 Pitches)'}
                               </span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700 }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
@@ -667,7 +667,7 @@ export default function Sidebar({
                             <div style={{
                               position: 'relative',
                               width: '100%',
-                              height: '115px',
+                              height: '118px',
                               backgroundColor: isDark ? '#050507' : '#f4f3f0',
                               borderRadius: '6px',
                               border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
@@ -679,33 +679,33 @@ export default function Sidebar({
                               <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                                 {/* Strike Zone Box (Outer & 9-zone Grid) */}
                                 <rect
-                                  x="26" y="20" width="48" height="58"
+                                  x="26" y="14" width="48" height="58"
                                   fill={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
                                   stroke={isDark ? '#52525b' : '#a1a1aa'}
                                   strokeWidth="1.5"
                                   rx="2"
                                 />
                                 {/* Grid vertical lines */}
-                                <line x1="42" y1="20" x2="42" y2="78" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                <line x1="58" y1="20" x2="58" y2="78" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
                                 {/* Grid horizontal lines */}
-                                <line x1="26" y1="39.3" x2="74" y2="39.3" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                <line x1="26" y1="58.6" x2="74" y2="58.6" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
 
-                                {/* Home Plate (Bottom indicator) */}
+                                {/* Home Plate (Bottom indicator - generous 10px gap below strike zone box: y=82 to y=96) */}
                                 <polygon
-                                  points="38,84 62,84 62,88 50,94 38,88"
+                                  points="26,82 74,82 74,87 50,96 26,87"
                                   fill={isDark ? '#27272a' : '#d1d5db'}
                                   stroke={isDark ? '#3f3f46' : '#9ca3af'}
                                   strokeWidth="0.8"
                                 />
 
                                 {/* Plotted Pitch Circles */}
-                                {scorecardData.gameInfo.liveGameState.pitches.map((p, idx) => (
+                                {(scorecardData.gameInfo.liveGameState.pitches || []).map((p, idx) => (
                                   <g key={idx}>
                                     <circle
                                       cx={p.normX}
-                                      cy={p.normY}
+                                      cy={Math.min(70, Math.max(16, p.normY - 4))}
                                       r="5.5"
                                       fill={p.color}
                                       stroke="#ffffff"
@@ -716,7 +716,7 @@ export default function Sidebar({
                                     </circle>
                                     <text
                                       x={p.normX}
-                                      y={p.normY + 2.5}
+                                      y={Math.min(70, Math.max(16, p.normY - 4)) + 2.5}
                                       textAnchor="middle"
                                       fill="#ffffff"
                                       fontSize="6.5"
@@ -732,40 +732,46 @@ export default function Sidebar({
                             </div>
 
                             {/* Pitch Sequence Chips */}
-                            <div style={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: '3px',
-                              maxHeight: '52px',
-                              overflowY: 'auto',
-                            }}>
-                              {scorecardData.gameInfo.liveGameState.pitches.map((p, idx) => (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    padding: '2px 5px',
-                                    borderRadius: '4px',
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-                                    border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                                    fontSize: '9px',
-                                    fontWeight: 700,
-                                    color: c.textHead,
-                                  }}
-                                  title={`${p.speed ? p.speed + ' MPH ' : ''}${p.callDesc}`}
-                                >
-                                  <span style={{
-                                    width: '5px', height: '5px', borderRadius: '50%',
-                                    backgroundColor: p.color, display: 'inline-block',
-                                  }} />
-                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", color: p.color }}>#{p.pitchNumber}</span>
-                                  {p.speed && <span style={{ color: c.textMuted }}>{p.speed}</span>}
-                                  <span style={{ fontSize: '8.5px', color: c.textMain }}>{p.pitchType}</span>
-                                </div>
-                              ))}
-                            </div>
+                            {scorecardData.gameInfo.liveGameState.pitches && scorecardData.gameInfo.liveGameState.pitches.length > 0 ? (
+                              <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '3px',
+                                maxHeight: '52px',
+                                overflowY: 'auto',
+                              }}>
+                                {scorecardData.gameInfo.liveGameState.pitches.map((p, idx) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      padding: '2px 5px',
+                                      borderRadius: '4px',
+                                      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
+                                      border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                                      fontSize: '9px',
+                                      fontWeight: 700,
+                                      color: c.textHead,
+                                    }}
+                                    title={`${p.speed ? p.speed + ' MPH ' : ''}${p.callDesc}`}
+                                  >
+                                    <span style={{
+                                      width: '5px', height: '5px', borderRadius: '50%',
+                                      backgroundColor: p.color, display: 'inline-block',
+                                    }} />
+                                    <span style={{ fontFamily: "'JetBrains Mono', monospace", color: p.color }}>#{p.pitchNumber}</span>
+                                    {p.speed && <span style={{ color: c.textMuted }}>{p.speed}</span>}
+                                    <span style={{ fontSize: '8.5px', color: c.textMain }}>{p.pitchType}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
+                                Awaiting pitch sequence...
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

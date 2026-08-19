@@ -75,10 +75,10 @@ export default function Header({
             fontWeight: 800, fontSize: isMobile ? '12.5px' : '14px', letterSpacing: '-0.02em',
             color: c.textHead, lineHeight: 1.1, whiteSpace: 'nowrap',
           }}>
-            MLB Scorecard Studio
+            Baseball Scorecard Studio
           </div>
           <div style={{ fontSize: isMobile ? '8.5px' : '10px', color: c.textMuted, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
-            Scorecard Graphic Art Generator
+            Live Scorebook & Poster Studio
           </div>
         </div>
       </div>
