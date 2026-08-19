@@ -255,4 +255,63 @@ describe('Sidebar Component & Visualizer Tests', () => {
     // Batted ball details allowed by pitcher
     expect(screen.getByText(/Exit Velocity/i)).toBeDefined();
   });
+
+  it('correctly isolates plays by pitcher when multiple pitchers pitched in the same inning', async () => {
+    const { getPitcherPlays } = await import('../components/PitcherInspectionModal');
+
+    const multiPitcherScorecard = {
+      awayData: {
+        pitchers: [
+          { id: 101, name: 'START', fullName: 'Starter Pitcher', pitchesByInning: { 5: { pitches: 12 } } },
+          { id: 102, name: 'RELIEF', fullName: 'Relief Pitcher', pitchesByInning: { 5: { pitches: 8 } } },
+        ]
+      },
+      homeData: {
+        batters: [
+          {
+            name: 'BATTER1',
+            fullName: 'First Batter',
+            plays: {
+              5: {
+                pitcherId: 101,
+                pitcherName: 'START',
+                pitcherFullName: 'Starter Pitcher',
+                code: '1B',
+                pitches: [{ pitchNumber: 1, speed: 95, pitchType: 'FF' }]
+              }
+            }
+          },
+          {
+            name: 'BATTER2',
+            fullName: 'Second Batter',
+            plays: {
+              5: {
+                pitcherId: 102,
+                pitcherName: 'RELIEF',
+                pitcherFullName: 'Relief Pitcher',
+                code: 'K',
+                pitches: [{ pitchNumber: 1, speed: 85, pitchType: 'SL' }]
+              }
+            }
+          }
+        ]
+      }
+    };
+
+    const starterCtx = { teamKey: 'away', pitcher: multiPitcherScorecard.awayData.pitchers[0], inning: 5 };
+    const reliefCtx = { teamKey: 'away', pitcher: multiPitcherScorecard.awayData.pitchers[1], inning: 5 };
+
+    const starterPlays = getPitcherPlays(starterCtx, multiPitcherScorecard, 5);
+    const reliefPlays = getPitcherPlays(reliefCtx, multiPitcherScorecard, 5);
+
+    // Starter should only receive Batter 1's play
+    expect(starterPlays.length).toBe(1);
+    expect(starterPlays[0].pitcherId).toBe(101);
+    expect(starterPlays[0].batterName).toBe('BATTER1');
+
+    // Reliever should only receive Batter 2's play
+    expect(reliefPlays.length).toBe(1);
+    expect(reliefPlays[0].pitcherId).toBe(102);
+    expect(reliefPlays[0].batterName).toBe('BATTER2');
+  });
 });

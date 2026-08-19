@@ -21,12 +21,46 @@ export function getPitcherPlays(pitcherCtx, scorecardData, selectedInning) {
       const playsList = Array.isArray(playOrPlays) ? playOrPlays : (playOrPlays ? [playOrPlays] : []);
       playsList.forEach(p => {
         if (!p) return;
-        const matchesId = p.pitcherId && pitcher?.id && String(p.pitcherId) === String(pitcher.id);
-        const matchesName = (p.pitcherName && pitcher?.name && p.pitcherName.toUpperCase() === pitcher.name.toUpperCase()) ||
-                            (p.pitcherFullName && (pitcher?.fullName || pitcher?.name) && (p.pitcherFullName.toLowerCase() === (pitcher.fullName || pitcher.name).toLowerCase()));
-        const singlePitcherInning = pitcher?.pitchesByInning?.[innNum]?.pitches > 0;
 
-        if (matchesId || matchesName || singlePitcherInning) {
+        // 1. Check explicit ID match
+        const matchesId = p.pitcherId && pitcher?.id && String(p.pitcherId) === String(pitcher.id);
+
+        // 2. Check explicit name match
+        const pFullName = (p.pitcherFullName || '').trim().toLowerCase();
+        const pName = (p.pitcherName || '').trim().toLowerCase();
+        const ptFullName = (pitcher?.fullName || '').trim().toLowerCase();
+        const ptName = (pitcher?.name || '').trim().toLowerCase();
+
+        const matchesFullName = pFullName && ptFullName && pFullName === ptFullName;
+        const matchesName = pName && ptName && pName === ptName;
+        const matchesCross = (pFullName && ptName && pFullName.includes(ptName)) || (ptFullName && pName && ptFullName.includes(pName));
+
+        const isExplicitMatch = matchesId || matchesFullName || matchesName || matchesCross;
+        const hasExplicitPitcherOnPlay = Boolean(p.pitcherId || p.pitcherFullName || p.pitcherName);
+
+        if (hasExplicitPitcherOnPlay) {
+          if (isExplicitMatch) {
+            matchingPlays.push({
+              ...p,
+              inning: innNum,
+              batterName: b.name,
+              batterFullName: b.fullName || b.name,
+              batterJerseyNumber: b.jerseyNumber,
+            });
+          }
+          return;
+        }
+
+        // 3. Fallback only if the play has NO pitcher info attached (e.g. manual scorekeeping):
+        // Only attribute if this pitcher was the sole pitcher on the staff who pitched in this inning
+        const staff = teamKey === 'away' ? (scorecardData.awayData?.pitchers || []) : (scorecardData.homeData?.pitchers || []);
+        const activeInningPitchers = staff.filter(s => (s.pitchesByInning?.[innNum]?.pitches || 0) > 0);
+        const isSolePitcherInInning = activeInningPitchers.length === 1 && (
+          (pitcher?.id && activeInningPitchers[0].id && String(activeInningPitchers[0].id) === String(pitcher.id)) ||
+          (activeInningPitchers[0].name && pitcher?.name && activeInningPitchers[0].name.toLowerCase() === pitcher.name.toLowerCase())
+        );
+
+        if (isSolePitcherInInning) {
           matchingPlays.push({
             ...p,
             inning: innNum,
