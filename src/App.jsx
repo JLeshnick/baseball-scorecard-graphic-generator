@@ -106,7 +106,6 @@ export default function App() {
 
   // Scoring Guide States
   const [guidePinned, setGuidePinned] = useState(false);
-  const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   // Live Scorebook State
   const [scoringMode, setScoringMode] = useState('mlb');
@@ -847,12 +846,6 @@ export default function App() {
         activeScale={activeScale}
         handleGlobalReset={handleGlobalReset}
         setAppTheme={setAppTheme}
-        onOpenGuide={() => {
-          if (isMobile) setGuideModalOpen(true);
-          else setGuidePinned(p => !p);
-        }}
-        guidePinned={guidePinned}
-        onTogglePinGuide={() => setGuidePinned(p => !p)}
       />
 
       {/* ── MAIN LAYOUT ─────────────────────────────────────────────────── */}
@@ -1108,16 +1101,6 @@ export default function App() {
           setTimeout(() => setToastMessage(''), 3500);
         }}
       />
-
-      {/* Scoring Guide Modal */}
-      {guideModalOpen && (
-        <ScoringGuide
-          isModal={true}
-          onClose={() => setGuideModalOpen(false)}
-          onTogglePin={!isMobile ? () => { setGuidePinned(true); setGuideModalOpen(false); } : null}
-          isDark={isDark}
-        />
-      )}
 
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
