@@ -12,6 +12,8 @@ import RosterEditModal from './components/RosterEditModal';
 import SavedGamesModal from './components/SavedGamesModal';
 import PitcherEditModal from './components/PitcherEditModal';
 import ScoringGuide from './components/ScoringGuide';
+import AtBatInspectionModal from './components/AtBatInspectionModal';
+import PitcherInspectionModal from './components/PitcherInspectionModal';
 import {
   createBlankScorecardData,
   createScorecardFromMlbGame,
@@ -112,6 +114,7 @@ export default function App() {
   const [playModalOpen, setPlayModalOpen] = useState(false);
   const [activeCellContext, setActiveCellContext] = useState(null);
   const [inspectedCell, setInspectedCell] = useState(null);
+  const [inspectedPitcher, setInspectedPitcher] = useState(null);
   const [pitcherModalOpen, setPitcherModalOpen] = useState(false);
   const [activePitcherContext, setActivePitcherContext] = useState(null);
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
@@ -131,6 +134,8 @@ export default function App() {
   // Responsive & Pan/Zoom State
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('preview');
+  const [mobileInspectionOpen, setMobileInspectionOpen] = useState(false);
+  const [mobilePitcherInspectionOpen, setMobilePitcherInspectionOpen] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [posterHeight, setPosterHeight] = useState(0);
@@ -466,17 +471,71 @@ export default function App() {
     } else {
       // In MLB mode: select/toggle at-bat to inspect pitch sequence and strike zone
       setActiveTab('game');
+      setInspectedPitcher(null);
       setInspectedCell(prev => (prev?.cellKey === cellCtx.cellKey ? null : cellCtx));
+      if (isMobile) {
+        setMobileInspectionOpen(true);
+      }
     }
   };
 
-  const handleBatterClick = () => {
-    setRosterModalOpen(true);
+  const handleBatterClick = (batterCtx) => {
+    if (scoringMode === 'live') {
+      setRosterModalOpen(true);
+    } else {
+      // In MLB mode: select/toggle batter performance to inspect all at-bats for full game!
+      setActiveTab('game');
+      setInspectedPitcher(null);
+      setInspectedCell(prev => {
+        const batterId = batterCtx.batter?.id ?? (batterCtx.isSub ? `sub-${batterCtx.batterIndex}-${batterCtx.batter?.name}` : batterCtx.batterIndex);
+        const targetKey = `batter-${batterCtx.teamKey}-${batterId}`;
+        if (prev?.cellKey === targetKey) {
+          return null;
+        }
+        // Extract all plays for this batter across all innings
+        const allPlays = [];
+        if (batterCtx.batter?.plays) {
+          Object.entries(batterCtx.batter.plays).forEach(([inn, play]) => {
+            if (Array.isArray(play)) {
+              play.forEach(p => allPlays.push({ ...p, inning: Number(inn) }));
+            } else if (play) {
+              allPlays.push({ ...play, inning: Number(inn) });
+            }
+          });
+        }
+        return {
+          ...batterCtx,
+          isFullGame: true,
+          inning: null,
+          plays: allPlays,
+          currentPlay: allPlays[0] || null,
+          cellKey: targetKey,
+        };
+      });
+      if (isMobile) {
+        setMobileInspectionOpen(true);
+      }
+    }
   };
 
   const handlePitcherClick = (pitcherCtx) => {
-    setActivePitcherContext(pitcherCtx);
-    setPitcherModalOpen(true);
+    if (scoringMode === 'live') {
+      setActivePitcherContext(pitcherCtx);
+      setPitcherModalOpen(true);
+    } else {
+      // In MLB mode: select/toggle pitcher performance to inspect pitches & hits by inning!
+      setActiveTab('game');
+      setInspectedCell(null);
+      setInspectedPitcher(prev => {
+        if (prev?.pitcher?.id === pitcherCtx.pitcher?.id && prev?.inning === pitcherCtx.inning) {
+          return null;
+        }
+        return pitcherCtx;
+      });
+      if (isMobile) {
+        setMobilePitcherInspectionOpen(true);
+      }
+    }
   };
 
   const handleSavePitcher = ({ teamKey, pitcherIndex, updatedPitcher, isDelete }) => {
@@ -907,6 +966,8 @@ export default function App() {
           onTogglePinGuide={() => setGuidePinned(p => !p)}
           inspectedCell={inspectedCell}
           setInspectedCell={setInspectedCell}
+          inspectedPitcher={inspectedPitcher}
+          setInspectedPitcher={setInspectedPitcher}
         />
 
         {/* ── CANVAS AREA ───────────────────────────────────────────────── */}
@@ -1028,13 +1089,15 @@ export default function App() {
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
                     onCellClick={!exporting ? handleCellClick : null}
-                    onBatterClick={!exporting && scoringMode === 'live' ? handleBatterClick : null}
-                    onPitcherClick={!exporting && scoringMode === 'live' ? handlePitcherClick : null}
+                    onBatterClick={!exporting ? handleBatterClick : null}
+                    onPitcherClick={!exporting ? handlePitcherClick : null}
                     activeCellKey={!exporting ? (scoringMode === 'live' ? activeCellContext?.cellKey : inspectedCell?.cellKey) : null}
+                    activePitcherKey={!exporting ? (inspectedPitcher ? (inspectedPitcher.inning ? `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}-${inspectedPitcher.inning}` : `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}`) : null) : null}
                     isInteractive={!exporting}
                     isExporting={exporting}
                     isAdvancedMode={isAdvancedMode}
                     isMobile={isMobile}
+                    scoringMode={scoringMode}
                   />
                 </div>
               </div>
@@ -1101,6 +1164,36 @@ export default function App() {
           setTimeout(() => setToastMessage(''), 3500);
         }}
       />
+
+      {/* Mobile Full-Size At-Bat Visualizer Modal */}
+      {isMobile && (
+        <AtBatInspectionModal
+          isOpen={mobileInspectionOpen && Boolean(inspectedCell) && scoringMode === 'mlb'}
+          onClose={() => {
+            setMobileInspectionOpen(false);
+            setInspectedCell(null);
+          }}
+          inspectedCell={inspectedCell}
+          scorecardData={scorecardData}
+          isDark={isDark}
+          c={c}
+        />
+      )}
+
+      {/* Mobile Full-Size Pitcher Inspection Modal */}
+      {isMobile && (
+        <PitcherInspectionModal
+          isOpen={mobilePitcherInspectionOpen && Boolean(inspectedPitcher) && scoringMode === 'mlb'}
+          onClose={() => {
+            setMobilePitcherInspectionOpen(false);
+            setInspectedPitcher(null);
+          }}
+          inspectedPitcher={inspectedPitcher}
+          scorecardData={scorecardData}
+          isDark={isDark}
+          c={c}
+        />
+      )}
 
       {/* TOAST NOTIFICATION */}
       {toastMessage && (

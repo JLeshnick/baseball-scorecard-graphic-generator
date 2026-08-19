@@ -108,7 +108,8 @@ describe('Sidebar Component & Visualizer Tests', () => {
     fireEvent.click(pitchesTabBtn);
     const frontAngleBtn = screen.getByRole('button', { name: /Catcher Front/i });
     fireEvent.click(frontAngleBtn);
-    expect(screen.getByText(/Strike Zone/i)).toBeDefined();
+    expect(screen.getByText(/RHB/i)).toBeDefined();
+    expect(screen.getAllByText(/Strike/i).length).toBeGreaterThan(0);
   });
 
   it('renders multi-at-bat switching buttons when player batted multiple times in an inning', () => {
@@ -167,5 +168,210 @@ describe('Sidebar Component & Visualizer Tests', () => {
     // Click 2nd at-bat
     fireEvent.click(pa2Btn);
     expect(screen.getByText(/3-Run Home run to right center/i)).toBeDefined();
+  });
+
+  it('renders Pitcher Inspection breakdown by inning with pitch count pills and visualizer tabs', () => {
+    const mockScorecardWithPitcher = {
+      gameInfo: {
+        dateDisplay: 'OCT 30, 2024',
+        awayTeam: { name: 'Los Angeles Dodgers', score: 7 },
+        homeTeam: { name: 'New York Yankees', score: 6 },
+        totalInnings: 9,
+      },
+      awayData: {
+        pitchers: [
+          {
+            id: 663556,
+            name: 'FLAHERTY',
+            fullName: 'Jack Flaherty',
+            number: '34',
+            ip: '5.1',
+            totalPitches: 86,
+            pitchesByInning: {
+              1: { pitches: 22, strikes: 14, balls: 8 },
+              2: { pitches: 14, strikes: 10, balls: 4 },
+            }
+          }
+        ]
+      },
+      homeData: {
+        batters: [
+          {
+            name: 'JUDGE',
+            fullName: 'Aaron Judge',
+            jerseyNumber: '99',
+            plays: {
+              1: {
+                pitcherId: 663556,
+                pitcherName: 'FLAHERTY',
+                code: 'HR',
+                pitches: [
+                  { pitchNumber: 1, speed: 94.2, pitchType: 'FF', callDesc: 'In Play', color: '#3b82f6', normX: 50, normY: 30 }
+                ],
+                hitData: { launchSpeed: 108.9, launchAngle: 28, totalDistance: 403, trajectory: 'fly_ball', coordX: 190, coordY: 50 }
+              }
+            }
+          }
+        ]
+      }
+    };
+
+    const mockInspectedPitcher = {
+      teamKey: 'away',
+      teamName: 'Los Angeles Dodgers',
+      pitcher: mockScorecardWithPitcher.awayData.pitchers[0],
+      pitcherIndex: 0,
+      inning: 1,
+    };
+
+    render(
+      <Sidebar
+        isMobile={false}
+        mobileView="controls"
+        c={mockColors}
+        isDark={false}
+        activeTab="game"
+        setActiveTab={vi.fn()}
+        tabStyle={vi.fn()}
+        scoringMode="mlb"
+        setScoringMode={vi.fn()}
+        scorecardData={mockScorecardWithPitcher}
+        setScorecardData={vi.fn()}
+        inspectedPitcher={mockInspectedPitcher}
+        setInspectedPitcher={vi.fn()}
+        selectedGamePk={123456}
+        setSelectedGamePk={vi.fn()}
+      />
+    );
+
+    // Should display Pitcher Header with inning scope
+    expect(screen.getByText(/INN 1/i)).toBeDefined();
+    expect(screen.getAllByText(/Jack Flaherty/i).length).toBeGreaterThan(0);
+
+    // Visualizer Mode Buttons
+    const hitsTabBtn = screen.getByRole('button', { name: /Hit\/Foul Spray/i });
+    expect(hitsTabBtn).toBeDefined();
+    fireEvent.click(hitsTabBtn);
+
+    // Batted ball details allowed by pitcher
+    expect(screen.getByText(/Exit Velocity/i)).toBeDefined();
+  });
+
+  it('correctly isolates plays by pitcher when multiple pitchers pitched in the same inning', async () => {
+    const { getPitcherPlays } = await import('../components/PitcherInspectionModal');
+
+    const multiPitcherScorecard = {
+      awayData: {
+        pitchers: [
+          { id: 101, name: 'START', fullName: 'Starter Pitcher', pitchesByInning: { 5: { pitches: 12 } } },
+          { id: 102, name: 'RELIEF', fullName: 'Relief Pitcher', pitchesByInning: { 5: { pitches: 8 } } },
+        ]
+      },
+      homeData: {
+        batters: [
+          {
+            name: 'BATTER1',
+            fullName: 'First Batter',
+            plays: {
+              5: {
+                pitcherId: 101,
+                pitcherName: 'START',
+                pitcherFullName: 'Starter Pitcher',
+                code: '1B',
+                pitches: [{ pitchNumber: 1, speed: 95, pitchType: 'FF' }]
+              }
+            }
+          },
+          {
+            name: 'BATTER2',
+            fullName: 'Second Batter',
+            plays: {
+              5: {
+                pitcherId: 102,
+                pitcherName: 'RELIEF',
+                pitcherFullName: 'Relief Pitcher',
+                code: 'K',
+                pitches: [{ pitchNumber: 1, speed: 85, pitchType: 'SL' }]
+              }
+            }
+          }
+        ]
+      }
+    };
+
+    const starterCtx = { teamKey: 'away', pitcher: multiPitcherScorecard.awayData.pitchers[0], inning: 5 };
+    const reliefCtx = { teamKey: 'away', pitcher: multiPitcherScorecard.awayData.pitchers[1], inning: 5 };
+
+    const starterPlays = getPitcherPlays(starterCtx, multiPitcherScorecard, 5);
+    const reliefPlays = getPitcherPlays(reliefCtx, multiPitcherScorecard, 5);
+
+    // Starter should only receive Batter 1's play
+    expect(starterPlays.length).toBe(1);
+    expect(starterPlays[0].pitcherId).toBe(101);
+    expect(starterPlays[0].batterName).toBe('BATTER1');
+
+    // Reliever should only receive Batter 2's play
+    expect(reliefPlays.length).toBe(1);
+    expect(reliefPlays[0].pitcherId).toBe(102);
+    expect(reliefPlays[0].batterName).toBe('BATTER2');
+  });
+
+  it('renders full-game batter performance with all aggregated PAs and individual PA switching', () => {
+    const fullGameBatterCell = {
+      teamKey: 'home',
+      teamName: 'New York Yankees',
+      isFullGame: true,
+      inning: null,
+      batterIndex: 2,
+      batter: { id: 99, jerseyNumber: '99', name: 'JUDGE', fullName: 'Aaron Judge' },
+      plays: [
+        {
+          inning: 1,
+          code: 'HR',
+          description: 'Aaron Judge homers to right field.',
+          pitches: [{ pitchNumber: 1, speed: 94.2, pitchType: 'FF', callDesc: 'Called Strike', color: '#ef4444' }, { pitchNumber: 2, speed: 95.1, pitchType: 'FF', callDesc: 'In Play', color: '#3b82f6' }],
+          hitData: { launchSpeed: 108.9, launchAngle: 28, totalDistance: 403, trajectory: 'fly_ball' }
+        },
+        {
+          inning: 3,
+          code: '1B',
+          description: 'Aaron Judge singles to left.',
+          pitches: [{ pitchNumber: 1, speed: 91.0, pitchType: 'CH', callDesc: 'In Play', color: '#3b82f6' }],
+          hitData: { launchSpeed: 102.5, launchAngle: 12, totalDistance: 275, trajectory: 'line_drive' }
+        },
+        {
+          inning: 5,
+          code: 'K',
+          description: 'Aaron Judge strikes out swinging.',
+          pitches: [{ pitchNumber: 1, speed: 85.0, pitchType: 'SL', callDesc: 'Swinging Strike', color: '#ef4444' }]
+        }
+      ]
+    };
+
+    render(
+      <Sidebar
+        isMobile={false}
+        mobileView="controls"
+        c={mockColors}
+        isDark={false}
+        activeTab="game"
+        setActiveTab={vi.fn()}
+        tabStyle={vi.fn()}
+        scoringMode="mlb"
+        setScoringMode={vi.fn()}
+        scorecardData={mockScorecardData}
+        setScorecardData={vi.fn()}
+        inspectedCell={fullGameBatterCell}
+        setInspectedCell={vi.fn()}
+        selectedGamePk={123456}
+        setSelectedGamePk={vi.fn()}
+      />
+    );
+
+    // FULL GAME badge
+    expect(screen.getByText(/FULL GAME/i)).toBeDefined();
+
+    // Aggregated pitch count (2 + 1 + 1 = 4 Pitches)
+    expect(screen.getAllByText(/4P ·/i).length).toBeGreaterThan(0);
   });
 });

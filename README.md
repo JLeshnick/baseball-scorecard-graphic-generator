@@ -12,13 +12,19 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 - **Live MLB Stats API Integration** — Pulls official play-by-play, box scores, lineups, and pitching data for active, upcoming, and completed MLB games.
 - **Auto-Polling Live Tracker** — Automatically updates live in-progress games with the latest plays, counts, and pitching lines.
 - **Unified Live Game Dashboard** — Real-time game state displaying active inning, score, digital and visual Ball/Strike/Out count indicators, and a dynamic base runners diamond.
-- **Dual-Angle Pitch Visualizer** —
-  - **Catcher Front View:** 9-zone strike zone box plotting every pitch in the at-bat with pitch numbers, velocity (MPH), concise pitch types (`4-Seam`, `2-Seam`, `Cutter`, `Sinker`, `Slider`, `Sweeper`, `Changeup`, `Curveball`, `Splitter`), and color-coded outcomes (Strikes, Balls, Fouls, In-Play).
+- **Dual-Angle Pitch Visualizer (Batters & Pitchers)** —
+  - **Catcher Front View:** 9-zone strike zone box plotting every pitch in the at-bat or pitching outing with pitch numbers, velocity (MPH), concise pitch types (`4-Seam`, `2-Seam`, `Cutter`, `Sinker`, `Slider`, `Sweeper`, `Changeup`, `Curveball`, `Splitter`), and color-coded outcomes (Strikes, Balls, Fouls, In-Play).
   - **Side Flight Arc View:** 54-ft mound-to-plate flight trajectory rendering vertical release height, pitch arc, and total vertical drop break (inches).
+- **Pitch Highlight & Tendency Filters** —
+  - **1st Pitch:** Isolates all first pitches in at-bats to analyze first-pitch strike location and pitch selection habits.
+  - **2 Strikes:** Filters for count-leverage pitches when the batter has two strikes (chase vs zone execution).
+  - **Dynamic Pitch Types:** Filter by specific pitch arsenal types (`4-Seam Fastball`, `Slider`, `Curveball`, `Changeup`, etc.) with matching pitch color dots.
+  - **Single Pitch Hover Isolation:** Hovering any pitch brings it to the top with a glowing halo ring and dims all other pitches to 18% grayscale opacity.
 - **Hit & Foul Spray Visualizer** —
-  - **Field Spray Top View:** Multi-hit field spray capturing all fair hits and foul balls in the plate appearance with launch angle trajectory lines.
+  - **Field Spray Top View:** Multi-hit field spray capturing all fair hits and foul balls in the plate appearance or pitching outing with launch angle trajectory lines.
   - **Elevation Arc Side View:** Side profile stadium view plotting true parabolic apex height and projected distance against warning track and 10 FT outfield wall.
-  - **Real-Time Hover Enunciation:** Hovering any flight curve, landing dot, or sequence chip instantly enunciates pitch number, exit velocity (MPH), projected distance (FT), and Statcast metrics in the top header.
+  - **Hover Enunciation:** Hovering any flight curve, landing dot, or sequence chip instantly enunciates pitch number, exit velocity (MPH), projected distance (FT), and Statcast metrics in the header.
+- **Pitcher Performance Visualizer** — Click any pitcher's row or inning pitch breakdown cell to inspect their strike zone command, pitch mix, and batted balls allowed for their entire outing or a specific inning.
 - **Interactive At-Bat & Inning Fate Inspection** — Click any scorecard cell or roster name to inspect that plate appearance's pitches, hits, and final inning fate (`Scored Run`, `Left on Base`, `Out on Basepaths`).
 
 ### 2. Interactive Digital Scorebook (Manual Scorekeeping)
@@ -29,12 +35,13 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 - **Pitching Staff Management** — Dynamically insert additional relief pitchers, assign decisions (`W`, `L`, `SV`, `HLD`), and record custom pitching lines.
 - **Lineup Substitutions** — Track pinch-hitters and defensive changes with official scorebook lettering (`a.`, `b.`, `c.`).
 - **Matchup Lineup Pre-filling** — 1-click import of real starting lineups and rosters from any MLB matchup directly into a blank scorebook.
+- **Ultra-Compact Lineup Columns** — Optimized column widths and smart pitch pill placement for a streamlined scorecard footprint.
 
 ### 3. Statcast Highlights & Game Analytics
 - **Home Run & Top Hits Leaderboard** — Showcases launch speeds (MPH), projected hit distances (FT), launch angles (°), and pitch details.
 - **Game Momentum Progression** — Inning-by-inning score progression and run differential tracking.
 - **Game MVP Award** — Automated MVP and winning pitcher badges for completed games.
-- **Pitch Count Breakdowns** — Pitcher total pitches, strikes, balls, and strike percentage breakdowns.
+- **Pitch Count Breakdowns** — Pitcher total pitches, strikes, balls, and strike percentage breakdowns per inning.
 
 ### 4. Framable Poster Themes & Customization
 - **6 Poster Color Themes** — Team Colors Light, Night Game Dark, Vintage Sepia, Newspaper Print, Blueprint, and Clean Monochrome.

@@ -39,10 +39,12 @@ const ScorecardGraphic = ({
   onBatterClick = null,
   onPitcherClick = null,
   activeCellKey = null,
+  activePitcherKey = null,
   isInteractive = false,
   isExporting = false,
   isAdvancedMode = false,
   isMobile = false,
+  scoringMode = 'mlb',
 }) => {
   if (!data) return null;
 
@@ -56,8 +58,7 @@ const ScorecardGraphic = ({
     (_, i) => i + 1
   );
 
-  // When in Simplified Mode, suppress dense technical overlays (Statcast tables, momentum charts, pitch ball/strike counters)
-  const effectiveShowPitchBreakdown = isAdvancedMode && showPitchBreakdown;
+  const effectiveShowPitchBreakdown = showPitchBreakdown;
   const effectiveShowStatcast = isAdvancedMode && showStatcast;
   const effectiveShowMomentum = isAdvancedMode && showMomentum;
   const effectiveShowMvp = isAdvancedMode && showMvp;
@@ -574,8 +575,8 @@ const ScorecardGraphic = ({
         }))
       : teamData.pitchers;
 
-    const POS_COL_W = 32;
-    const NAME_COL_W = 126;
+    const POS_COL_W = 18;
+    const NAME_COL_W = 108;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 48;
 
@@ -670,22 +671,22 @@ const ScorecardGraphic = ({
               {battersToRender.map((b, bIdx) => {
                 const nameStr = b.name || '';
                 const nameLen = nameStr.length;
-                let batterFontSize = '11px';
-                let letterSpacing = '0.01em';
-                if (nameLen > 16) {
-                  batterFontSize = '7.5px';
+                let batterFontSize = '10.5px';
+                let letterSpacing = '0em';
+                if (nameLen > 15) {
+                  batterFontSize = '7px';
                   letterSpacing = '-0.03em';
-                } else if (nameLen > 13) {
-                  batterFontSize = '8px';
+                } else if (nameLen > 12) {
+                  batterFontSize = '7.5px';
                   letterSpacing = '-0.02em';
-                } else if (nameLen > 10) {
-                  batterFontSize = '9px';
+                } else if (nameLen > 9) {
+                  batterFontSize = '8.5px';
                   letterSpacing = '-0.01em';
-                } else if (nameLen > 7) {
-                  batterFontSize = '10px';
+                } else if (nameLen > 6) {
+                  batterFontSize = '9.5px';
                 }
                 if (t.isHandwritten) {
-                  batterFontSize = nameLen > 14 ? '9px' : nameLen > 10 ? '11px' : '12.5px';
+                  batterFontSize = nameLen > 14 ? '8.5px' : nameLen > 10 ? '10px' : '11.5px';
                 }
 
                 return (
@@ -720,19 +721,19 @@ const ScorecardGraphic = ({
                     <td style={{
                       textAlign: 'center',
                       verticalAlign: 'middle',
-                      padding: '2px 1px',
+                      padding: '2px 0',
                       borderRight: `1px solid ${t.borderLight}`,
                       backgroundColor: t.tableRowAlt,
-                      verticalAlign: 'middle',
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
                         <span style={{
                           display: 'inline-block',
                           fontFamily: t.fontMono,
                           fontWeight: 800,
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: accentColor,
                           letterSpacing: '0.02em',
+                          lineHeight: 1,
                         }}>
                           {b.position}
                         </span>
@@ -752,81 +753,100 @@ const ScorecardGraphic = ({
                     </td>
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
-                    <td
-                      onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
-                      className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
-                      style={{
-                        verticalAlign: 'middle',
-                        padding: '3px 4px 3px 6px',
-                        borderRight: `1.5px solid ${t.borderStrong}`,
-                        overflow: 'visible',
-                        maxWidth: `${NAME_COL_W - 22}px`,
-                        cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
-                      }}
-                      title={!isExporting && onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'visible' }}>
-                        {/* Starter */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            width: '16px', height: '16px', borderRadius: '50%',
-                            backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
-                            color: accentText,
-                            fontSize: '7px', fontWeight: 800,
-                            fontFamily: t.fontMono,
-                            flexShrink: 0,
-                          }}>
-                            {b.jerseyNumber}
-                          </span>
-                          <span style={{
-                            fontSize: batterFontSize, fontWeight: 700,
-                            letterSpacing: letterSpacing, textTransform: 'uppercase',
-                            fontFamily: t.fontHeader,
-                            color: t.textPrimary,
-                            whiteSpace: 'nowrap',
+                    {(() => {
+                      const thisBatterKey = `batter-${isHome ? 'home' : 'away'}-${b.id ?? bIdx}`;
+                      const isBatterActive = activeCellKey === thisBatterKey;
+                      return (
+                        <td
+                          onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                          className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
+                          style={{
+                            verticalAlign: 'middle',
+                            padding: '3px 4px 3px 6px',
+                            borderRight: `1.5px solid ${t.borderStrong}`,
                             overflow: 'visible',
-                            paddingRight: '6px',
-                            display: 'inline-block',
-                            lineHeight: 1.1,
-                          }}>
-                            {renderHandwrittenText(b.name, 'batter_' + b.id)}
-                          </span>
-                        </div>
+                            maxWidth: `${NAME_COL_W - 22}px`,
+                            cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
+                            backgroundColor: isBatterActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                            boxShadow: isBatterActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                            transition: 'all 0.12s ease',
+                          }}
+                          title={!isExporting && onBatterClick ? `Inspect #${b.jerseyNumber} ${b.name} Full Game Visuals` : undefined}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'visible' }}>
+                            {/* Starter */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: '16px', height: '16px', borderRadius: '50%',
+                                backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
+                                color: accentText,
+                                fontSize: '7px', fontWeight: 800,
+                                fontFamily: t.fontMono,
+                                flexShrink: 0,
+                              }}>
+                                {b.jerseyNumber}
+                              </span>
+                              <span style={{
+                                fontSize: batterFontSize, fontWeight: 700,
+                                letterSpacing: letterSpacing, textTransform: 'uppercase',
+                                fontFamily: t.fontHeader,
+                                color: t.textPrimary,
+                                whiteSpace: 'nowrap',
+                                overflow: 'visible',
+                                paddingRight: '6px',
+                                display: 'inline-block',
+                                lineHeight: 1.1,
+                              }}>
+                                {renderHandwrittenText(b.name, 'batter_' + b.id)}
+                              </span>
+                            </div>
 
-                        {/* Substitutes in this slot */}
-                        {b.substitutes && b.substitutes.map((sub, sIdx) => (
-                          <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px', opacity: 0.9 }}>
-                            <span style={{
-                              fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono,
-                              color: accentColor,
-                            }}>
-                              {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
-                            </span>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '13px', height: '13px', borderRadius: '50%',
-                              backgroundColor: t.borderLight,
-                              color: t.textPrimary,
-                              fontSize: '6.5px', fontWeight: 800,
-                              fontFamily: t.fontMono,
-                              flexShrink: 0,
-                            }}>
-                              {sub.jerseyNumber || '—'}
-                            </span>
-                            <span style={{
-                              fontSize: '9px', fontWeight: 700,
-                              fontFamily: t.fontHeader,
-                              color: t.textPrimary,
-                              letterSpacing: '0.01em',
-                              textTransform: 'uppercase',
-                            }}>
-                              {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
-                            </span>
+                            {/* Substitutes in this slot — clickable for full-game breakdown */}
+                            {b.substitutes && b.substitutes.map((sub, sIdx) => {
+                              const subKey = `batter-${isHome ? 'home' : 'away'}-${sub.id ?? ('sub-' + bIdx + '-' + sIdx)}`;
+                              const isSubActive = activeCellKey === subKey;
+                              return (
+                                <div
+                                  key={sIdx}
+                                  onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: sub, teamName: teamInfo.name, isSub: true }) : undefined}
+                                  className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
+                                  title={!isExporting && onBatterClick ? `Inspect #${sub.jerseyNumber} ${sub.name} Full Game Visuals` : undefined}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px',
+                                    cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
+                                    backgroundColor: isSubActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                                    boxShadow: isSubActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                                    borderRadius: '3px',
+                                    transition: 'all 0.12s ease',
+                                  }}
+                                >
+                                  <span style={{ fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono, color: accentColor }}>
+                                    {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
+                                  </span>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '13px', height: '13px', borderRadius: '50%',
+                                    backgroundColor: isSubActive ? '#3b82f6' : t.borderLight,
+                                    color: isSubActive ? '#ffffff' : t.textPrimary,
+                                    fontSize: '6.5px', fontWeight: 800, fontFamily: t.fontMono, flexShrink: 0,
+                                  }}>
+                                    {sub.jerseyNumber || '—'}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '9px', fontWeight: 700, fontFamily: t.fontHeader,
+                                    color: isSubActive ? (isDark ? '#93c5fd' : '#1d4ed8') : t.textPrimary,
+                                    letterSpacing: '0.01em', textTransform: 'uppercase',
+                                  }}>
+                                    {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
-                    </td>
+                        </td>
+                      );
+                    })()}
 
                     {/* Inning cells */}
                     {innings.map(n => {
@@ -884,138 +904,6 @@ const ScorecardGraphic = ({
                           }}
                         >
                           {renderPlayCell(play, isHome, cellKey)}
-
-                          {/* Selected At-Bat Floating Pitch Popover on Graphic (Mobile Only: on Desktop the Sidebar displays the full pitch visualizer without covering cells) */}
-                          {isSelected && isMobile && !isExporting && currentPlayObj && currentPlayPitches.length > 0 && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                zIndex: 120,
-                                minWidth: '150px',
-                                maxWidth: '180px',
-                                padding: '6px 8px',
-                                backgroundColor: isDark ? '#18181b' : '#ffffff',
-                                border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
-                                borderRadius: '7px',
-                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.35), 0 8px 10px -6px rgba(0,0,0,0.35)',
-                                marginTop: '4px',
-                                pointerEvents: 'auto',
-                                textAlign: 'left',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <span style={{ fontSize: '8.5px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
-                                    {currentPlayObj.code} ({currentPlayPitches.length}P)
-                                  </span>
-                                  <span style={{
-                                    fontSize: '7.5px', fontWeight: 800, padding: '1px 3px', borderRadius: '3px',
-                                    backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                    color: batSide === 'L' ? '#3b82f6' : '#ef4444',
-                                  }}>
-                                    {batSide === 'L' ? 'LHB' : 'RHB'}
-                                  </span>
-                                </div>
-
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onCellClick({
-                                      teamKey: isHome ? 'home' : 'away',
-                                      teamName: teamInfo.name,
-                                      batterIndex: bIdx,
-                                      batter: b,
-                                      inning: n,
-                                      currentPlay: currentPlayObj,
-                                      cellKey,
-                                    });
-                                  }}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: '16px', height: '16px',
-                                    borderRadius: '50%',
-                                    border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
-                                    backgroundColor: isDark ? '#27272a' : '#f1f5f9',
-                                    color: isDark ? '#a1a1aa' : '#64748b',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                  }}
-                                >
-                                  <X style={{ width: '10px', height: '10px' }} />
-                                </button>
-                              </div>
-                              {currentPlayObj.pitcherName && (
-                                <div style={{ fontSize: '7.5px', color: isDark ? '#a1a1aa' : '#64748b', marginBottom: '3px' }}>
-                                  vs {currentPlayObj.pitcherName}
-                                </div>
-                              )}
-
-                              {/* Mini Strike Zone with Batter Boxes */}
-                              <div style={{
-                                width: '100%', height: '80px',
-                                backgroundColor: isDark ? '#09090b' : '#f8fafc',
-                                borderRadius: '4px',
-                                border: `1px solid ${isDark ? '#27272a' : '#e2e8f0'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                marginBottom: '4px',
-                              }}>
-                                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                                  {/* Left Batter Box (RHB: catcher's left) */}
-                                  <rect
-                                    x="7" y="14" width="15" height="58" rx="2"
-                                    fill={batSide === 'R' ? 'rgba(239, 68, 68, 0.15)' : 'none'}
-                                    stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                    strokeWidth={batSide === 'R' ? 1.2 : 0.6}
-                                    strokeDasharray={batSide === 'R' ? 'none' : '1.5 1.5'}
-                                  />
-                                  <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="800">RHB</text>
-
-                                  {/* Right Batter Box (LHB: catcher's right) */}
-                                  <rect
-                                    x="78" y="14" width="15" height="58" rx="2"
-                                    fill={batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'none'}
-                                    stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                    strokeWidth={batSide === 'L' ? 1.2 : 0.6}
-                                    strokeDasharray={batSide === 'L' ? 'none' : '1.5 1.5'}
-                                  />
-                                  <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="800">LHB</text>
-
-                                  {/* Strike Zone Box */}
-                                  <rect x="26" y="14" width="48" height="58" fill="none" stroke={isDark ? '#52525b' : '#94a3b8'} strokeWidth="1.5" rx="2" />
-                                  <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                  <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                  <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                  <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                  <polygon points="26,82 74,82 74,87 50,96 26,87" fill={isDark ? '#27272a' : '#cbd5e1'} stroke={isDark ? '#3f3f46' : '#94a3b8'} strokeWidth="0.8" />
-                                  
-                                  {/* Plotted Pitches */}
-                                  {currentPlayPitches.map((p, pIdx) => (
-                                    <g key={pIdx}>
-                                      <circle cx={p.normX} cy={Math.min(70, Math.max(16, p.normY - 4))} r="5.5" fill={p.color} stroke="#ffffff" strokeWidth="1.2" />
-                                      <text x={p.normX} y={Math.min(70, Math.max(16, p.normY - 4)) + 2.5} textAnchor="middle" fill="#ffffff" fontSize="6.5" fontWeight="900">{p.pitchNumber}</text>
-                                    </g>
-                                  ))}
-                                </svg>
-                              </div>
-
-                              {/* Mini Pitch Chips */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', maxHeight: '40px', overflowY: 'auto' }}>
-                                {currentPlayPitches.map((p, pIdx) => (
-                                  <span key={pIdx} style={{
-                                    fontSize: '7.5px', fontWeight: 700, padding: '1px 3px', borderRadius: '3px',
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
-                                    color: p.color,
-                                  }}>
-                                    #{p.pitchNumber} {p.speed ? `${p.speed} ` : ''}{p.pitchType}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </td>
                       );
                     })}
@@ -1115,66 +1003,83 @@ const ScorecardGraphic = ({
                         </td>
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
-                      <td
-                        onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
-                        className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
-                        style={{
-                          padding: '3px 6px',
-                          borderRight: `1.5px solid ${t.borderStrong}`,
-                          verticalAlign: 'middle',
-                          cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
-                        }}
-                        title={!isExporting && onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '15px', height: '15px', borderRadius: '50%',
-                              backgroundColor: p.number && p.number.trim() ? color : 'transparent',
-                              color: text,
-                              fontSize: '7px', fontWeight: 800,
-                              fontFamily: t.fontMono, flexShrink: 0,
-                            }}>
-                              {p.number}
-                            </span>
-                            <span style={{
-                              fontFamily: t.fontHeader, fontWeight: 700,
-                              fontSize: p.name && p.name.length > 11 ? '9.5px' : '11px', letterSpacing: '0.02em',
-                              color: t.textPrimary, whiteSpace: 'nowrap',
-                            }}>
-                              {p.name}
-                            </span>
-                          </div>
-                          {/* Stats summary row: IP H R ER BB K and Total Pitches (P) */}
-                          <div style={{
-                            fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
-                            color: t.textMuted, whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.95, flexWrap: 'nowrap',
-                            marginTop: '2px',
-                          }}>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong> H</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong> R</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong> ER</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong> BB</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong> K</span>
-                            <span style={{ opacity: 0.35 }}>•</span>
-                            <span style={{
-                              color: t.textPrimary, fontWeight: 900,
-                              backgroundColor: t.borderLight, padding: '1px 5px', borderRadius: '3px',
-                              display: 'inline-flex', alignItems: 'center', gap: '2px',
-                            }}>
-                              {isBlankMode ? '—' : (p.totalPitches != null ? <><span>{p.totalPitches}</span><span style={{ opacity: 0.75 }}>P</span></> : '—')}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+                      {(() => {
+                        const thisPitcherKey = `pitcher-${isHome ? 'home' : 'away'}-${p.id ?? pIdx}`;
+                        const isPitcherActive = activePitcherKey === thisPitcherKey;
+                        return (
+                          <td
+                            onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                            className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
+                            style={{
+                              padding: '3px 5px',
+                              borderRight: `1.5px solid ${t.borderStrong}`,
+                              verticalAlign: 'middle',
+                              cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
+                              backgroundColor: isPitcherActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                              boxShadow: isPitcherActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                              transition: 'all 0.12s ease',
+                            }}
+                            title={!isExporting && onPitcherClick ? `Inspect ${p.fullName || p.name} Performance` : undefined}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '15px', height: '15px', borderRadius: '50%',
+                                    backgroundColor: p.number && p.number.trim() ? color : 'transparent',
+                                    color: text,
+                                    fontSize: '7px', fontWeight: 800,
+                                    fontFamily: t.fontMono, flexShrink: 0,
+                                  }}>
+                                    {p.number}
+                                  </span>
+                                  <span style={{
+                                    fontFamily: t.fontHeader, fontWeight: 700,
+                                    fontSize: p.name && p.name.length > 13 ? '9px' : '10.5px', letterSpacing: '0.02em',
+                                    color: t.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                  }}>
+                                    {p.name}
+                                  </span>
+                                </div>
+
+                                {/* Total Pitches Pill on Top-Right of cell */}
+                                {!isBlankMode && p.totalPitches != null && (
+                                  <span style={{
+                                    fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 900,
+                                    color: t.textPrimary,
+                                    backgroundColor: t.borderLight, padding: '1px 4px', borderRadius: '3px',
+                                    display: 'inline-flex', alignItems: 'center', gap: '1px',
+                                    flexShrink: 0,
+                                  }}>
+                                    <span>{p.totalPitches}</span>
+                                    <span style={{ opacity: 0.75 }}>P</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Stats summary row: IP • H • R • ER • BB • K */}
+                              <div style={{
+                                fontFamily: t.fontMono, fontSize: '7px', fontWeight: 700,
+                                color: t.textMuted, whiteSpace: 'nowrap',
+                                display: 'flex', alignItems: 'center', gap: '2px', opacity: 0.95, flexWrap: 'nowrap',
+                              }}>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.hits ?? 0)}</strong>H</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.runs ?? 0)}</strong>R</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.earnedRuns ?? 0)}</strong>ER</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.walks ?? 0)}</strong>BB</span>
+                                <span style={{ opacity: 0.35 }}>•</span>
+                                <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : ks}</strong>K</span>
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })()}
 
                       {/* Inning Pitch Breakdown Cells with Uppercase S / B and Clear Spacing */}
                       {innings.map(n => {
@@ -1187,6 +1092,8 @@ const ScorecardGraphic = ({
                         const cnt = innStat?.pitches || 0;
                         const str = innStat?.strikes || 0;
                         const bll = innStat?.balls || 0;
+                        const thisInningKey = `pitcher-${isHome ? 'home' : 'away'}-${p.id ?? pIdx}-${n}`;
+                        const isInningActive = activePitcherKey === thisInningKey;
                         return (
                           <td
                             key={n}
@@ -1197,8 +1104,11 @@ const ScorecardGraphic = ({
                               borderLeft: `1px solid ${t.borderLight}`,
                               verticalAlign: 'middle',
                               cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
+                              backgroundColor: isInningActive ? (isDark ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.18)') : undefined,
+                              boxShadow: isInningActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                              transition: 'all 0.12s ease',
                             }}
-                            title={!isExporting && onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                            title={!isExporting && onPitcherClick ? `Inspect ${p.fullName || p.name} Inning ${n} Performance` : undefined}
                           >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
@@ -1224,7 +1134,7 @@ const ScorecardGraphic = ({
                 })}
 
                 {/* Interactive Add Pitcher button in manual mode */}
-                {!isExporting && isInteractive && onPitcherClick && (
+                {!isExporting && isInteractive && scoringMode === 'live' && onPitcherClick && (
                   <tr className="interactive-add-pitcher-row no-export" data-interactive-only="true" style={{ backgroundColor: t.tableRowAlt, borderTop: `1px dashed ${t.borderLight}` }}>
                     <td
                       colSpan={innings.length + 1}
