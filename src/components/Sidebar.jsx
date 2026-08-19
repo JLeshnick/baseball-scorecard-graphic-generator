@@ -123,6 +123,7 @@ export default function Sidebar({
 
   const [visualizerTab, setVisualizerTab] = useState('strikezone'); // 'strikezone' | 'hit'
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
+  const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
@@ -134,12 +135,14 @@ export default function Sidebar({
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
+    setPitchFilter('all');
   }, [inspectedCellKey]);
 
   useEffect(() => {
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
+    setPitchFilter('all');
   }, [inspectedPitcher]);
 
   if (isMobile && mobileView !== 'controls') return null;
@@ -1044,397 +1047,532 @@ export default function Sidebar({
                                     backgroundColor: viewPerspective === 'side' ? (isDark ? '#3f3f46' : '#ffffff') : 'transparent',
                                     color: viewPerspective === 'side' ? (isDark ? '#ffffff' : '#0f172a') : c.textMuted,
                                     boxShadow: viewPerspective === 'side' ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
-                                  }}
-                                >
-                                  {visualizerTab === 'strikezone' ? 'Side Flight Arc' : 'Elevation Arc'}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* TAB 1: Strike Zone Visualizer */}
-                            {visualizerTab === 'strikezone' && (
-                              <>
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  height: '20px',
-                                  minHeight: '20px',
-                                  maxHeight: '20px',
-                                  overflow: 'hidden',
-                                  whiteSpace: 'nowrap',
-                                }}>
-                                  {hoveredPitchIdx !== null ? (() => {
-                                    const hp = targetPitches?.[hoveredPitchIdx];
-                                    if (!hp) return null;
-                                    return (
-                                      <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        fontSize: '9.5px',
-                                        fontWeight: 800,
-                                        color: c.textHead,
-                                        overflow: 'hidden',
-                                        whiteSpace: 'nowrap',
-                                        textOverflow: 'ellipsis',
-                                      }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
-                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
-                                        {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
-                                        <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
-                                        <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
-                                        {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '8.5px' }}>{hp.breakVertical}" drop</span>}
-                                      </div>
-                                    );
-                                  })() : (
-                                    <>
-                                      <span style={{
-                                        fontSize: '9px',
-                                        fontWeight: 800,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.04em',
-                                        color: isInspecting ? '#3b82f6' : c.textMuted,
-                                        overflow: 'hidden',
-                                        whiteSpace: 'nowrap',
-                                        textOverflow: 'ellipsis',
-                                      }}>
-                                        {viewPerspective === 'front' ? 'Strike Zone' : 'Mound -> Plate'} {targetPitches?.length ? `(${targetPitches.length}P)` : '(0P)'}
-                                      </span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700, flexShrink: 0 }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
-                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
-                                          Strike
-                                        </span>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
-                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-                                          Ball
-                                        </span>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
-                                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
-                                          Foul
-                                        </span>
-                                      </div>
-                                    </>
-                                  )}
+                                  }}>
+                                    {visualizerTab === 'strikezone' ? 'Side Flight Arc' : 'Elevation Arc'}
+                                  </button>
                                 </div>
+                              </div>
 
-                                {/* Strike Zone Graphic: Front vs Side Angle */}
-                                <div style={{
-                                  position: 'relative',
-                                  width: '100%',
-                                  height: '135px',
-                                  backgroundColor: isDark ? '#050507' : '#f4f3f0',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  overflow: 'hidden',
-                                }}>
-                                  {viewPerspective === 'front' ? (
-                                    /* Front Angle Strike Zone (Catcher View) */
-                                    <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                                      {/* Left Batter Box (RHB) */}
-                                      <rect
-                                        x="7" y="14" width="15" height="58" rx="2"
-                                        fill={batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
-                                        stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                        strokeWidth={batSide === 'R' ? 1.4 : 0.8}
-                                        strokeDasharray={batSide === 'R' ? 'none' : '2 2'}
-                                      />
-                                      <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">RHB</text>
+                              {/* TAB 1: Strike Zone Visualizer */}
+                              {visualizerTab === 'strikezone' && (() => {
+                              const matchesPitchFilter = (p, filter) => {
+                                if (!filter || filter === 'all') return true;
+                                if (filter === 'first_pitch') return p.pitchNumber === 1;
+                                if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
+                                if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
+                                if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
+                                if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
+                                if (filter.startsWith('type:')) {
+                                  const targetType = filter.replace('type:', '');
+                                  return p.pitchType === targetType || p.pitchTypeName === targetType;
+                                }
+                                return true;
+                              };
 
-                                      {/* Right Batter Box (LHB) */}
-                                      <rect
-                                        x="78" y="14" width="15" height="58" rx="2"
-                                        fill={batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
-                                        stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
-                                        strokeWidth={batSide === 'L' ? 1.4 : 0.8}
-                                        strokeDasharray={batSide === 'L' ? 'none' : '2 2'}
-                                      />
-                                      <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">LHB</text>
+                              const availablePitchTypes = (() => {
+                                const map = new Map();
+                                (targetPitches || []).forEach(p => {
+                                  const key = p.pitchTypeName || p.pitchType || 'Other';
+                                  if (!map.has(key)) {
+                                    map.set(key, { name: key, code: p.pitchType, color: p.color || '#3b82f6', count: 0 });
+                                  }
+                                  map.get(key).count += 1;
+                                });
+                                return Array.from(map.values()).sort((a, b) => b.count - a.count);
+                              })();
 
-                                      {/* Strike Zone 9-Grid Area */}
-                                      <rect
-                                        x="26" y="14" width="48" height="58"
-                                        fill={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
-                                        stroke={isDark ? '#52525b' : '#a1a1aa'}
-                                        strokeWidth="1.5"
-                                        rx="2"
-                                      />
-                                      <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                      <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                      <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                      <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                              const firstPitchCount = (targetPitches || []).filter(p => p.pitchNumber === 1).length;
+                              const twoStrikesCount = (targetPitches || []).filter(p => p.strikes === 2 || p.callDesc?.toLowerCase().includes('strike 3')).length;
+                              const isFilterActive = pitchFilter !== 'all';
+                              const matchingCount = isFilterActive ? (targetPitches || []).filter(p => matchesPitchFilter(p, pitchFilter)).length : targetPitches?.length || 0;
 
-                                      <polygon
-                                        points="26,82 74,82 74,87 50,96 26,87"
-                                        fill={isDark ? '#27272a' : '#d1d5db'}
-                                        stroke={isDark ? '#3f3f46' : '#9ca3af'}
-                                        strokeWidth="0.8"
-                                      />
+                              return (
+                                <>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    height: '20px',
+                                    minHeight: '20px',
+                                    maxHeight: '20px',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    {hoveredPitchIdx !== null ? (() => {
+                                      const hp = targetPitches?.[hoveredPitchIdx];
+                                      if (!hp) return null;
+                                      return (
+                                        <div style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          fontSize: '9.5px',
+                                          fontWeight: 800,
+                                          color: c.textHead,
+                                          overflow: 'hidden',
+                                          whiteSpace: 'nowrap',
+                                          textOverflow: 'ellipsis',
+                                        }}>
+                                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: hp.color, flexShrink: 0 }} />
+                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: hp.color }}>#{hp.pitchNumber}</span>
+                                          {hp.speed && <span style={{ color: c.textMuted }}>{hp.speed} MPH</span>}
+                                          <span style={{ color: c.textHead }}>{hp.pitchTypeName || hp.pitchType}</span>
+                                          <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
+                                          {hp.breakVertical && <span style={{ color: '#3b82f6', fontSize: '8.5px' }}>{hp.breakVertical}" drop</span>}
+                                        </div>
+                                      );
+                                    })() : (
+                                      <>
+                                        <span style={{
+                                          fontSize: '9px',
+                                          fontWeight: 800,
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.04em',
+                                          color: isInspecting ? '#3b82f6' : c.textMuted,
+                                          overflow: 'hidden',
+                                          whiteSpace: 'nowrap',
+                                          textOverflow: 'ellipsis',
+                                        }}>
+                                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound -> Plate'} {isFilterActive ? `(${matchingCount}/${targetPitches?.length || 0}P)` : `(${targetPitches?.length || 0}P)`}
+                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700, flexShrink: 0 }}>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
+                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
+                                            Strike
+                                          </span>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#10b981' }}>
+                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                                            Ball
+                                          </span>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b' }}>
+                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
+                                            Foul
+                                          </span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
 
-                                      {/* Render Pitches with Hovered Pitch Sorted on Top and Background Pitches Dimmed */}
-                                      {(() => {
-                                        const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
-                                        if (hoveredPitchIdx !== null) {
+                                  {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
+                                  {targetPitches && targetPitches.length > 1 && (
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      overflowX: 'auto',
+                                      padding: '1px 0 3px 0',
+                                      scrollbarWidth: 'none',
+                                    }}>
+                                      <button
+                                        onClick={() => setPitchFilter('all')}
+                                        style={{
+                                          padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                                          backgroundColor: pitchFilter === 'all' ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                                          color: pitchFilter === 'all' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                          border: `1px solid ${pitchFilter === 'all' ? '#2563eb' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                                          cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                        }}
+                                      >
+                                        All ({targetPitches.length})
+                                      </button>
+                                      {firstPitchCount > 1 && (
+                                        <button
+                                          onClick={() => setPitchFilter(pitchFilter === 'first_pitch' ? 'all' : 'first_pitch')}
+                                          style={{
+                                            padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                                            backgroundColor: pitchFilter === 'first_pitch' ? '#8b5cf6' : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                                            color: pitchFilter === 'first_pitch' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                            border: `1px solid ${pitchFilter === 'first_pitch' ? '#8b5cf6' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                                            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                          }}
+                                        >
+                                          1st Pitch ({firstPitchCount})
+                                        </button>
+                                      )}
+                                      {twoStrikesCount > 0 && (
+                                        <button
+                                          onClick={() => setPitchFilter(pitchFilter === 'two_strikes' ? 'all' : 'two_strikes')}
+                                          style={{
+                                            padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                                            backgroundColor: pitchFilter === 'two_strikes' ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                                            color: pitchFilter === 'two_strikes' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                            border: `1px solid ${pitchFilter === 'two_strikes' ? '#ef4444' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                                            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                          }}
+                                        >
+                                          2 Strikes ({twoStrikesCount})
+                                        </button>
+                                      )}
+                                      {availablePitchTypes.map(pt => {
+                                        const isSel = pitchFilter === `type:${pt.name}`;
+                                        return (
+                                          <button
+                                            key={pt.name}
+                                            onClick={() => setPitchFilter(isSel ? 'all' : `type:${pt.name}`)}
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                              padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                                              backgroundColor: isSel ? pt.color : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                                              color: isSel ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                                              border: `1px solid ${isSel ? pt.color : (isDark ? '#27272a' : '#e2e8f0')}`,
+                                              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                            }}
+                                          >
+                                            <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: isSel ? '#ffffff' : pt.color }} />
+                                            <span>{pt.name} ({pt.count})</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Strike Zone Graphic: Front vs Side Angle */}
+                                  <div style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '135px',
+                                    backgroundColor: isDark ? '#050507' : '#f4f3f0',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    overflow: 'hidden',
+                                  }}>
+                                    {viewPerspective === 'front' ? (
+                                      /* Front Angle Strike Zone (Catcher View) */
+                                      <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                                        {/* Left Batter Box (RHB) */}
+                                        <rect
+                                          x="7" y="14" width="15" height="58" rx="2"
+                                          fill={batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
+                                          stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                          strokeWidth={batSide === 'R' ? 1.4 : 0.8}
+                                          strokeDasharray={batSide === 'R' ? 'none' : '2 2'}
+                                        />
+                                        <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">RHB</text>
+
+                                        {/* Right Batter Box (LHB) */}
+                                        <rect
+                                          x="78" y="14" width="15" height="58" rx="2"
+                                          fill={batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
+                                          stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                          strokeWidth={batSide === 'L' ? 1.4 : 0.8}
+                                          strokeDasharray={batSide === 'L' ? 'none' : '2 2'}
+                                        />
+                                        <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="900">LHB</text>
+
+                                        {/* Strike Zone 9-Grid Area */}
+                                        <rect
+                                          x="26" y="14" width="48" height="58"
+                                          fill={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
+                                          stroke={isDark ? '#52525b' : '#a1a1aa'}
+                                          strokeWidth="1.5"
+                                          rx="2"
+                                        />
+                                        <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                        <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                        <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                        <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+
+                                        <polygon
+                                          points="26,82 74,82 74,87 50,96 26,87"
+                                          fill={isDark ? '#27272a' : '#d1d5db'}
+                                          stroke={isDark ? '#3f3f46' : '#9ca3af'}
+                                          strokeWidth="0.8"
+                                        />
+
+                                        {/* Render Pitches with Hovered/Filtered Pitches Sorted on Top and Dimmed Background */}
+                                        {(() => {
+                                          const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
                                           sortedPitches.sort((a, b) => {
                                             if (a.origIdx === hoveredPitchIdx) return 1;
                                             if (b.origIdx === hoveredPitchIdx) return -1;
+                                            const aMatch = matchesPitchFilter(a, pitchFilter);
+                                            const bMatch = matchesPitchFilter(b, pitchFilter);
+                                            if (aMatch && !bMatch) return 1;
+                                            if (!aMatch && bMatch) return -1;
                                             return 0;
                                           });
-                                        }
-                                        return sortedPitches.map((p) => {
-                                          const isHovered = hoveredPitchIdx === p.origIdx;
-                                          const isAnyHovered = hoveredPitchIdx !== null;
-                                          const cy = Math.min(70, Math.max(16, p.normY - 4));
-                                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 1);
-                                          const r = isHovered ? 8 : 5.5;
 
-                                          return (
-                                            <g
-                                              key={p.origIdx}
-                                              style={{ cursor: 'pointer' }}
-                                              onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
-                                              onMouseLeave={() => setHoveredPitchIdx(null)}
-                                            >
-                                              {isHovered && (
+                                          return sortedPitches.map((p) => {
+                                            const isHovered = hoveredPitchIdx === p.origIdx;
+                                            const isAnyHovered = hoveredPitchIdx !== null;
+                                            const isMatching = matchesPitchFilter(p, pitchFilter);
+                                            const cy = Math.min(70, Math.max(16, p.normY - 4));
+
+                                            let opacity = 1;
+                                            if (isHovered) {
+                                              opacity = 1;
+                                            } else if (isAnyHovered) {
+                                              opacity = 0.18;
+                                            } else if (isFilterActive) {
+                                              opacity = isMatching ? 1 : 0.18;
+                                            }
+
+                                            const isDimmed = (isAnyHovered && !isHovered) || (isFilterActive && !isMatching && !isHovered);
+                                            const r = isHovered ? 8 : (isFilterActive && isMatching ? 6.2 : 5.5);
+
+                                            return (
+                                              <g
+                                                key={p.origIdx}
+                                                style={{ cursor: 'pointer' }}
+                                                onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
+                                                onMouseLeave={() => setHoveredPitchIdx(null)}
+                                              >
+                                                {isHovered && (
+                                                  <circle
+                                                    cx={p.normX}
+                                                    cy={cy}
+                                                    r="11.5"
+                                                    fill="none"
+                                                    stroke={p.color}
+                                                    strokeWidth="2"
+                                                    strokeDasharray="2.5 2"
+                                                    opacity="1"
+                                                  />
+                                                )}
+
                                                 <circle
                                                   cx={p.normX}
                                                   cy={cy}
-                                                  r="11.5"
-                                                  fill="none"
-                                                  stroke={p.color}
-                                                  strokeWidth="2"
-                                                  strokeDasharray="2.5 2"
-                                                  opacity="1"
+                                                  r={r}
+                                                  fill={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                  stroke="#ffffff"
+                                                  strokeWidth={isHovered ? 2 : (isFilterActive && isMatching ? 1.5 : 1.2)}
+                                                  opacity={opacity}
+                                                  style={{
+                                                    filter: isHovered
+                                                      ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.7))'
+                                                      : (isFilterActive && isMatching ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' : 'none'),
+                                                    transition: 'all 0.15s ease',
+                                                  }}
                                                 />
-                                              )}
 
-                                              <circle
-                                                cx={p.normX}
-                                                cy={cy}
-                                                r={r}
-                                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
-                                                stroke="#ffffff"
-                                                strokeWidth={isHovered ? 2 : 1.2}
-                                                opacity={opacity}
-                                                style={{
-                                                  filter: isHovered
-                                                    ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.7))'
-                                                    : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
-                                                  transition: 'r 0.15s ease, stroke-width 0.15s ease',
-                                                }}
-                                              />
+                                                <text
+                                                  x={p.normX}
+                                                  y={cy + (isHovered ? 3 : 2.5)}
+                                                  textAnchor="middle"
+                                                  fill="#ffffff"
+                                                  fontSize={isHovered ? '8' : (isFilterActive && isMatching ? '7' : '6.5')}
+                                                  fontWeight="900"
+                                                  fontFamily="'JetBrains Mono', monospace"
+                                                  opacity={opacity}
+                                                  pointerEvents="none"
+                                                >
+                                                  {p.pitchNumber}
+                                                </text>
+                                              </g>
+                                            );
+                                          });
+                                        })()}
+                                      </svg>
+                                    ) : (
+                                      /* Side Angle Pitch Flight & Drop Trajectory (Mound -> Plate) */
+                                      <svg viewBox="0 0 250 130" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                                        {/* Ground Line */}
+                                        <line x1="10" y1="105" x2="240" y2="105" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="1" />
 
-                                              <text
-                                                x={p.normX}
-                                                y={cy + (isHovered ? 3 : 2.5)}
-                                                textAnchor="middle"
-                                                fill="#ffffff"
-                                                fontSize={isHovered ? '8' : '6.5'}
-                                                fontWeight="900"
-                                                fontFamily="'JetBrains Mono', monospace"
-                                                opacity={opacity}
-                                                pointerEvents="none"
-                                              >
-                                                {p.pitchNumber}
-                                              </text>
-                                            </g>
-                                          );
-                                        });
-                                      })()}
-                                    </svg>
-                                  ) : (
-                                    /* Side Angle Pitch Flight & Drop Trajectory (Mound -> Plate) */
-                                    <svg viewBox="0 0 250 130" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                                      {/* Ground Line */}
-                                      <line x1="10" y1="105" x2="240" y2="105" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="1" />
+                                        {/* Pitcher's Mound */}
+                                        <path d="M 12 105 Q 32 94 52 105 Z" fill={isDark ? '#27170e' : '#fed7aa'} stroke={isDark ? '#3b1c08' : '#fb923c'} strokeWidth="0.8" />
+                                        <rect x="29" y="93" width="6" height="2" fill="#ffffff" rx="0.5" />
+                                        <text x="32" y="118" textAnchor="middle" fill={c.textMuted} fontSize="6.5" fontWeight="700">Mound (54')</text>
 
-                                      {/* Pitcher's Mound */}
-                                      <path d="M 12 105 Q 32 94 52 105 Z" fill={isDark ? '#27170e' : '#fed7aa'} stroke={isDark ? '#3b1c08' : '#fb923c'} strokeWidth="0.8" />
-                                      <rect x="29" y="93" width="6" height="2" fill="#ffffff" rx="0.5" />
-                                      <text x="32" y="118" textAnchor="middle" fill={c.textMuted} fontSize="6.5" fontWeight="700">Mound (54')</text>
+                                        {/* Home Plate */}
+                                        <polygon points="214,105 226,105 226,108 214,108" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.5" />
+                                        <text x="220" y="118" textAnchor="middle" fill={c.textMuted} fontSize="6.5" fontWeight="700">Plate (0')</text>
 
-                                      {/* Home Plate */}
-                                      <polygon points="214,105 226,105 226,108 214,108" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.5" />
-                                      <text x="220" y="118" textAnchor="middle" fill={c.textMuted} fontSize="6.5" fontWeight="700">Plate (0')</text>
+                                        {/* Vertical Strike Zone Window at Home Plate */}
+                                        <rect
+                                          x="217" y="44" width="6" height="42" rx="1.5"
+                                          fill={isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)'}
+                                          stroke="#3b82f6"
+                                          strokeWidth="1.2"
+                                        />
+                                        <text x="220" y="39" textAnchor="middle" fill="#3b82f6" fontSize="6.5" fontWeight="800">SZ</text>
 
-                                      {/* Vertical Strike Zone Window at Home Plate */}
-                                      <rect
-                                        x="217" y="44" width="6" height="42" rx="1.5"
-                                        fill={isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)'}
-                                        stroke="#3b82f6"
-                                        strokeWidth="1.2"
-                                      />
-                                      <text x="220" y="39" textAnchor="middle" fill="#3b82f6" fontSize="6.5" fontWeight="800">SZ</text>
+                                        {/* Height Reference Dotted Lines (3 FT, 6 FT) */}
+                                        <line x1="20" y1="65" x2="235" y2="65" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeDasharray="2 2" strokeWidth="0.8" />
+                                        <line x1="20" y1="35" x2="235" y2="35" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeDasharray="2 2" strokeWidth="0.8" />
+                                        <text x="14" y="67" fill={c.textMuted} fontSize="5.5" fontWeight="700">3'</text>
+                                        <text x="14" y="37" fill={c.textMuted} fontSize="5.5" fontWeight="700">6'</text>
 
-                                      {/* Height Reference Dotted Lines (3 FT, 6 FT) */}
-                                      <line x1="20" y1="65" x2="235" y2="65" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeDasharray="2 2" strokeWidth="0.8" />
-                                      <line x1="20" y1="35" x2="235" y2="35" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeDasharray="2 2" strokeWidth="0.8" />
-                                      <text x="14" y="67" fill={c.textMuted} fontSize="5.5" fontWeight="700">3'</text>
-                                      <text x="14" y="37" fill={c.textMuted} fontSize="5.5" fontWeight="700">6'</text>
-
-                                      {/* Pitches Flight Paths Sorted */}
-                                      {(() => {
-                                        const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
-                                        if (hoveredPitchIdx !== null) {
+                                        {/* Pitches Flight Paths Sorted */}
+                                        {(() => {
+                                          const sortedPitches = (targetPitches || []).map((p, idx) => ({ ...p, origIdx: idx }));
                                           sortedPitches.sort((a, b) => {
                                             if (a.origIdx === hoveredPitchIdx) return 1;
                                             if (b.origIdx === hoveredPitchIdx) return -1;
+                                            const aMatch = matchesPitchFilter(a, pitchFilter);
+                                            const bMatch = matchesPitchFilter(b, pitchFilter);
+                                            if (aMatch && !bMatch) return 1;
+                                            if (!aMatch && bMatch) return -1;
                                             return 0;
                                           });
-                                        }
-                                        return sortedPitches.map((p) => {
-                                          const isHovered = hoveredPitchIdx === p.origIdx;
-                                          const isAnyHovered = hoveredPitchIdx !== null;
-                                          const relX = 32;
-                                          const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
-                                          const plateX = 220;
-                                          const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
-                                          const midX = 126;
-                                          const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
-                                          const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
-                                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.15 : 0.75);
 
-                                          return (
-                                            <g
-                                              key={p.origIdx}
-                                              style={{ cursor: 'pointer' }}
-                                              onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
-                                              onMouseLeave={() => setHoveredPitchIdx(null)}
-                                            >
-                                              {/* Flight Curve */}
-                                              <path
-                                                d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
-                                                fill="none"
-                                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
-                                                strokeWidth={isHovered ? 3.2 : 1.4}
-                                                strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
-                                                opacity={opacity}
-                                              />
+                                          return sortedPitches.map((p) => {
+                                            const isHovered = hoveredPitchIdx === p.origIdx;
+                                            const isAnyHovered = hoveredPitchIdx !== null;
+                                            const isMatching = matchesPitchFilter(p, pitchFilter);
+                                            const relX = 32;
+                                            const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
+                                            const plateX = 220;
+                                            const plateY = Math.min(94, Math.max(24, 20 + (p.normY / 100) * 75));
+                                            const midX = 126;
+                                            const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
+                                            const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
 
-                                              {/* Plate Crossing Marker */}
-                                              <circle
-                                                cx={plateX}
-                                                cy={plateY}
-                                                r={isHovered ? 7 : 4.5}
-                                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
-                                                stroke="#ffffff"
-                                                strokeWidth={isHovered ? 2 : 1}
-                                                opacity={opacity}
-                                                style={{ filter: isHovered ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.6))' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
-                                              />
-                                              <text
-                                                x={plateX}
-                                                y={plateY + (isHovered ? 2.5 : 2.2)}
-                                                textAnchor="middle"
-                                                fill="#ffffff"
-                                                fontSize={isHovered ? '7' : '5.5'}
-                                                fontWeight="900"
-                                                fontFamily="'JetBrains Mono', monospace"
-                                                opacity={opacity}
-                                                pointerEvents="none"
+                                            let opacity = 0.75;
+                                            if (isHovered) {
+                                              opacity = 1;
+                                            } else if (isAnyHovered) {
+                                              opacity = 0.15;
+                                            } else if (isFilterActive) {
+                                              opacity = isMatching ? 0.95 : 0.15;
+                                            }
+
+                                            const isDimmed = (isAnyHovered && !isHovered) || (isFilterActive && !isMatching && !isHovered);
+
+                                            return (
+                                              <g
+                                                key={p.origIdx}
+                                                style={{ cursor: 'pointer' }}
+                                                onMouseEnter={() => setHoveredPitchIdx(p.origIdx)}
+                                                onMouseLeave={() => setHoveredPitchIdx(null)}
                                               >
-                                                {p.pitchNumber}
-                                              </text>
-                                            </g>
-                                          );
-                                        });
-                                      })()}
-                                    </svg>
-                                  )}
+                                                {/* Flight Curve */}
+                                                <path
+                                                  d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
+                                                  fill="none"
+                                                  stroke={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                  strokeWidth={isHovered ? 3.2 : (isFilterActive && isMatching ? 2.2 : 1.4)}
+                                                  strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
+                                                  opacity={opacity}
+                                                />
 
-                                  {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
-                                  {isInspectingCell && !inspectedPlay && (
-                                    <div style={{
-                                      position: 'absolute',
-                                      inset: 0,
-                                      backgroundColor: isDark ? 'rgba(9, 9, 11, 0.82)' : 'rgba(255, 255, 255, 0.86)',
-                                      backdropFilter: 'blur(3.5px)',
-                                      WebkitBackdropFilter: 'blur(3.5px)',
-                                      borderRadius: '6px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      padding: '12px',
-                                      textAlign: 'center',
-                                      zIndex: 10,
-                                    }}>
+                                                {/* Plate Crossing Marker */}
+                                                <circle
+                                                  cx={plateX}
+                                                  cy={plateY}
+                                                  r={isHovered ? 7 : (isFilterActive && isMatching ? 5.5 : 4.5)}
+                                                  fill={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                                  stroke="#ffffff"
+                                                  strokeWidth={isHovered ? 2 : 1}
+                                                  opacity={opacity}
+                                                  style={{ filter: isHovered ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.6))' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
+                                                />
+                                                <text
+                                                  x={plateX}
+                                                  y={plateY + (isHovered ? 2.5 : 2.2)}
+                                                  textAnchor="middle"
+                                                  fill="#ffffff"
+                                                  fontSize={isHovered ? '7' : '5.5'}
+                                                  fontWeight="900"
+                                                  fontFamily="'JetBrains Mono', monospace"
+                                                  opacity={opacity}
+                                                  pointerEvents="none"
+                                                >
+                                                  {p.pitchNumber}
+                                                </text>
+                                              </g>
+                                            );
+                                          });
+                                        })()}
+                                      </svg>
+                                    )}
+
+                                    {/* Frosted Blur Overlay when Cell had No Plate Appearance */}
+                                    {isInspectingCell && !inspectedPlay && (
                                       <div style={{
-                                        fontSize: '11.5px',
-                                        fontWeight: 800,
-                                        color: c.textHead,
-                                        marginBottom: '3px',
-                                        letterSpacing: '0.02em',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        backgroundColor: isDark ? 'rgba(9, 9, 11, 0.82)' : 'rgba(255, 255, 255, 0.86)',
+                                        backdropFilter: 'blur(3.5px)',
+                                        WebkitBackdropFilter: 'blur(3.5px)',
+                                        borderRadius: '6px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '12px',
+                                        textAlign: 'center',
+                                        zIndex: 10,
                                       }}>
-                                        No Plate Appearance
-                                      </div>
-                                      <div style={{ fontSize: '9.5px', color: c.textMuted, maxWidth: '200px', lineHeight: 1.35 }}>
-                                        #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name} did not bat in Inning {inspectedCell.inning}.
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Pitch Sequence Chips */}
-                                {targetPitches && targetPitches.length > 0 ? (
-                                  <div style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '3.5px',
-                                    paddingTop: '2px',
-                                  }}>
-                                    {targetPitches.map((p, idx) => {
-                                      const isHovered = hoveredPitchIdx === idx;
-                                      const isAnyHovered = hoveredPitchIdx !== null;
-                                      return (
-                                        <div
-                                          key={idx}
-                                          onMouseEnter={() => setHoveredPitchIdx(idx)}
-                                          onMouseLeave={() => setHoveredPitchIdx(null)}
-                                          style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '3.5px',
-                                            padding: '2.5px 6px',
-                                            borderRadius: '4px',
-                                            backgroundColor: isHovered
-                                              ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)')
-                                              : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'),
-                                            border: `1px solid ${isHovered ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
-                                            boxShadow: isHovered ? '0 0 0 1px #3b82f6' : 'none',
-                                            fontSize: '9px',
-                                            fontWeight: 700,
-                                            color: c.textHead,
-                                            cursor: 'pointer',
-                                            opacity: isAnyHovered && !isHovered ? 0.35 : 1,
-                                            transform: isHovered ? 'scale(1.04)' : 'scale(1)',
-                                            transition: 'all 0.12s ease',
-                                          }}
-                                        >
-                                          <span style={{
-                                            width: '5px', height: '5px', borderRadius: '50%',
-                                            backgroundColor: p.color, display: 'inline-block',
-                                          }} />
-                                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: p.color }}>#{p.pitchNumber}</span>
-                                          {p.speed && <span style={{ color: c.textMuted }}>{p.speed}</span>}
-                                          <span style={{ fontSize: '8.5px', color: c.textMain }}>{p.pitchTypeName || p.pitchType}</span>
+                                        <div style={{
+                                          fontSize: '11.5px',
+                                          fontWeight: 800,
+                                          color: c.textHead,
+                                          marginBottom: '3px',
+                                          letterSpacing: '0.02em',
+                                        }}>
+                                          No Plate Appearance
                                         </div>
-                                      );
-                                    })}
+                                        <div style={{ fontSize: '9.5px', color: c.textMuted, maxWidth: '200px', lineHeight: 1.35 }}>
+                                          #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name} did not bat in Inning {inspectedCell.inning}.
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
-                                ) : (
-                                  !isInspecting && (
-                                    <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
-                                      Awaiting pitch sequence...
+
+                                  {/* Pitch Sequence Chips */}
+                                  {targetPitches && targetPitches.length > 0 ? (
+                                    <div style={{
+                                      display: 'flex',
+                                      flexWrap: 'wrap',
+                                      gap: '3.5px',
+                                      paddingTop: '2px',
+                                    }}>
+                                      {targetPitches.map((p, idx) => {
+                                        const isHovered = hoveredPitchIdx === idx;
+                                        const isAnyHovered = hoveredPitchIdx !== null;
+                                        const isMatching = matchesPitchFilter(p, pitchFilter);
+                                        const opacity = isAnyHovered ? (isHovered ? 1 : 0.3) : (isFilterActive ? (isMatching ? 1 : 0.3) : 1);
+                                        return (
+                                          <div
+                                            key={idx}
+                                            onMouseEnter={() => setHoveredPitchIdx(idx)}
+                                            onMouseLeave={() => setHoveredPitchIdx(null)}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3.5px',
+                                              padding: '2.5px 6px',
+                                              borderRadius: '4px',
+                                              backgroundColor: isHovered
+                                                ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)')
+                                                : (isFilterActive && isMatching ? (isDark ? 'rgba(255,255,255,0.12)' : '#e2e8f0') : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6')),
+                                              border: `1px solid ${isHovered ? '#3b82f6' : (isFilterActive && isMatching ? p.color : (isDark ? '#27272a' : '#e5e7eb'))}`,
+                                              boxShadow: isHovered ? '0 0 0 1px #3b82f6' : 'none',
+                                              fontSize: '9px',
+                                              fontWeight: 700,
+                                              color: c.textHead,
+                                              cursor: 'pointer',
+                                              opacity,
+                                              transform: isHovered ? 'scale(1.04)' : 'scale(1)',
+                                              transition: 'all 0.12s ease',
+                                            }}
+                                          >
+                                            <span style={{
+                                              width: '5px', height: '5px', borderRadius: '50%',
+                                              backgroundColor: p.color, display: 'inline-block',
+                                            }} />
+                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: p.color }}>#{p.pitchNumber}</span>
+                                            {p.speed && <span style={{ color: c.textMuted }}>{p.speed}</span>}
+                                            <span style={{ fontSize: '8.5px', color: c.textMain }}>{p.pitchTypeName || p.pitchType}</span>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  )
-                                )}
-                              </>
-                            )}
+                                  ) : (
+                                    !isInspecting && (
+                                      <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
+                                        Awaiting pitch sequence...
+                                      </div>
+                                    )
+                                  )}
+                                </>
+                              );
+                            })()}
 
                             {/* TAB 2: Batted Ball Hit & Foul Spray / Trajectory Visualizer */}
                             {visualizerTab === 'hit' && (

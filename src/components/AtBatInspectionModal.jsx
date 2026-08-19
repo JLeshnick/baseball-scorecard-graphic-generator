@@ -12,6 +12,7 @@ export default function AtBatInspectionModal({
 }) {
   const [visualizerTab, setVisualizerTab] = useState('strikezone'); // 'strikezone' | 'hit'
   const [viewPerspective, setViewPerspective] = useState('front'); // 'front' | 'side'
+  const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
@@ -23,6 +24,7 @@ export default function AtBatInspectionModal({
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
+    setPitchFilter('all');
     setVisualizerTab('strikezone');
     setViewPerspective('front');
   }, [inspectedCellKey]);
@@ -424,28 +426,151 @@ export default function AtBatInspectionModal({
                         <span style={{ color: c.textMuted }}>({hp.callDesc})</span>
                       </div>
                     );
-                  })() : (
-                    <>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
-                        {viewPerspective === 'front' ? 'Strike Zone' : 'Mound → Plate'} ({targetPitches.length}P)
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 700 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                          Strike
+                  })() : (() => {
+                    const isFilterActive = pitchFilter !== 'all';
+                    const matchesPitchFilter = (p, filter) => {
+                      if (!filter || filter === 'all') return true;
+                      if (filter === 'first_pitch') return p.pitchNumber === 1;
+                      if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
+                      if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
+                      if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
+                      if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
+                      if (filter.startsWith('type:')) {
+                        const targetType = filter.replace('type:', '');
+                        return p.pitchType === targetType || p.pitchTypeName === targetType;
+                      }
+                      return true;
+                    };
+                    const matchingCount = isFilterActive ? targetPitches.filter(p => matchesPitchFilter(p, pitchFilter)).length : targetPitches.length;
+                    return (
+                      <>
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>
+                          {viewPerspective === 'front' ? 'Strike Zone' : 'Mound → Plate'} {isFilterActive ? `(${matchingCount}/${targetPitches.length}P)` : `(${targetPitches.length}P)`}
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          Ball
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                          Foul
-                        </span>
-                      </div>
-                    </>
-                  )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9.5px', fontWeight: 700 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#ef4444' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                            Strike
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                            Ball
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#f59e0b' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                            Foul
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
+
+                {/* Quick Highlight Filter Pills (All, 1st Pitch, 2 Strikes, Pitch Types) */}
+                {(() => {
+                  const matchesPitchFilter = (p, filter) => {
+                    if (!filter || filter === 'all') return true;
+                    if (filter === 'first_pitch') return p.pitchNumber === 1;
+                    if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
+                    if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
+                    if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
+                    if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
+                    if (filter.startsWith('type:')) {
+                      const targetType = filter.replace('type:', '');
+                      return p.pitchType === targetType || p.pitchTypeName === targetType;
+                    }
+                    return true;
+                  };
+
+                  const availablePitchTypes = (() => {
+                    const map = new Map();
+                    targetPitches.forEach(p => {
+                      const key = p.pitchTypeName || p.pitchType || 'Other';
+                      if (!map.has(key)) {
+                        map.set(key, { name: key, code: p.pitchType, color: p.color || '#3b82f6', count: 0 });
+                      }
+                      map.get(key).count += 1;
+                    });
+                    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+                  })();
+
+                  const firstPitchCount = targetPitches.filter(p => p.pitchNumber === 1).length;
+                  const twoStrikesCount = targetPitches.filter(p => p.strikes === 2 || p.callDesc?.toLowerCase().includes('strike 3')).length;
+
+                  if (targetPitches.length <= 1) return null;
+
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      overflowX: 'auto',
+                      padding: '1px 0 3px 0',
+                      scrollbarWidth: 'none',
+                    }}>
+                      <button
+                        onClick={() => setPitchFilter('all')}
+                        style={{
+                          padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                          backgroundColor: pitchFilter === 'all' ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                          color: pitchFilter === 'all' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                          border: `1px solid ${pitchFilter === 'all' ? '#2563eb' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                          cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                        }}
+                      >
+                        All ({targetPitches.length})
+                      </button>
+                      {firstPitchCount > 1 && (
+                        <button
+                          onClick={() => setPitchFilter(pitchFilter === 'first_pitch' ? 'all' : 'first_pitch')}
+                          style={{
+                            padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                            backgroundColor: pitchFilter === 'first_pitch' ? '#8b5cf6' : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                            color: pitchFilter === 'first_pitch' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                            border: `1px solid ${pitchFilter === 'first_pitch' ? '#8b5cf6' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                          }}
+                        >
+                          1st Pitch ({firstPitchCount})
+                        </button>
+                      )}
+                      {twoStrikesCount > 0 && (
+                        <button
+                          onClick={() => setPitchFilter(pitchFilter === 'two_strikes' ? 'all' : 'two_strikes')}
+                          style={{
+                            padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                            backgroundColor: pitchFilter === 'two_strikes' ? '#ef4444' : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                            color: pitchFilter === 'two_strikes' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                            border: `1px solid ${pitchFilter === 'two_strikes' ? '#ef4444' : (isDark ? '#27272a' : '#e2e8f0')}`,
+                            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                          }}
+                        >
+                          2 Strikes ({twoStrikesCount})
+                        </button>
+                      )}
+                      {availablePitchTypes.map(pt => {
+                        const isSel = pitchFilter === `type:${pt.name}`;
+                        return (
+                          <button
+                            key={pt.name}
+                            onClick={() => setPitchFilter(isSel ? 'all' : `type:${pt.name}`)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '3px',
+                              padding: '2px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 800,
+                              backgroundColor: isSel ? pt.color : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                              color: isSel ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
+                              border: `1px solid ${isSel ? pt.color : (isDark ? '#27272a' : '#e2e8f0')}`,
+                              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                            }}
+                          >
+                            <span style={{ width: '4.5px', height: '4.5px', borderRadius: '50%', backgroundColor: isSel ? '#ffffff' : pt.color }} />
+                            <span>{pt.name} ({pt.count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {/* SVG Visualizer Canvas */}
                 <div style={{
@@ -495,20 +620,49 @@ export default function AtBatInspectionModal({
 
                       {/* Plotted Pitches Sorted on Top */}
                       {(() => {
+                        const matchesPitchFilter = (p, filter) => {
+                          if (!filter || filter === 'all') return true;
+                          if (filter === 'first_pitch') return p.pitchNumber === 1;
+                          if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
+                          if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
+                          if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
+                          if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
+                          if (filter.startsWith('type:')) {
+                            const targetType = filter.replace('type:', '');
+                            return p.pitchType === targetType || p.pitchTypeName === targetType;
+                          }
+                          return true;
+                        };
+
+                        const isFilterActive = pitchFilter !== 'all';
                         const sortedPitches = targetPitches.map((p, idx) => ({ ...p, origIdx: idx }));
-                        if (hoveredPitchIdx !== null) {
-                          sortedPitches.sort((a, b) => {
-                            if (a.origIdx === hoveredPitchIdx) return 1;
-                            if (b.origIdx === hoveredPitchIdx) return -1;
-                            return 0;
-                          });
-                        }
+                        sortedPitches.sort((a, b) => {
+                          if (a.origIdx === hoveredPitchIdx) return 1;
+                          if (b.origIdx === hoveredPitchIdx) return -1;
+                          const aMatch = matchesPitchFilter(a, pitchFilter);
+                          const bMatch = matchesPitchFilter(b, pitchFilter);
+                          if (aMatch && !bMatch) return 1;
+                          if (!aMatch && bMatch) return -1;
+                          return 0;
+                        });
+
                         return sortedPitches.map((p) => {
                           const isHovered = hoveredPitchIdx === p.origIdx;
                           const isAnyHovered = hoveredPitchIdx !== null;
+                          const isMatching = matchesPitchFilter(p, pitchFilter);
                           const cy = Math.min(70, Math.max(16, p.normY - 4));
-                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.22 : 1);
-                          const r = isHovered ? 8 : 6;
+
+                          let opacity = 1;
+                          if (isHovered) {
+                            opacity = 1;
+                          } else if (isAnyHovered) {
+                            opacity = 0.18;
+                          } else if (isFilterActive) {
+                            opacity = isMatching ? 1 : 0.18;
+                          }
+
+                          const isDimmed = (isAnyHovered && !isHovered) || (isFilterActive && !isMatching && !isHovered);
+                          const r = isHovered ? 8 : (isFilterActive && isMatching ? 6.5 : 6);
 
                           return (
                             <g
@@ -523,18 +677,22 @@ export default function AtBatInspectionModal({
                                 cx={p.normX}
                                 cy={cy}
                                 r={r}
-                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                fill={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
                                 stroke="#ffffff"
-                                strokeWidth={isHovered ? 2 : 1.2}
+                                strokeWidth={isHovered ? 2 : (isFilterActive && isMatching ? 1.5 : 1.2)}
                                 opacity={opacity}
-                                style={{ filter: isHovered ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))' }}
+                                style={{
+                                  filter: isHovered
+                                    ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))'
+                                    : (isFilterActive && isMatching ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))'),
+                                }}
                               />
                               <text
                                 x={p.normX}
                                 y={cy + (isHovered ? 3 : 2.5)}
                                 textAnchor="middle"
                                 fill="#ffffff"
-                                fontSize={isHovered ? '8' : '6.5'}
+                                fontSize={isHovered ? '8' : (isFilterActive && isMatching ? '7' : '6.5')}
                                 fontWeight="900"
                                 fontFamily="'JetBrains Mono', monospace"
                                 opacity={opacity}
@@ -566,17 +724,36 @@ export default function AtBatInspectionModal({
                       <text x="14" y="37" fill={c.textMuted} fontSize="5.5" fontWeight="700">6'</text>
 
                       {(() => {
+                        const matchesPitchFilter = (p, filter) => {
+                          if (!filter || filter === 'all') return true;
+                          if (filter === 'first_pitch') return p.pitchNumber === 1;
+                          if (filter === 'two_strikes') return p.strikes === 2 || (typeof p.callDesc === 'string' && p.callDesc.toLowerCase().includes('strike 3'));
+                          if (filter === 'full_count') return p.balls === 3 && p.strikes === 2;
+                          if (filter === 'strikes') return p.resultType === 'strike' || p.callDesc?.toLowerCase().includes('strike');
+                          if (filter === 'balls') return p.resultType === 'ball' || p.callDesc?.toLowerCase().includes('ball');
+                          if (filter.startsWith('type:')) {
+                            const targetType = filter.replace('type:', '');
+                            return p.pitchType === targetType || p.pitchTypeName === targetType;
+                          }
+                          return true;
+                        };
+
+                        const isFilterActive = pitchFilter !== 'all';
                         const sortedPitches = targetPitches.map((p, idx) => ({ ...p, origIdx: idx }));
-                        if (hoveredPitchIdx !== null) {
-                          sortedPitches.sort((a, b) => {
-                            if (a.origIdx === hoveredPitchIdx) return 1;
-                            if (b.origIdx === hoveredPitchIdx) return -1;
-                            return 0;
-                          });
-                        }
+                        sortedPitches.sort((a, b) => {
+                          if (a.origIdx === hoveredPitchIdx) return 1;
+                          if (b.origIdx === hoveredPitchIdx) return -1;
+                          const aMatch = matchesPitchFilter(a, pitchFilter);
+                          const bMatch = matchesPitchFilter(b, pitchFilter);
+                          if (aMatch && !bMatch) return 1;
+                          if (!aMatch && bMatch) return -1;
+                          return 0;
+                        });
+
                         return sortedPitches.map((p) => {
                           const isHovered = hoveredPitchIdx === p.origIdx;
                           const isAnyHovered = hoveredPitchIdx !== null;
+                          const isMatching = matchesPitchFilter(p, pitchFilter);
                           const relX = 32;
                           const relY = Math.max(22, Math.min(50, 36 + (5.8 - (p.releaseZ || 5.8)) * 6));
                           const plateX = 220;
@@ -584,23 +761,33 @@ export default function AtBatInspectionModal({
                           const midX = 126;
                           const vertBreakEffect = p.breakVertical ? (Math.abs(p.breakVertical) * 0.18) : 5;
                           const midY = (relY + plateY) / 2 - Math.max(2, 7 - vertBreakEffect);
-                          const opacity = isHovered ? 1 : (isAnyHovered ? 0.15 : 0.8);
+
+                          let opacity = 0.8;
+                          if (isHovered) {
+                            opacity = 1;
+                          } else if (isAnyHovered) {
+                            opacity = 0.15;
+                          } else if (isFilterActive) {
+                            opacity = isMatching ? 0.95 : 0.15;
+                          }
+
+                          const isDimmed = (isAnyHovered && !isHovered) || (isFilterActive && !isMatching && !isHovered);
 
                           return (
                             <g key={p.origIdx} onClick={() => setHoveredPitchIdx(isHovered ? null : p.origIdx)} style={{ cursor: 'pointer' }}>
                               <path
                                 d={`M ${relX} ${relY} Q ${midX} ${midY} ${plateX} ${plateY}`}
                                 fill="none"
-                                stroke={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
-                                strokeWidth={isHovered ? 3.2 : 1.5}
+                                stroke={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                strokeWidth={isHovered ? 3.2 : (isFilterActive && isMatching ? 2.2 : 1.5)}
                                 strokeDasharray={p.resultType === 'foul' ? '3 2' : 'none'}
                                 opacity={opacity}
                               />
                               <circle
                                 cx={plateX}
                                 cy={plateY}
-                                r={isHovered ? 7 : 4.5}
-                                fill={isAnyHovered && !isHovered ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
+                                r={isHovered ? 7 : (isFilterActive && isMatching ? 5.5 : 4.5)}
+                                fill={isDimmed ? (isDark ? '#3f3f46' : '#94a3b8') : p.color}
                                 stroke="#ffffff"
                                 strokeWidth={isHovered ? 1.8 : 1.2}
                                 opacity={opacity}
@@ -630,6 +817,23 @@ export default function AtBatInspectionModal({
                   {targetPitches.map((p, idx) => {
                     const isHovered = hoveredPitchIdx === idx;
                     const isAnyHovered = hoveredPitchIdx !== null;
+                    const matchesPitchFilter = (item, filter) => {
+                      if (!filter || filter === 'all') return true;
+                      if (filter === 'first_pitch') return item.pitchNumber === 1;
+                      if (filter === 'two_strikes') return item.strikes === 2 || (typeof item.callDesc === 'string' && item.callDesc.toLowerCase().includes('strike 3'));
+                      if (filter === 'full_count') return item.balls === 3 && item.strikes === 2;
+                      if (filter === 'strikes') return item.resultType === 'strike' || item.callDesc?.toLowerCase().includes('strike');
+                      if (filter === 'balls') return item.resultType === 'ball' || item.callDesc?.toLowerCase().includes('ball');
+                      if (filter.startsWith('type:')) {
+                        const targetType = filter.replace('type:', '');
+                        return item.pitchType === targetType || item.pitchTypeName === targetType;
+                      }
+                      return true;
+                    };
+                    const isFilterActive = pitchFilter !== 'all';
+                    const isMatching = matchesPitchFilter(p, pitchFilter);
+                    const opacity = isAnyHovered ? (isHovered ? 1 : 0.35) : (isFilterActive ? (isMatching ? 1 : 0.35) : 1);
+
                     return (
                       <button
                         key={idx}
@@ -642,13 +846,13 @@ export default function AtBatInspectionModal({
                           borderRadius: '6px',
                           backgroundColor: isHovered
                             ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)')
-                            : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6'),
-                          border: `1px solid ${isHovered ? '#3b82f6' : (isDark ? '#27272a' : '#e5e7eb')}`,
+                            : (isFilterActive && isMatching ? (isDark ? 'rgba(255,255,255,0.12)' : '#e2e8f0') : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6')),
+                          border: `1px solid ${isHovered ? '#3b82f6' : (isFilterActive && isMatching ? p.color : (isDark ? '#27272a' : '#e5e7eb'))}`,
                           fontSize: '10px',
                           fontWeight: 700,
                           color: isDark ? '#f4f4f5' : '#0f172a',
                           cursor: 'pointer',
-                          opacity: isAnyHovered && !isHovered ? 0.35 : 1,
+                          opacity,
                         }}
                       >
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: p.color }} />
