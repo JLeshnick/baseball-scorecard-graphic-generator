@@ -68,6 +68,8 @@ export default function Sidebar({
   handleGlobalReset,
   guidePinned,
   onTogglePinGuide,
+  inspectedCell,
+  setInspectedCell,
 }) {
   // Read and write directly to Zustand store for all display & custom text options!
   const theme = useAppStore(s => s.theme);
@@ -532,120 +534,184 @@ export default function Sidebar({
                       </div>
                     </div>
 
-                    {/* Live Count & Bases (if active/live) */}
-                    {scorecardData.gameInfo.liveGameState && (
-                      <div style={{
-                        display: 'flex', flexDirection: 'column', gap: '8px',
-                        padding: '8px', borderRadius: '6px',
-                        backgroundColor: isDark ? '#09090b' : '#ffffff',
-                        border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          {/* Count: Balls, Strikes, Outs */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {/* Balls */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>B:</span>
-                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
-                                {scorecardData.gameInfo.liveGameState.balls || 0}
-                              </span>
-                              <div style={{ display: 'flex', gap: '2px' }}>
-                                {[1, 2, 3].map(dot => (
-                                  <span key={dot} style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    backgroundColor: (scorecardData.gameInfo.liveGameState.balls || 0) >= dot ? '#10b981' : (isDark ? '#27272a' : '#e5e7eb'),
-                                  }} />
-                                ))}
+                    {/* Live Count & Bases & Strike Zone (Active Game OR Inspected Cell) */}
+                    {(scorecardData.gameInfo.liveGameState || inspectedCell) && (() => {
+                      const inspectedPlay = inspectedCell?.currentPlay ? (Array.isArray(inspectedCell.currentPlay) ? inspectedCell.currentPlay[0] : inspectedCell.currentPlay) : null;
+                      const isInspecting = Boolean(inspectedCell);
+                      const targetPitches = isInspecting
+                        ? (inspectedPlay?.pitches || [])
+                        : (scorecardData.gameInfo.liveGameState?.pitches || []);
+                      const batterName = isInspecting
+                        ? (inspectedCell.batter?.fullName || inspectedCell.batter?.name || inspectedPlay?.batterName || 'Batter')
+                        : (scorecardData.gameInfo.liveGameState?.batterName || '');
+                      const pitcherName = isInspecting
+                        ? (inspectedPlay?.pitcherName || '')
+                        : (scorecardData.gameInfo.liveGameState?.pitcherName || '');
+                      const batSide = isInspecting
+                        ? (inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R')
+                        : (scorecardData?.gameInfo?.liveGameState?.batSide || 'R');
+                      const playDesc = isInspecting
+                        ? (inspectedPlay?.code ? `${inspectedPlay.code}${inspectedPlay.description ? ` · ${inspectedPlay.description}` : ''}` : (inspectedPlay?.description || (inspectedPlay ? '' : 'No plate appearance in this inning.')))
+                        : '';
+
+                      return (
+                        <div style={{
+                          display: 'flex', flexDirection: 'column', gap: '8px',
+                          padding: '8px', borderRadius: '6px',
+                          backgroundColor: isDark ? '#09090b' : '#ffffff',
+                          border: `1px solid ${isInspecting ? '#3b82f6' : (isDark ? '#27272a' : '#e4e0da')}`,
+                          boxShadow: isInspecting ? '0 0 0 1px #3b82f6' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}>
+                          {/* Top Header: Live Count vs Inspected Cell */}
+                          {isInspecting ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                  padding: '2px 5px', borderRadius: '4px',
+                                  backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                }}>
+                                  {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                </span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
+                                  #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name}
+                                </span>
                               </div>
+                              <button
+                                onClick={() => setInspectedCell(null)}
+                                style={{
+                                  padding: '2px 6px', fontSize: '9px', fontWeight: 700,
+                                  borderRadius: '4px', border: `1px solid ${c.border}`,
+                                  backgroundColor: isDark ? '#27272a' : '#e5e7eb',
+                                  color: c.textMain, cursor: 'pointer',
+                                }}
+                                title="Close inspected at-bat and return to live view"
+                              >
+                                Clear
+                              </button>
                             </div>
-
-                            {/* Strikes */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>S:</span>
-                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
-                                {scorecardData.gameInfo.liveGameState.strikes || 0}
-                              </span>
-                              <div style={{ display: 'flex', gap: '2px' }}>
-                                {[1, 2].map(dot => (
-                                  <span key={dot} style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    backgroundColor: (scorecardData.gameInfo.liveGameState.strikes || 0) >= dot ? '#ef4444' : (isDark ? '#27272a' : '#e5e7eb'),
-                                  }} />
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Outs */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>O:</span>
-                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
-                                {scorecardData.gameInfo.liveGameState.outs || 0}
-                              </span>
-                              <div style={{ display: 'flex', gap: '2px' }}>
-                                {[1, 2].map(dot => (
-                                  <span key={dot} style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    backgroundColor: (scorecardData.gameInfo.liveGameState.outs || 0) >= dot ? '#f59e0b' : (isDark ? '#27272a' : '#e5e7eb'),
-                                  }} />
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Bases Diamond */}
-                          <div style={{ width: '22px', height: '22px', position: 'relative', flexShrink: 0 }}>
-                            {/* 2B */}
-                            <div style={{
-                              position: 'absolute', top: '1px', left: '7.5px', width: '7px', height: '7px',
-                              transform: 'rotate(45deg)',
-                              backgroundColor: scorecardData.gameInfo.liveGameState.onSecond ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
-                              borderRadius: '1px',
-                            }} />
-                            {/* 3B */}
-                            <div style={{
-                              position: 'absolute', top: '7.5px', left: '1px', width: '7px', height: '7px',
-                              transform: 'rotate(45deg)',
-                              backgroundColor: scorecardData.gameInfo.liveGameState.onThird ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
-                              borderRadius: '1px',
-                            }} />
-                            {/* 1B */}
-                            <div style={{
-                              position: 'absolute', top: '7.5px', left: '14px', width: '7px', height: '7px',
-                              transform: 'rotate(45deg)',
-                              backgroundColor: scorecardData.gameInfo.liveGameState.onFirst ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
-                              borderRadius: '1px',
-                            }} />
-                          </div>
-                        </div>
-
-                        {/* Active Batter vs Pitcher Matchup */}
-                        {(scorecardData.gameInfo.liveGameState.batterName || scorecardData.gameInfo.liveGameState.pitcherName) && (
-                          <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '2px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
-                            {scorecardData.gameInfo.liveGameState.batterName && (
+                          ) : (
+                            /* Live Balls/Strikes/Outs and Bases Diamond */
+                            scorecardData.gameInfo.liveGameState && (
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>At Bat:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{scorecardData.gameInfo.liveGameState.batterName}</span>
-                              </div>
-                            )}
-                            {scorecardData.gameInfo.liveGameState.pitcherName && (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitching:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{scorecardData.gameInfo.liveGameState.pitcherName}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  {/* Balls */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>B:</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                      {scorecardData.gameInfo.liveGameState.balls || 0}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                      {[1, 2, 3].map(dot => (
+                                        <span key={dot} style={{
+                                          width: '6px', height: '6px', borderRadius: '50%',
+                                          backgroundColor: (scorecardData.gameInfo.liveGameState.balls || 0) >= dot ? '#10b981' : (isDark ? '#27272a' : '#e5e7eb'),
+                                        }} />
+                                      ))}
+                                    </div>
+                                  </div>
 
-                        {/* Live Strike Zone & Pitches for Current At-Bat (Always visible during active game) */}
-                        {scorecardData.gameInfo.liveGameState && (
+                                  {/* Strikes */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>S:</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                      {scorecardData.gameInfo.liveGameState.strikes || 0}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                      {[1, 2].map(dot => (
+                                        <span key={dot} style={{
+                                          width: '6px', height: '6px', borderRadius: '50%',
+                                          backgroundColor: (scorecardData.gameInfo.liveGameState.strikes || 0) >= dot ? '#ef4444' : (isDark ? '#27272a' : '#e5e7eb'),
+                                        }} />
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Outs */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>O:</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                      {scorecardData.gameInfo.liveGameState.outs || 0}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                      {[1, 2].map(dot => (
+                                        <span key={dot} style={{
+                                          width: '6px', height: '6px', borderRadius: '50%',
+                                          backgroundColor: (scorecardData.gameInfo.liveGameState.outs || 0) >= dot ? '#f59e0b' : (isDark ? '#27272a' : '#e5e7eb'),
+                                        }} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Bases Diamond */}
+                                <div style={{ width: '22px', height: '22px', position: 'relative', flexShrink: 0 }}>
+                                  <div style={{
+                                    position: 'absolute', top: '1px', left: '7.5px', width: '7px', height: '7px',
+                                    transform: 'rotate(45deg)',
+                                    backgroundColor: scorecardData.gameInfo.liveGameState.onSecond ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                                    borderRadius: '1px',
+                                  }} />
+                                  <div style={{
+                                    position: 'absolute', top: '7.5px', left: '1px', width: '7px', height: '7px',
+                                    transform: 'rotate(45deg)',
+                                    backgroundColor: scorecardData.gameInfo.liveGameState.onThird ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                                    borderRadius: '1px',
+                                  }} />
+                                  <div style={{
+                                    position: 'absolute', top: '7.5px', left: '14px', width: '7px', height: '7px',
+                                    transform: 'rotate(45deg)',
+                                    backgroundColor: scorecardData.gameInfo.liveGameState.onFirst ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                                    borderRadius: '1px',
+                                  }} />
+                                </div>
+                              </div>
+                            )
+                          )}
+
+                          {/* Batter & Pitcher Matchup & Result */}
+                          {(batterName || pitcherName || playDesc) && (
+                            <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '2px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
+                              {batterName && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontWeight: 700, color: c.textHead }}>At Bat:</span>
+                                    <span style={{
+                                      fontSize: '8px', fontWeight: 800, padding: '0 4px', borderRadius: '3px',
+                                      backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                      color: batSide === 'L' ? '#3b82f6' : '#ef4444',
+                                    }}>
+                                      {batSide === 'L' ? 'LHB' : 'RHB'}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontWeight: 600, color: c.textMain }}>{batterName}</span>
+                                </div>
+                              )}
+                              {pitcherName && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontWeight: 700, color: c.textHead }}>Pitching:</span>
+                                  <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherName}</span>
+                                </div>
+                              )}
+                              {playDesc && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                                  <span style={{ fontWeight: 700, color: c.textHead }}>Result:</span>
+                                  <span style={{ fontWeight: 600, color: '#3b82f6', maxWidth: '200px', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={playDesc}>{playDesc}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Strike Zone Visualizer */}
                           <div style={{
                             display: 'flex', flexDirection: 'column', gap: '6px',
                             borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`,
                             paddingTop: '6px',
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: c.textMuted }}>
-                                Strike Zone {scorecardData.gameInfo.liveGameState.pitches?.length ? `(${scorecardData.gameInfo.liveGameState.pitches.length} Pitches)` : '(0 Pitches)'}
+                              <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: isInspecting ? '#3b82f6' : c.textMuted }}>
+                                Strike Zone {targetPitches?.length ? `(${targetPitches.length} Pitches)` : '(0 Pitches)'}
                               </span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '8.5px', fontWeight: 700 }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#ef4444' }}>
@@ -677,7 +743,45 @@ export default function Sidebar({
                               overflow: 'hidden',
                             }}>
                               <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                                {/* Strike Zone Box (Outer & 9-zone Grid) */}
+                                {/* Left Batter's Box (RHB - catcher's left) */}
+                                <rect
+                                  x="7" y="14" width="15" height="58" rx="2"
+                                  fill={batSide === 'R' ? (isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(239, 68, 68, 0.12)') : 'none'}
+                                  stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                  strokeWidth={batSide === 'R' ? 1.4 : 0.8}
+                                  strokeDasharray={batSide === 'R' ? 'none' : '2 2'}
+                                />
+                                <text
+                                  x="14.5" y="45"
+                                  textAnchor="middle"
+                                  fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')}
+                                  fontSize="5.5"
+                                  fontWeight="900"
+                                  fontFamily="'Inter', sans-serif"
+                                >
+                                  RHB
+                                </text>
+
+                                {/* Right Batter's Box (LHB - catcher's right) */}
+                                <rect
+                                  x="78" y="14" width="15" height="58" rx="2"
+                                  fill={batSide === 'L' ? (isDark ? 'rgba(59, 130, 246, 0.18)' : 'rgba(59, 130, 246, 0.12)') : 'none'}
+                                  stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                  strokeWidth={batSide === 'L' ? 1.4 : 0.8}
+                                  strokeDasharray={batSide === 'L' ? 'none' : '2 2'}
+                                />
+                                <text
+                                  x="85.5" y="45"
+                                  textAnchor="middle"
+                                  fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')}
+                                  fontSize="5.5"
+                                  fontWeight="900"
+                                  fontFamily="'Inter', sans-serif"
+                                >
+                                  LHB
+                                </text>
+
+                                {/* Strike Zone Box */}
                                 <rect
                                   x="26" y="14" width="48" height="58"
                                   fill={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
@@ -685,14 +789,11 @@ export default function Sidebar({
                                   strokeWidth="1.5"
                                   rx="2"
                                 />
-                                {/* Grid vertical lines */}
                                 <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
                                 <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
-                                {/* Grid horizontal lines */}
                                 <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
                                 <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#d4d4d8'} strokeWidth="0.8" strokeDasharray="1.5 2" />
 
-                                {/* Home Plate (Bottom indicator - generous 10px gap below strike zone box: y=82 to y=96) */}
                                 <polygon
                                   points="26,82 74,82 74,87 50,96 26,87"
                                   fill={isDark ? '#27272a' : '#d1d5db'}
@@ -700,8 +801,7 @@ export default function Sidebar({
                                   strokeWidth="0.8"
                                 />
 
-                                {/* Plotted Pitch Circles */}
-                                {(scorecardData.gameInfo.liveGameState.pitches || []).map((p, idx) => (
+                                {(targetPitches || []).map((p, idx) => (
                                   <g key={idx}>
                                     <circle
                                       cx={p.normX}
@@ -732,7 +832,7 @@ export default function Sidebar({
                             </div>
 
                             {/* Pitch Sequence Chips */}
-                            {scorecardData.gameInfo.liveGameState.pitches && scorecardData.gameInfo.liveGameState.pitches.length > 0 ? (
+                            {targetPitches && targetPitches.length > 0 ? (
                               <div style={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
@@ -740,7 +840,7 @@ export default function Sidebar({
                                 maxHeight: '52px',
                                 overflowY: 'auto',
                               }}>
-                                {scorecardData.gameInfo.liveGameState.pitches.map((p, idx) => (
+                                {targetPitches.map((p, idx) => (
                                   <div
                                     key={idx}
                                     style={{
@@ -769,13 +869,13 @@ export default function Sidebar({
                               </div>
                             ) : (
                               <div style={{ fontSize: '9px', color: c.textMuted, fontStyle: 'italic', textAlign: 'center', padding: '2px 0' }}>
-                                Awaiting pitch sequence...
+                                {isInspecting ? (inspectedPlay ? 'No pitch coordinate data recorded for this play.' : 'No plate appearance recorded for this cell.') : 'Awaiting pitch sequence...'}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Share scorecard button */}
                     <button

@@ -112,6 +112,7 @@ export default function App() {
   const [scoringMode, setScoringMode] = useState('mlb');
   const [playModalOpen, setPlayModalOpen] = useState(false);
   const [activeCellContext, setActiveCellContext] = useState(null);
+  const [inspectedCell, setInspectedCell] = useState(null);
   const [pitcherModalOpen, setPitcherModalOpen] = useState(false);
   const [activePitcherContext, setActivePitcherContext] = useState(null);
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
@@ -334,6 +335,7 @@ export default function App() {
       setRawGameData(data._rawData || null);
       setLastRefreshedTime(new Date());
       if (!isSilentRefresh) {
+        setInspectedCell(null);
         setCustomHeadline(data.gameInfo.dateDisplay || '');
         setCustomSubtitle([data.gameInfo.venue, data.gameInfo.headline].filter(Boolean).join(' · '));
         setCustomFooter([(data.gameInfo.venue || '').toUpperCase(), data.gameInfo.dateDisplay].filter(Boolean).join(' • '));
@@ -361,6 +363,7 @@ export default function App() {
     setScorecardData(blank);
     setScoringMode('live');
     setBlankMode('none');
+    setInspectedCell(null);
     setLiveInning(1);
     setLiveHalf('away');
     setLiveBatterIdx(0);
@@ -391,6 +394,7 @@ export default function App() {
     setScorecardData(liveClone);
     setScoringMode('live');
     setBlankMode('none');
+    setInspectedCell(null);
     setLiveInning(1);
     setLiveHalf('away');
     setLiveBatterIdx(0);
@@ -433,6 +437,7 @@ export default function App() {
       setScorecardData(liveClone);
       setScoringMode('live');
       setBlankMode('none');
+      setInspectedCell(null);
       setLiveInning(1);
       setLiveHalf('away');
       setLiveBatterIdx(0);
@@ -452,8 +457,14 @@ export default function App() {
   };
 
   const handleCellClick = (cellCtx) => {
-    setActiveCellContext(cellCtx);
-    setPlayModalOpen(true);
+    if (scoringMode === 'live') {
+      setActiveCellContext(cellCtx);
+      setPlayModalOpen(true);
+    } else {
+      // In MLB mode: select/toggle at-bat to inspect pitch sequence and strike zone
+      setActiveTab('game');
+      setInspectedCell(prev => (prev?.cellKey === cellCtx.cellKey ? null : cellCtx));
+    }
   };
 
   const handleBatterClick = () => {
@@ -897,6 +908,8 @@ export default function App() {
           handleGlobalReset={handleGlobalReset}
           guidePinned={guidePinned}
           onTogglePinGuide={() => setGuidePinned(p => !p)}
+          inspectedCell={inspectedCell}
+          setInspectedCell={setInspectedCell}
         />
 
         {/* ── CANVAS AREA ───────────────────────────────────────────────── */}
@@ -1048,11 +1061,11 @@ export default function App() {
                     isBlankScorecard={blankMode}
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
-                    onCellClick={!exporting && scoringMode === 'live' ? handleCellClick : null}
+                    onCellClick={!exporting ? handleCellClick : null}
                     onBatterClick={!exporting && scoringMode === 'live' ? handleBatterClick : null}
                     onPitcherClick={!exporting && scoringMode === 'live' ? handlePitcherClick : null}
-                    activeCellKey={!exporting && scoringMode === 'live' ? activeCellContext?.cellKey : null}
-                    isInteractive={!exporting && scoringMode === 'live'}
+                    activeCellKey={!exporting ? (scoringMode === 'live' ? activeCellContext?.cellKey : inspectedCell?.cellKey) : null}
+                    isInteractive={!exporting}
                     isExporting={exporting}
                     isAdvancedMode={isAdvancedMode}
                   />
