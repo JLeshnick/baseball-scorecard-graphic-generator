@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, RotateCcw } from 'lucide-react';
+import { formatPlayerName } from '../utils/constants';
 
 export default function AtBatInspectionModal({
   isOpen,
@@ -47,9 +48,9 @@ export default function AtBatInspectionModal({
     || (selectedBattedBallIndex !== null && targetBattedBalls[selectedBattedBallIndex])
     || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
 
-  const batterName = inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter';
+  const batterName = formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter');
   const displayJersey = inspectedPlay?.batterJerseyNumber || inspectedCell.batter?.jerseyNumber || '';
-  const pitcherName = inspectedPlay?.pitcherName || '';
+  const pitcherName = formatPlayerName(inspectedPlay?.pitcherFullName || inspectedPlay?.pitcherName || '');
   const batSide = inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R';
   const playDesc = inspectedPlay?.description || (inspectedPlay?.code ? inspectedPlay.code : (inspectedPlay ? '' : 'No plate appearance in this inning.'));
 

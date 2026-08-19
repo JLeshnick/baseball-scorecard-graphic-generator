@@ -15,7 +15,7 @@ import {
   Lock,
   RotateCcw,
 } from 'lucide-react';
-import { POSTER_THEMES } from '../utils/constants';
+import { POSTER_THEMES, formatPlayerName } from '../utils/constants';
 import { useAppStore } from '../store/useAppStore';
 
 import ScoringGuide from './ScoringGuide';
@@ -574,17 +574,17 @@ export default function Sidebar({
                         || (selectedBattedBallIndex !== null && targetBattedBalls[selectedBattedBallIndex])
                         || (targetBattedBalls.length > 0 ? targetBattedBalls[targetBattedBalls.length - 1] : targetHitData);
                       const batterName = isInspecting
-                        ? (inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
-                        : (scorecardData.gameInfo.liveGameState?.batterName || '');
+                        ? formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
+                        : formatPlayerName(scorecardData.gameInfo.liveGameState?.batterName || '');
                       const displayJersey = isInspecting
                         ? (inspectedPlay?.batterJerseyNumber || inspectedCell.batter?.jerseyNumber || '')
                         : '';
                       const displayHeaderName = isInspecting
-                        ? (inspectedPlay?.batterName || inspectedCell.batter?.name || 'Batter')
+                        ? formatPlayerName(inspectedPlay?.batterFullName || inspectedPlay?.batterName || inspectedCell.batter?.fullName || inspectedCell.batter?.name || 'Batter')
                         : '';
                       const pitcherName = isInspecting
-                        ? (inspectedPlay?.pitcherName || '')
-                        : (scorecardData.gameInfo.liveGameState?.pitcherName || '');
+                        ? formatPlayerName(inspectedPlay?.pitcherFullName || inspectedPlay?.pitcherName || '')
+                        : formatPlayerName(scorecardData.gameInfo.liveGameState?.pitcherName || '');
                       const batSide = isInspecting
                         ? (inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R')
                         : (scorecardData?.gameInfo?.liveGameState?.batSide || 'R');

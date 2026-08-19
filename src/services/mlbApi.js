@@ -699,6 +699,7 @@ export function processMLBData(data, gamePkOverride) {
         parsed.hitData = hitData;
         parsed.battedBalls = battedBalls;
         parsed.pitcherName = extractLastNameGlobal(play.matchup?.pitcher?.fullName || '');
+        parsed.pitcherFullName = play.matchup?.pitcher?.fullName || '';
         parsed.batterId = playBatterId;
         parsed.batterName = playBatterLastName;
         parsed.batterFullName = playBatterFullName;

@@ -100,3 +100,31 @@ export const getAppThemeColors = (isDark) => ({
   accent:           isDark ? '#6366f1' : '#4f46e5',
   accentBg:         isDark ? 'rgba(99,102,241,0.15)' : 'rgba(79,70,229,0.08)',
 });
+
+export const formatPlayerName = (name) => {
+  if (!name || typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+
+  // If ALL CAPS string (e.g. "FLAHERTY", "JACK FLAHERTY"), convert to clean Title Case
+  if (trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed)) {
+    return trimmed
+      .toLowerCase()
+      .split(' ')
+      .map(word => {
+        if (word.startsWith("o'") && word.length > 2) {
+          return "O'" + word.charAt(2).toUpperCase() + word.slice(3);
+        }
+        if (word.startsWith("mc") && word.length > 2) {
+          return "Mc" + word.charAt(2).toUpperCase() + word.slice(3);
+        }
+        if (word === 'jr' || word === 'jr.') return 'Jr.';
+        if (word === 'sr' || word === 'sr.') return 'Sr.';
+        if (['ii', 'iii', 'iv', 'v'].includes(word)) return word.toUpperCase();
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+  }
+
+  return trimmed;
+};
