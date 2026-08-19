@@ -212,8 +212,8 @@ function getErrorPosition(play) {
   return '';
 }
 
-function parsePlayNotation(play) {
-  const event = play.result?.eventType || '';
+export function parsePlayNotation(play) {
+  const event = (play.result?.eventType || play.result?.event || '').toLowerCase().replace(/\s+/g, '_');
   const desc = play.result?.description || '';
   const descLower = desc.toLowerCase();
   const isComplete = play.about?.isComplete ?? Boolean(event || desc);
@@ -598,6 +598,38 @@ export function processMLBData(data, gamePkOverride) {
           });
         }
 
+        let hitData = null;
+        if (play.playEvents) {
+          play.playEvents.forEach(evt => {
+            if (evt.hitData) {
+              const hd = evt.hitData;
+              hitData = {
+                launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+                launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+                totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+                trajectory: hd.trajectory || '',
+                hardness: hd.hardness || '',
+                location: hd.location || '',
+                coordX: hd.coordinates?.coordX ?? null,
+                coordY: hd.coordinates?.coordY ?? null,
+              };
+            }
+          });
+        }
+        if (!hitData && play.hitData) {
+          const hd = play.hitData;
+          hitData = {
+            launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+            launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+            totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+            trajectory: hd.trajectory || '',
+            hardness: hd.hardness || '',
+            location: hd.location || '',
+            coordX: hd.coordinates?.coordX ?? null,
+            coordY: hd.coordinates?.coordY ?? null,
+          };
+        }
+
         const playBatterId = play.matchup?.batter?.id || batterId;
         const playBatterPlayer = playerMap[`ID${playBatterId}`];
         const playBatterFullName = play.matchup?.batter?.fullName || playBatterPlayer?.person?.fullName || '';
@@ -608,6 +640,7 @@ export function processMLBData(data, gamePkOverride) {
         const pitchHand = play.matchup?.pitchHand?.code || 'R';
 
         parsed.pitches = playPitches;
+        parsed.hitData = hitData;
         parsed.pitcherName = extractLastNameGlobal(play.matchup?.pitcher?.fullName || '');
         parsed.batterId = playBatterId;
         parsed.batterName = playBatterLastName;
@@ -1091,6 +1124,38 @@ export function processMLBData(data, gamePkOverride) {
       });
     }
 
+    let liveHitData = null;
+    if (targetPlay?.playEvents) {
+      targetPlay.playEvents.forEach(evt => {
+        if (evt.hitData) {
+          const hd = evt.hitData;
+          liveHitData = {
+            launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+            launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+            totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+            trajectory: hd.trajectory || '',
+            hardness: hd.hardness || '',
+            location: hd.location || '',
+            coordX: hd.coordinates?.coordX ?? null,
+            coordY: hd.coordinates?.coordY ?? null,
+          };
+        }
+      });
+    }
+    if (!liveHitData && targetPlay?.hitData) {
+      const hd = targetPlay.hitData;
+      liveHitData = {
+        launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+        launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+        totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+        trajectory: hd.trajectory || '',
+        hardness: hd.hardness || '',
+        location: hd.location || '',
+        coordX: hd.coordinates?.coordX ?? null,
+        coordY: hd.coordinates?.coordY ?? null,
+      };
+    }
+
     liveGameState = {
       balls: currentPlay?.count?.balls ?? linescore?.balls ?? 0,
       strikes: currentPlay?.count?.strikes ?? linescore?.strikes ?? 0,
@@ -1107,6 +1172,7 @@ export function processMLBData(data, gamePkOverride) {
       onSecond: Boolean(linescore?.offense?.second || currentPlay?.matchup?.postOnSecond),
       onThird: Boolean(linescore?.offense?.third || currentPlay?.matchup?.postOnThird),
       pitches,
+      hitData: liveHitData,
     };
   }
 
