@@ -213,11 +213,16 @@ const ScorecardGraphic = ({
 
   // ─── Play Cell Renderer ───────────────────────────────────────────────────────
   const renderSinglePlayCell = (play, isHome = false, cellKey = '') => {
+    const isMulti = cellKey.includes('_multi_');
+    const diamondSize = isMulti ? '23' : '30';
+    const badgeFontSize = isMulti ? '5px' : '6.5px';
+    const badgePad = isMulti ? '0.5px 2px' : '1px 3px';
+
     if (!play || !play.code || isBlankMode) {
       return (
         <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {renderEraserOverlay(cellKey)}
-          <svg viewBox="0 0 40 40" width="28" height="28" style={{ display: 'block', margin: 'auto', opacity: 0.25, position: 'relative', zIndex: 1 }}>
+          <svg viewBox="0 0 40 40" width={isMulti ? '20' : '28'} height={isMulti ? '20' : '28'} style={{ display: 'block', margin: 'auto', opacity: 0.25, position: 'relative', zIndex: 1 }}>
             <polygon
               points="20,35 35,20 20,5 5,20"
               fill="none"
@@ -236,9 +241,9 @@ const ScorecardGraphic = ({
 
     const extraEventBadge = effectiveShowExtraEvents && extraEvent ? (
       <span style={{
-        position: 'absolute', top: '2px', left: '2px',
-        fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
-        lineHeight: 1, padding: '1px 3px', borderRadius: '2px',
+        position: 'absolute', top: '1px', left: isMulti ? '9px' : '2px',
+        fontSize: badgeFontSize, fontWeight: 900, fontFamily: t.fontMono,
+        lineHeight: 1, padding: badgePad, borderRadius: '2px',
         backgroundColor: isHome ? t.homeSecondary : t.awaySecondary,
         color: '#000000', zIndex: 3, boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
       }}>
@@ -248,8 +253,8 @@ const ScorecardGraphic = ({
 
     const subLetterBadge = play.subLetter ? (
       <span style={{
-        position: 'absolute', top: '2px', left: (effectiveShowExtraEvents && extraEvent) ? '20px' : '2px',
-        fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
+        position: 'absolute', top: '1px', left: (effectiveShowExtraEvents && extraEvent) ? (isMulti ? '18px' : '20px') : (isMulti ? '9px' : '2px'),
+        fontSize: badgeFontSize, fontWeight: 900, fontFamily: t.fontMono,
         lineHeight: 1,
         color: isHome ? t.homeColor : t.awayColor,
         zIndex: 3,
@@ -262,13 +267,13 @@ const ScorecardGraphic = ({
       <span
         style={{
           position: 'absolute',
-          top: '2px',
-          right: '2px',
-          fontSize: '6.5px',
+          top: '1px',
+          right: '1.5px',
+          fontSize: badgeFontSize,
           fontWeight: 900,
           fontFamily: t.fontMono,
           lineHeight: 1,
-          padding: '1px 3px',
+          padding: badgePad,
           borderRadius: '2px',
           backgroundColor: '#ef4444',
           color: '#ffffff',
@@ -311,7 +316,7 @@ const ScorecardGraphic = ({
           {extraEventBadge}
           {subLetterBadge}
           {baseOutBadge}
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
+          <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
             <polygon
               points="20,37 37,20 20,3 3,20"
               fill={isHR ? hitColor : 'none'}
@@ -356,13 +361,13 @@ const ScorecardGraphic = ({
           </svg>
           <span style={{
             position: 'absolute',
-            bottom: '2px',
-            right: '2px',
-            fontSize: '7.5px',
+            bottom: '1.5px',
+            right: '1.5px',
+            fontSize: isMulti ? '6.5px' : '7.5px',
             fontWeight: 900,
             fontFamily: t.fontMono,
             lineHeight: 1,
-            padding: '1.5px 3px',
+            padding: isMulti ? '1px 2px' : '1.5px 3px',
             borderRadius: '2px',
             backgroundColor: pillBg,
             color: pillText,
@@ -387,13 +392,13 @@ const ScorecardGraphic = ({
           {extraEventBadge}
           {subLetterBadge}
           {baseOutBadge}
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
+          <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
             <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
           </svg>
           <span style={{
             fontFamily: t.fontHeader,
             fontWeight: 700,
-            fontSize: '17px',
+            fontSize: isMulti ? '14px' : '17px',
             color: t.textPrimary,
             display: 'inline-block',
             transform: isLooking ? 'scaleX(-1)' : 'none',
@@ -414,13 +419,13 @@ const ScorecardGraphic = ({
         {extraEventBadge}
         {subLetterBadge}
         {baseOutBadge}
-        <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
+        <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
           <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
         </svg>
         <span style={{
           fontFamily: t.fontMono,
           fontWeight: 700,
-          fontSize: type === 'error' ? '9px' : '8.5px',
+          fontSize: isMulti ? '7.5px' : (type === 'error' ? '9px' : '8.5px'),
           color: t.textSecondary,
           position: 'relative',
           zIndex: 2,
@@ -445,22 +450,10 @@ const ScorecardGraphic = ({
       // Multiple plate appearances in the same inning (batting through the order)
       return (
         <div style={{
-          display: 'flex', width: '100%', height: '100%',
+          display: 'flex', width: '100%', height: '100%', minHeight: '38px',
           alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden',
           position: 'relative',
         }}>
-          {/* Multi-PA badge */}
-          <span style={{
-            position: 'absolute', top: '1px', left: '50%', transform: 'translateX(-50%)',
-            fontSize: '5.5px', fontWeight: 900, fontFamily: t.fontMono,
-            color: t.textMuted, opacity: 0.85, pointerEvents: 'none', zIndex: 4,
-            letterSpacing: '0.04em', textTransform: 'uppercase',
-            backgroundColor: t.tableHeaderBg, padding: '0 3px', borderRadius: '2px',
-            border: `0.5px solid ${t.borderLight}`,
-          }}>
-            {playOrArray.length}x PA
-          </span>
-
           {playOrArray.map((p, idx) => (
             <div
               key={idx}
@@ -468,12 +461,13 @@ const ScorecardGraphic = ({
                 flex: 1, height: '100%', minWidth: 0,
                 borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderStrong}` : 'none',
                 position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              {/* Sequence number */}
+              {/* Sequence number badge */}
               <span style={{
                 position: 'absolute', top: '1px', left: '1.5px',
-                fontSize: '6px', fontWeight: 900, fontFamily: t.fontMono,
+                fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
                 color: isHome ? t.homeColor : t.awayColor,
                 opacity: 0.9, zIndex: 4, pointerEvents: 'none',
               }}>
@@ -583,7 +577,7 @@ const ScorecardGraphic = ({
     const POS_COL_W = 32;
     const NAME_COL_W = 126;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
-    const INNING_COL_W = 42;
+    const INNING_COL_W = 48;
 
     return (
       <div style={{ marginBottom: '12px' }}>

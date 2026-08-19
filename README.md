@@ -1,6 +1,6 @@
 # Baseball Scorecard Studio
 
-A comprehensive, live MLB scoring studio and print-quality baseball scorecard generator. Score games live in real-time with an interactive digital scorebook, track active MLB games with pitch-by-pitch strike zone visualizers and Statcast metrics, or generate retro and modern framable scorecard posters for any game in MLB history.
+A comprehensive, live MLB scoring studio and print-quality baseball scorecard generator. Score games live in real-time with an interactive digital scorebook, track active MLB games with pitch-by-pitch strike zone visualizers, multi-angle trajectory arcs, and Statcast metrics, or generate retro and modern framable scorecard posters for any game in MLB history.
 
 **Live App:** [jleshnick.github.io/baseball-scorecard-graphic-generator](https://jleshnick.github.io/baseball-scorecard-graphic-generator/)
 
@@ -10,21 +10,28 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 
 ### 1. Live MLB Game Day Hub & Real-Time Tracking
 - **Live MLB Stats API Integration** — Pulls official play-by-play, box scores, lineups, and pitching data for active, upcoming, and completed MLB games.
-- **Auto-Polling Live Tracker** — Automatically updates live in-progress games with the latest plays and pitching lines.
+- **Auto-Polling Live Tracker** — Automatically updates live in-progress games with the latest plays, counts, and pitching lines.
 - **Unified Live Game Dashboard** — Real-time game state displaying active inning, score, digital and visual Ball/Strike/Out count indicators, and a dynamic base runners diamond.
-- **Interactive Strike Zone & Pitch Visualizer** — Live 9-zone strike zone box plotting every pitch in the current at-bat with pitch numbers, velocity (MPH), pitch type (4-Seam Fastball, Slider, Changeup, Curveball, Cutter, Sinker), and outcome color coding (Strikes, Balls, Fouls, In-Play).
+- **Dual-Angle Pitch Visualizer** —
+  - **Catcher Front View:** 9-zone strike zone box plotting every pitch in the at-bat with pitch numbers, velocity (MPH), concise pitch types (`4-Seam`, `2-Seam`, `Cutter`, `Sinker`, `Slider`, `Sweeper`, `Changeup`, `Curveball`, `Splitter`), and color-coded outcomes (Strikes, Balls, Fouls, In-Play).
+  - **Side Flight Arc View:** 54-ft mound-to-plate flight trajectory rendering vertical release height, pitch arc, and total vertical drop break (inches).
+- **Hit & Foul Spray Visualizer** —
+  - **Field Spray Top View:** Multi-hit field spray capturing all fair hits and foul balls in the plate appearance with launch angle trajectory lines.
+  - **Elevation Arc Side View:** Side profile stadium view plotting true parabolic apex height and projected distance against warning track and 10 FT outfield wall.
+  - **Real-Time Hover Enunciation:** Hovering any flight curve, landing dot, or sequence chip instantly enunciates pitch number, exit velocity (MPH), projected distance (FT), and Statcast metrics in the top header.
+- **Interactive At-Bat & Inning Fate Inspection** — Click any scorecard cell or roster name to inspect that plate appearance's pitches, hits, and final inning fate (`Scored Run`, `Left on Base`, `Out on Basepaths`).
 
 ### 2. Interactive Digital Scorebook (Manual Scorekeeping)
 - **Click-to-Score Grid** — Click any batter cell in any inning to log at-bats with quick presets or custom codes.
 - **Visual Diamond Progression** — Supports own at-bat reach (dashed base paths) and subsequent end-of-inning advancements (solid base paths).
-- **Basepath Outs & Notation** — Full support for caught stealing (CS), pickoffs (PO), and runner outs on basepaths (1B, 2B, 3B, Home Plate) with diamond markers and badges.
-- **Multi-PA Inning Indicators** — Visual sequence counters and dividers for teams that bat around in a single inning.
-- **Pitching Staff Management** — Dynamically insert additional relief pitchers, assign decisions (W, L, SV, HLD), and record custom pitching lines.
-- **Lineup Substitutions** — Track pinch-hitters and defensive changes with official scorebook lettering (a, b, c).
+- **Basepath Outs & Notation** — Full support for caught stealing (`CS`), pickoffs (`PO`), and runner outs on basepaths (`1B`, `2B`, `3B`, `Home Plate`) with diamond markers and badges.
+- **Multi-PA Inning Indicators** — Visual sequence counters (`①`, `②`, `③`) and clean split sub-cells for teams that bat around in a single inning.
+- **Pitching Staff Management** — Dynamically insert additional relief pitchers, assign decisions (`W`, `L`, `SV`, `HLD`), and record custom pitching lines.
+- **Lineup Substitutions** — Track pinch-hitters and defensive changes with official scorebook lettering (`a.`, `b.`, `c.`).
 - **Matchup Lineup Pre-filling** — 1-click import of real starting lineups and rosters from any MLB matchup directly into a blank scorebook.
 
 ### 3. Statcast Highlights & Game Analytics
-- **Home Run & Top Hits Leaderboard** — Showcases launch speeds (MPH), projected hit distances (FT), launch angles, and pitch details.
+- **Home Run & Top Hits Leaderboard** — Showcases launch speeds (MPH), projected hit distances (FT), launch angles (°), and pitch details.
 - **Game Momentum Progression** — Inning-by-inning score progression and run differential tracking.
 - **Game MVP Award** — Automated MVP and winning pitcher badges for completed games.
 - **Pitch Count Breakdowns** — Pitcher total pitches, strikes, balls, and strike percentage breakdowns.
@@ -38,7 +45,7 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 - **Orientation Modes** — Instant toggle between Portrait (vertical stacked) and Landscape (side-by-side) layouts.
 
 ### 5. Built-in Scorekeeping Guide & Notation Key
-- **Comprehensive Reference** — Complete scoring notation key for hits, strikeouts, putouts, errors, fielder's choices, double plays, basepath outs, and fielding position numbers.
+- **Comprehensive Reference** — Complete scoring notation key for hits, strikeouts, putouts, errors, fielder's choices, double plays, basepath outs, Statcast metrics, pitch types, and fielding position numbers.
 - **Live Search & Filter** — Fast search bar to quickly look up symbols and terms.
 - **Pin to Canvas (Desktop)** — Pin the scoring guide floating alongside your scorecard while scoring live.
 
@@ -66,21 +73,47 @@ A comprehensive, live MLB scoring studio and print-quality baseball scorecard ge
 
 | Code / Symbol | Meaning | Description |
 |---------------|---------|-------------|
-| **1B / 2B / 3B** | Single / Double / Triple | Base hit reaching first, second, or third base |
-| **HR [Dist]** | Home Run | Home run (with optional Statcast distance in feet) |
-| **K** | Strikeout Swinging | Batter swung and missed on strike three |
-| **ꓘ** | Strikeout Looking | Called third strike |
+| **1B / 2B / 3B** | Single / Double / Triple | Base hit reaching first, second, or third base (dashed line) |
+| **HR [Dist]** | Home Run | Home run (with full diamond highlight & optional Statcast distance in feet) |
+| **K** | Strikeout Swinging | Batter swung and missed on strike three (forward K) |
+| **ꓘ** | Strikeout Looking | Called third strike (backwards K) |
 | **BB / IBB** | Walk / Intentional Walk | Four balls or intentional base on balls |
 | **HBP** | Hit by Pitch | Batter awarded first base after being struck by pitch |
 | **6-3, 4-3, 5-3** | Groundout | Ground ball fielded by shortstop/2B/3B thrown to 1B |
 | **F8, F7, F9** | Flyout | Fly ball caught by center, left, or right fielder |
 | **L6, L4, L5** | Lineout | Line drive caught by infielder |
 | **DP / 6-4-3** | Double Play | Two outs recorded on single continuous play |
+| **TP / 5-4-3** | Triple Play | Three outs recorded on single continuous play |
 | **FC** | Fielder's Choice | Batter reaches base as defense attempts putout on another runner |
 | **E1–E9** | Fielding Error | Batter reaches base on defensive misplay by position #1–9 |
-| **X 2B / 3B / HP** | Out on Basepaths | Runner tagged or forced out advancing on bases |
+| **X 2B / 3B / HP** | Out on Basepaths | Runner tagged or forced out advancing on bases (red X mark) |
 | **CS / PO** | Caught Stealing / Pickoff | Runner put out attempting steal or picked off base |
 | **SB / WP / PB** | Stolen Base / Wild Pitch / Passed Ball | Runner advancement events |
+| **SCORED / LOB** | Scored Run / Left on Base | Inning fate: crossed home plate to score vs left stranded at 3rd out |
+| **① / ② / ③** | Multi-PA in Inning | Numbered plate appearance indicator for batting around in order |
+| **a. / b. / c.** | Lineup Substitution | Pinch hitter or defensive substitution indicator |
+
+---
+
+## Pitch Types & Visualizer Nomenclature
+
+| Pitch Type | Code | Description |
+|------------|------|-------------|
+| **4-Seam** | FF | Four-seam riding fastball |
+| **2-Seam** | FT | Two-seam fastball with arm-side tail |
+| **Cutter** | FC | Cut fastball with sharp glove-side break |
+| **Sinker** | SI | Heavy downward sinking fastball |
+| **Slider** | SL | Sharp horizontal and downward breaking ball |
+| **Sweeper** | ST | High-spin wide horizontal sweep slider |
+| **Slurve** | SV | Hybrid slider-curveball break |
+| **Changeup** | CH | Off-speed pitch with late tumbling drop |
+| **Curveball** | CU | 12-6 or sweeping vertical loop curve |
+| **Knuckle Curve** | KC | Spiked-grip downer curveball |
+| **Splitter** | FS | Tumbling split-finger diving pitch |
+| **Forkball** | FO | Deep-grip plunging off-speed pitch |
+| **Knuckleball** | KN | Erratic zero-spin flutterball |
+| **Eephus** | EP | Ultra slow high-arcing rainbow pitch |
+| **Int. Ball** | IN | Intentional ball thrown outside zone |
 
 ---
 

@@ -549,12 +549,17 @@ export function processMLBData(data, gamePkOverride) {
               const rawTypeDesc = evt.details?.type?.description || '';
               const rawTypeCode = evt.details?.type?.code || '';
               const PITCH_DICT = {
-                FF: '4-Seam Fastball', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam Fastball',
+                FF: '4-Seam', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam',
                 FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', SV: 'Slurve', CH: 'Changeup',
                 CU: 'Curveball', KC: 'Knuckle Curve', CS: 'Slow Curve', FS: 'Splitter',
-                FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Intentional Ball'
+                FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Int. Ball'
               };
-              const pitchTypeName = rawTypeDesc || PITCH_DICT[rawTypeCode] || rawTypeCode || 'Pitch';
+              let pitchTypeName = PITCH_DICT[rawTypeCode] || rawTypeDesc || rawTypeCode || 'Pitch';
+              if (pitchTypeName.includes('Four-Seam')) pitchTypeName = '4-Seam';
+              else if (pitchTypeName.includes('Two-Seam')) pitchTypeName = '2-Seam';
+              else if (pitchTypeName.includes('Cut Fastball')) pitchTypeName = 'Cutter';
+              else if (pitchTypeName.includes('Intentional')) pitchTypeName = 'Int. Ball';
+
               const pitchType = rawTypeCode || rawTypeDesc || 'P';
               const callDesc = evt.details?.call?.description || evt.details?.description || (isStrike ? 'Strike' : 'Ball');
 
@@ -1145,12 +1150,17 @@ export function processMLBData(data, gamePkOverride) {
           const rawTypeDesc = evt.details?.type?.description || '';
           const rawTypeCode = evt.details?.type?.code || '';
           const PITCH_DICT = {
-            FF: '4-Seam Fastball', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam Fastball',
+            FF: '4-Seam', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam',
             FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', SV: 'Slurve', CH: 'Changeup',
             CU: 'Curveball', KC: 'Knuckle Curve', CS: 'Slow Curve', FS: 'Splitter',
-            FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Intentional Ball'
+            FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Int. Ball'
           };
-          const pitchTypeName = rawTypeDesc || PITCH_DICT[rawTypeCode] || rawTypeCode || 'Pitch';
+          let pitchTypeName = PITCH_DICT[rawTypeCode] || rawTypeDesc || rawTypeCode || 'Pitch';
+          if (pitchTypeName.includes('Four-Seam')) pitchTypeName = '4-Seam';
+          else if (pitchTypeName.includes('Two-Seam')) pitchTypeName = '2-Seam';
+          else if (pitchTypeName.includes('Cut Fastball')) pitchTypeName = 'Cutter';
+          else if (pitchTypeName.includes('Intentional')) pitchTypeName = 'Int. Ball';
+
           const pitchType = rawTypeCode || rawTypeDesc || 'P';
 
           let resultType = 'ball';
