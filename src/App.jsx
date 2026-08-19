@@ -1096,6 +1096,7 @@ export default function App() {
                     isExporting={exporting}
                     isAdvancedMode={isAdvancedMode}
                     isMobile={isMobile}
+                    scoringMode={scoringMode}
                   />
                 </div>
               </div>

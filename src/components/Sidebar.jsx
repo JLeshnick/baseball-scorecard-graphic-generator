@@ -14,6 +14,7 @@ import {
   Share2,
   Lock,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 import { POSTER_THEMES, formatPlayerName } from '../utils/constants';
 import { useAppStore } from '../store/useAppStore';
@@ -556,6 +557,30 @@ export default function Sidebar({
                         </div>
                       </div>
                     </div>
+
+                    {/* Interactive Statcast Breakdown Hint Card */}
+                    {scoringMode === 'mlb' && !inspectedCell && !inspectedPitcher && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '9px 11px',
+                        borderRadius: '8px',
+                        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
+                        border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                      }}>
+                        <Sparkles style={{ width: '14px', height: '14px', color: '#3b82f6', flexShrink: 0, marginTop: '1.5px' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: c.textHead, letterSpacing: '0.01em' }}>
+                            Interactive Statcast Visualizer
+                          </div>
+                          <div style={{ fontSize: '10px', color: c.textMuted, lineHeight: 1.35 }}>
+                            Click any <strong>at-bat cell</strong>, <strong>batter</strong>, or <strong>pitcher</strong> on the scorecard to inspect pitch sequences, command, and spray charts.
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Live Count & Bases & Strike Zone (Active Game OR Inspected Cell OR Inspected Pitcher) */}
                     {(scorecardData.gameInfo.liveGameState || inspectedCell || inspectedPitcher) && (() => {

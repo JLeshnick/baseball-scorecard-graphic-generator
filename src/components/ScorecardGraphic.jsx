@@ -44,6 +44,7 @@ const ScorecardGraphic = ({
   isExporting = false,
   isAdvancedMode = false,
   isMobile = false,
+  scoringMode = 'mlb',
 }) => {
   if (!data) return null;
 
@@ -766,7 +767,7 @@ const ScorecardGraphic = ({
                             overflow: 'visible',
                             maxWidth: `${NAME_COL_W - 22}px`,
                             cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
-                            backgroundColor: isBatterActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                            backgroundColor: isBatterActive ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
                             boxShadow: isBatterActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
                             transition: 'all 0.12s ease',
                           }}
@@ -1123,7 +1124,7 @@ const ScorecardGraphic = ({
                 })}
 
                 {/* Interactive Add Pitcher button in manual mode */}
-                {!isExporting && isInteractive && onPitcherClick && (
+                {!isExporting && isInteractive && scoringMode === 'live' && onPitcherClick && (
                   <tr className="interactive-add-pitcher-row no-export" data-interactive-only="true" style={{ backgroundColor: t.tableRowAlt, borderTop: `1px dashed ${t.borderLight}` }}>
                     <td
                       colSpan={innings.length + 1}
