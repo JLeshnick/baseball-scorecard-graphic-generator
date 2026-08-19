@@ -604,30 +604,17 @@ export default function Sidebar({
                           {/* Top Header: Live Count vs Inspected Cell */}
                           {isInspecting ? (
                             <>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <span style={{
-                                    fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                    padding: '2px 5px', borderRadius: '4px',
-                                    backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
-                                  }}>
-                                    {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
-                                  </span>
-                                  <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                    {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={() => { setInspectedCell(null); setSelectedBattedBallIndex(null); }}
-                                  style={{
-                                    padding: '2px 6px', fontSize: '9px', fontWeight: 700,
-                                    borderRadius: '4px', border: `1px solid ${c.border}`,
-                                    backgroundColor: isDark ? '#27272a' : '#e5e7eb',
-                                    color: c.textMain, cursor: 'pointer',
-                                  }}
-                                >
-                                  Clear
-                                </button>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                  padding: '2px 5px', borderRadius: '4px',
+                                  backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                }}>
+                                  {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                </span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
+                                  {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
+                                </span>
                               </div>
 
                               {/* Multi-PA Selector when player batted multiple times in this inning */}
