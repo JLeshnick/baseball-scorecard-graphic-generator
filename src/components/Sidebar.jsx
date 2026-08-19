@@ -126,15 +126,15 @@ export default function Sidebar({
   const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
-  const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
+  const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(inspectedCell?.isFullGame ? 'all' : 0);
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
-    setSelectedMultiPaIndex(0);
+    setSelectedMultiPaIndex(inspectedCell?.isFullGame ? 'all' : 0);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
-  }, [inspectedCellKey]);
+  }, [inspectedCellKey, inspectedCell?.isFullGame]);
 
   useEffect(() => {
     setHoveredBattedBallIndex(null);
@@ -562,6 +562,7 @@ export default function Sidebar({
                       const isInspectingCell = Boolean(inspectedCell);
                       const isInspectingPitcher = Boolean(inspectedPitcher);
                       const isInspecting = isInspectingCell || isInspectingPitcher;
+                      const isFullGameBatter = Boolean(isInspectingCell && inspectedCell?.isFullGame);
 
                       // Pitcher inspection plays (scoped to clicked inning if clicked on inning cell, or all outing if clicked on pitcher header)
                       const targetPitcherInning = inspectedPitcher?.inning ? Number(inspectedPitcher.inning) : 'all';
@@ -574,9 +575,11 @@ export default function Sidebar({
                         : (Array.isArray(inspectedCell?.currentPlay)
                             ? inspectedCell.currentPlay
                             : (inspectedCell?.currentPlay ? [inspectedCell.currentPlay] : []));
-                      const activeMultiIndex = (selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
+                      
+                      const isAggregatedFullGame = isFullGameBatter && (selectedMultiPaIndex === 'all' || selectedMultiPaIndex === null || selectedMultiPaIndex === undefined);
+                      const activeMultiIndex = (!isAggregatedFullGame && typeof selectedMultiPaIndex === 'number' && selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
                       const inspectedPlay = isInspectingCell
-                        ? (inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null)
+                        ? (isAggregatedFullGame ? null : (inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null))
                         : null;
 
                       const targetPitches = isInspectingPitcher
@@ -588,7 +591,15 @@ export default function Sidebar({
                             pitchNumber: idx + 1,
                           })))
                         : (isInspectingCell
-                            ? (inspectedPlay?.pitches || [])
+                            ? (isAggregatedFullGame
+                                ? inspectedPlaysArray.flatMap((p, pIdx) => (p.pitches || []).map((pitch, idx) => ({
+                                    ...pitch,
+                                    playDesc: p.description || p.code,
+                                    pitcherName: p.pitcherFullName || p.pitcherName,
+                                    inning: p.inning,
+                                    pitchNumber: idx + 1,
+                                  })))
+                                : (inspectedPlay?.pitches || []))
                             : (scorecardData.gameInfo.liveGameState?.pitches || []));
 
                       const targetHitData = isInspectingCell
@@ -608,7 +619,18 @@ export default function Sidebar({
                             }));
                           })
                         : (isInspectingCell
-                            ? (inspectedPlay?.battedBalls?.length ? inspectedPlay.battedBalls : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : []))
+                            ? (isAggregatedFullGame
+                                ? inspectedPlaysArray.flatMap(p => {
+                                    const balls = p.battedBalls?.length ? p.battedBalls : (p.hitData ? [p.hitData] : []);
+                                    return balls.map(b => ({
+                                      ...b,
+                                      pitcherName: p.pitcherFullName || p.pitcherName,
+                                      playCode: p.code,
+                                      playDesc: p.description || p.code,
+                                      inning: p.inning,
+                                    }));
+                                  })
+                                : (inspectedPlay?.battedBalls?.length ? inspectedPlay.battedBalls : (inspectedPlay?.hitData ? [inspectedPlay.hitData] : [])))
                             : (scorecardData.gameInfo.liveGameState?.battedBalls?.length ? scorecardData.gameInfo.liveGameState.battedBalls : (scorecardData.gameInfo.liveGameState?.hitData ? [scorecardData.gameInfo.liveGameState.hitData] : [])));
 
                       const totalPitchesCount = targetPitches?.length || 0;
@@ -689,7 +711,7 @@ export default function Sidebar({
                                     padding: '2px 5px', borderRadius: '4px',
                                     backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
                                   }}>
-                                    {`${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
+                                    {isFullGameBatter ? 'FULL GAME' : `${inspectedCell.teamKey === 'away' ? '▲ TOP' : '▼ BOT'} INN ${inspectedCell.inning}`}
                                   </span>
                                   <span style={{ fontSize: '10.5px', fontWeight: 800, color: c.textHead }}>
                                     {displayJersey ? `#${displayJersey} ` : ''}{displayHeaderName}
@@ -707,22 +729,45 @@ export default function Sidebar({
                                 )}
                               </div>
 
-                              {/* Multi-PA Selector when player batted multiple times in this inning */}
+                              {/* Multi-PA Selector when player has multiple PAs or full game is inspected */}
                               {inspectedPlaysArray.length > 1 && (
                                 <div style={{
                                   display: 'flex', alignItems: 'center', gap: '4px',
                                   backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                                   padding: '3px', borderRadius: '6px',
                                   border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                                  flexWrap: 'wrap',
                                 }}>
                                   <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted, paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
-                                    At-Bat:
+                                    {isFullGameBatter ? 'Scope:' : 'At-Bat:'}
                                   </span>
+                                  {isFullGameBatter && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedMultiPaIndex('all');
+                                        setHoveredBattedBallIndex(null);
+                                        setHoveredPitchIdx(null);
+                                      }}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                                        padding: '3px 6px', borderRadius: '5px', cursor: 'pointer',
+                                        border: `1px solid ${isAggregatedFullGame ? '#3b82f6' : 'transparent'}`,
+                                        backgroundColor: isAggregatedFullGame ? (isDark ? '#1e3a8a' : '#eff6ff') : 'transparent',
+                                        color: isAggregatedFullGame ? (isDark ? '#93c5fd' : '#1d4ed8') : c.textMuted,
+                                        fontWeight: isAggregatedFullGame ? 800 : 600,
+                                        fontSize: '9.5px',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                    >
+                                      <span>All ({inspectedPlaysArray.length} PA)</span>
+                                    </button>
+                                  )}
                                   {inspectedPlaysArray.map((p, pIdx) => {
-                                    const isCur = pIdx === activeMultiIndex;
-                                    const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : '③';
+                                    const isCur = !isAggregatedFullGame && pIdx === activeMultiIndex;
+                                    const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : pIdx === 2 ? '③' : pIdx === 3 ? '④' : '⑤';
                                     const playCode = p?.code || `PA ${pIdx + 1}`;
                                     const pitchCount = p?.pitches?.length || 0;
+                                    const label = isFullGameBatter ? `Inn ${p.inning} · ${playCode}` : playCode;
                                     return (
                                       <button
                                         key={pIdx}
@@ -732,20 +777,19 @@ export default function Sidebar({
                                           setHoveredPitchIdx(null);
                                         }}
                                         style={{
-                                          flex: 1,
                                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-                                          padding: '4px 6px', borderRadius: '5px', cursor: 'pointer',
+                                          padding: '3px 6px', borderRadius: '5px', cursor: 'pointer',
                                           border: `1px solid ${isCur ? '#3b82f6' : 'transparent'}`,
                                           backgroundColor: isCur ? (isDark ? '#1e3a8a' : '#eff6ff') : 'transparent',
                                           color: isCur ? (isDark ? '#93c5fd' : '#1d4ed8') : c.textMuted,
                                           fontWeight: isCur ? 800 : 600,
-                                          fontSize: '10px',
+                                          fontSize: '9.5px',
                                           transition: 'all 0.15s ease',
                                         }}
                                       >
                                         <span>{seqSymbol}</span>
-                                        <span>{playCode}</span>
-                                        <span style={{ fontSize: '8.5px', opacity: 0.75 }}>({pitchCount}P)</span>
+                                        <span>{label}</span>
+                                        <span style={{ fontSize: '8px', opacity: 0.75 }}>({pitchCount}P)</span>
                                       </button>
                                     );
                                   })}
@@ -838,6 +882,21 @@ export default function Sidebar({
                                 <span style={{ fontWeight: 700, color: c.textHead }}>Strike Rate:</span>
                                 <span style={{ fontWeight: 600, color: c.textMain }}>
                                   {totalPitchesCount > 0 ? `${Math.round((totalStrikesCount / totalPitchesCount) * 100)}%` : '0%'} ({totalStrikesCount} Strikes / {totalBallsCount} Balls)
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Batted Balls:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>
+                                  {targetBattedBalls.length > 0 ? `${targetBattedBalls.length} In Play (${totalHitsCount}H · ${totalFoulsHitCount}F${totalOutsHitCount > 0 ? ` · ${totalOutsHitCount}O` : ''})` : '0 In Play'}
+                                </span>
+                              </div>
+                            </div>
+                          ) : isFullGameBatter && isAggregatedFullGame ? (
+                            <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '3px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Plate Appearances:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>
+                                  {inspectedPlaysArray.length} PA ({inspectedPlaysArray.map(p => p.code || 'PA').join(', ')})
                                 </span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1192,7 +1251,7 @@ export default function Sidebar({
                                   <div style={{
                                     position: 'relative',
                                     width: '100%',
-                                    height: '135px',
+                                    height: '175px',
                                     backgroundColor: isDark ? '#050507' : '#f4f3f0',
                                     borderRadius: '6px',
                                     border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
@@ -1470,7 +1529,9 @@ export default function Sidebar({
                                           No Plate Appearance
                                         </div>
                                         <div style={{ fontSize: '9.5px', color: c.textMuted, maxWidth: '200px', lineHeight: 1.35 }}>
-                                          #{inspectedCell.batter?.jerseyNumber} {inspectedCell.batter?.name} did not bat in Inning {inspectedCell.inning}.
+                                          {isFullGameBatter
+                                            ? `#${inspectedCell.batter?.jerseyNumber} ${inspectedCell.batter?.name} has no pitch data recorded for this game.`
+                                            : `#${inspectedCell.batter?.jerseyNumber} ${inspectedCell.batter?.name} did not bat in Inning ${inspectedCell.inning}.`}
                                         </div>
                                       </div>
                                     )}
@@ -1611,7 +1672,7 @@ export default function Sidebar({
                                   <div style={{
                                     position: 'relative',
                                     width: '100%',
-                                    height: '145px',
+                                    height: '175px',
                                     backgroundColor: isDark ? '#050507' : '#f4f3f0',
                                     borderRadius: '6px',
                                     border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,

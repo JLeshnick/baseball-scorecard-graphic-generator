@@ -315,4 +315,72 @@ describe('Sidebar Component & Visualizer Tests', () => {
     expect(reliefPlays[0].pitcherId).toBe(102);
     expect(reliefPlays[0].batterName).toBe('BATTER2');
   });
+
+  it('renders full-game batter performance with all aggregated PAs and individual PA switching', () => {
+    const fullGameBatterCell = {
+      teamKey: 'home',
+      teamName: 'New York Yankees',
+      isFullGame: true,
+      inning: null,
+      batterIndex: 2,
+      batter: { id: 99, jerseyNumber: '99', name: 'JUDGE', fullName: 'Aaron Judge' },
+      plays: [
+        {
+          inning: 1,
+          code: 'HR',
+          description: 'Aaron Judge homers to right field.',
+          pitches: [{ pitchNumber: 1, speed: 94.2, pitchType: 'FF', callDesc: 'Called Strike', color: '#ef4444' }, { pitchNumber: 2, speed: 95.1, pitchType: 'FF', callDesc: 'In Play', color: '#3b82f6' }],
+          hitData: { launchSpeed: 108.9, launchAngle: 28, totalDistance: 403, trajectory: 'fly_ball' }
+        },
+        {
+          inning: 3,
+          code: '1B',
+          description: 'Aaron Judge singles to left.',
+          pitches: [{ pitchNumber: 1, speed: 91.0, pitchType: 'CH', callDesc: 'In Play', color: '#3b82f6' }],
+          hitData: { launchSpeed: 102.5, launchAngle: 12, totalDistance: 275, trajectory: 'line_drive' }
+        },
+        {
+          inning: 5,
+          code: 'K',
+          description: 'Aaron Judge strikes out swinging.',
+          pitches: [{ pitchNumber: 1, speed: 85.0, pitchType: 'SL', callDesc: 'Swinging Strike', color: '#ef4444' }]
+        }
+      ]
+    };
+
+    render(
+      <Sidebar
+        isMobile={false}
+        mobileView="controls"
+        c={mockColors}
+        isDark={false}
+        activeTab="game"
+        setActiveTab={vi.fn()}
+        tabStyle={vi.fn()}
+        scoringMode="mlb"
+        setScoringMode={vi.fn()}
+        scorecardData={mockScorecardData}
+        setScorecardData={vi.fn()}
+        inspectedCell={fullGameBatterCell}
+        setInspectedCell={vi.fn()}
+        selectedGamePk={123456}
+        setSelectedGamePk={vi.fn()}
+      />
+    );
+
+    // FULL GAME badge
+    expect(screen.getByText(/FULL GAME/i)).toBeDefined();
+    expect(screen.getByText(/All \(3 PA\)/i)).toBeDefined();
+    expect(screen.getByText(/Inn 1 · HR/i)).toBeDefined();
+    expect(screen.getByText(/Inn 3 · 1B/i)).toBeDefined();
+    expect(screen.getByText(/Inn 5 · K/i)).toBeDefined();
+
+    // Aggregated pitch count (2 + 1 + 1 = 4 Pitches)
+    expect(screen.getAllByText(/4P ·/i).length).toBeGreaterThan(0);
+
+    // Click individual PA
+    const pa1Btn = screen.getByRole('button', { name: /Inn 1 · HR/i });
+    fireEvent.click(pa1Btn);
+    expect(screen.getByText(/Aaron Judge homers to right field/i)).toBeDefined();
+  });
 });

@@ -444,7 +444,7 @@ export default function PitcherInspectionModal({
           {/* VISUALIZER CANVAS */}
           <div style={{
             width: '100%',
-            height: '240px',
+            height: '260px',
             backgroundColor: isDark ? '#09090b' : '#f8fafc',
             borderRadius: '12px',
             border: `1px solid ${isDark ? '#27272a' : '#e2e8f0'}`,

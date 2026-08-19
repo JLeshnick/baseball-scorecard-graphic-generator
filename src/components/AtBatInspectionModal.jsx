@@ -15,34 +15,56 @@ export default function AtBatInspectionModal({
   const [pitchFilter, setPitchFilter] = useState('all'); // 'all' | 'first_pitch' | 'two_strikes' | 'type:...'
   const [hoveredPitchIdx, setHoveredPitchIdx] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
-  const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
+  const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(inspectedCell?.isFullGame ? 'all' : 0);
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
-    setSelectedMultiPaIndex(0);
+    setSelectedMultiPaIndex(inspectedCell?.isFullGame ? 'all' : 0);
     setHoveredBattedBallIndex(null);
     setHoveredPitchIdx(null);
     setPitchFilter('all');
     setVisualizerTab('strikezone');
     setViewPerspective('front');
-  }, [inspectedCellKey]);
+  }, [inspectedCellKey, inspectedCell?.isFullGame]);
 
   if (!isOpen || !inspectedCell) return null;
 
+  const isFullGameBatter = Boolean(inspectedCell?.isFullGame);
   const inspectedPlaysArray = inspectedCell?.plays?.length
     ? inspectedCell.plays
     : (Array.isArray(inspectedCell?.currentPlay)
         ? inspectedCell.currentPlay
         : (inspectedCell?.currentPlay ? [inspectedCell.currentPlay] : []));
 
-  const activeMultiIndex = (selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
-  const inspectedPlay = inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null;
+  const isAggregatedFullGame = isFullGameBatter && (selectedMultiPaIndex === 'all' || selectedMultiPaIndex === null || selectedMultiPaIndex === undefined);
+  const activeMultiIndex = (!isAggregatedFullGame && typeof selectedMultiPaIndex === 'number' && selectedMultiPaIndex < inspectedPlaysArray.length) ? selectedMultiPaIndex : 0;
+  const inspectedPlay = isAggregatedFullGame ? null : (inspectedPlaysArray.length > 0 ? inspectedPlaysArray[activeMultiIndex] : null);
 
-  const targetPitches = inspectedPlay?.pitches || [];
+  const targetPitches = isAggregatedFullGame
+    ? inspectedPlaysArray.flatMap((p, pIdx) => (p.pitches || []).map((pitch, idx) => ({
+        ...pitch,
+        playDesc: p.description || p.code,
+        pitcherName: p.pitcherFullName || p.pitcherName,
+        inning: p.inning,
+        pitchNumber: idx + 1,
+      })))
+    : (inspectedPlay?.pitches || []);
+
   const targetHitData = inspectedPlay?.hitData || null;
-  const targetBattedBalls = inspectedPlay?.battedBalls?.length
-    ? inspectedPlay.battedBalls
-    : (targetHitData ? [targetHitData] : []);
+  const targetBattedBalls = isAggregatedFullGame
+    ? inspectedPlaysArray.flatMap(p => {
+        const balls = p.battedBalls?.length ? p.battedBalls : (p.hitData ? [p.hitData] : []);
+        return balls.map(b => ({
+          ...b,
+          pitcherName: p.pitcherFullName || p.pitcherName,
+          playCode: p.code,
+          playDesc: p.description || p.code,
+          inning: p.inning,
+        }));
+      })
+    : (inspectedPlay?.battedBalls?.length
+        ? inspectedPlay.battedBalls
+        : (targetHitData ? [targetHitData] : []));
 
   const totalPitchesCount = targetPitches.length;
   const totalStrikesCount = targetPitches.filter(p => p.isStrike || p.resultType === 'strike' || p.resultType === 'foul' || p.callDesc?.toLowerCase().includes('strike') || p.callDesc?.toLowerCase().includes('foul')).length;
@@ -60,7 +82,9 @@ export default function AtBatInspectionModal({
   const displayJersey = inspectedPlay?.batterJerseyNumber || inspectedCell.batter?.jerseyNumber || '';
   const pitcherName = formatPlayerName(inspectedPlay?.pitcherFullName || inspectedPlay?.pitcherName || '');
   const batSide = inspectedPlay?.batSide || inspectedCell.batter?.batSide || 'R';
-  const playDesc = inspectedPlay?.description || (inspectedPlay?.code ? inspectedPlay.code : (inspectedPlay ? '' : 'No plate appearance in this inning.'));
+  const playDesc = isFullGameBatter && isAggregatedFullGame
+    ? `${inspectedPlaysArray.length} Plate Appearances (${inspectedPlaysArray.map(p => p.code || 'PA').join(', ')})`
+    : (inspectedPlay?.description || (inspectedPlay?.code ? inspectedPlay.code : (inspectedPlay ? '' : 'No plate appearance in this inning.')));
 
   return (
     <div style={{
@@ -150,7 +174,7 @@ export default function AtBatInspectionModal({
                 </span>
               </div>
               <div style={{ fontSize: '11px', color: isDark ? '#a1a1aa' : '#64748b', marginTop: '1px' }}>
-                {inspectedCell.teamName || (inspectedCell.teamKey === 'home' ? 'Home' : 'Away')} · Inning {inspectedCell.inning} {pitcherName ? `· vs ${pitcherName}` : ''}
+                {inspectedCell.teamName || (inspectedCell.teamKey === 'home' ? 'Home' : 'Away')} · {isFullGameBatter ? 'Full Game Performance' : `Inning ${inspectedCell.inning}`} {pitcherName ? `· vs ${pitcherName}` : ''}
               </div>
             </div>
           </div>
@@ -194,26 +218,51 @@ export default function AtBatInspectionModal({
               padding: '4px',
               borderRadius: '8px',
               border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+              flexWrap: 'wrap',
             }}>
               <span style={{ fontSize: '9.5px', fontWeight: 800, color: c.textMuted, paddingLeft: '4px', textTransform: 'uppercase' }}>
-                At-Bat:
+                {isFullGameBatter ? 'Scope:' : 'At-Bat:'}
               </span>
+              {isFullGameBatter && (
+                <button
+                  onClick={() => {
+                    setSelectedMultiPaIndex('all');
+                    setHoveredBattedBallIndex(null);
+                    setHoveredPitchIdx(null);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '5px 8px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    border: `1px solid ${isAggregatedFullGame ? '#3b82f6' : 'transparent'}`,
+                    backgroundColor: isAggregatedFullGame ? (isDark ? '#1e3a8a' : '#eff6ff') : 'transparent',
+                    color: isAggregatedFullGame ? (isDark ? '#93c5fd' : '#1d4ed8') : c.textMuted,
+                    fontWeight: isAggregatedFullGame ? 800 : 600,
+                    fontSize: '11px',
+                  }}
+                >
+                  <span>All ({inspectedPlaysArray.length} PA)</span>
+                </button>
+              )}
               {inspectedPlaysArray.map((p, pIdx) => {
-                const isCur = pIdx === activeMultiIndex;
-                const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : '③';
+                const isCur = !isAggregatedFullGame && pIdx === activeMultiIndex;
+                const seqSymbol = pIdx === 0 ? '①' : pIdx === 1 ? '②' : pIdx === 2 ? '③' : pIdx === 3 ? '④' : '⑤';
                 const playCode = p?.code || `PA ${pIdx + 1}`;
                 const pitchCount = p?.pitches?.length || 0;
+                const label = isFullGameBatter ? `Inn ${p.inning} · ${playCode}` : playCode;
                 return (
                   <button
                     key={pIdx}
                     onClick={() => {
                       setSelectedMultiPaIndex(pIdx);
-                      setSelectedBattedBallIndex(null);
                       setHoveredBattedBallIndex(null);
                       setHoveredPitchIdx(null);
                     }}
                     style={{
-                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -229,7 +278,7 @@ export default function AtBatInspectionModal({
                     }}
                   >
                     <span>{seqSymbol}</span>
-                    <span>{playCode}</span>
+                    <span>{label}</span>
                     <span style={{ fontSize: '9.5px', opacity: 0.75 }}>({pitchCount}P)</span>
                   </button>
                 );
@@ -516,7 +565,7 @@ export default function AtBatInspectionModal({
                 <div style={{
                   position: 'relative',
                   width: '100%',
-                  height: '175px',
+                  height: '230px',
                   backgroundColor: isDark ? '#09090b' : '#f8fafc',
                   borderRadius: '10px',
                   border: `1px solid ${isDark ? '#27272a' : '#e2e8f0'}`,
@@ -879,7 +928,7 @@ export default function AtBatInspectionModal({
                 <div style={{
                   position: 'relative',
                   width: '100%',
-                  height: '185px',
+                  height: '230px',
                   backgroundColor: isDark ? '#09090b' : '#f8fafc',
                   borderRadius: '10px',
                   border: `1px solid ${isDark ? '#27272a' : '#e2e8f0'}`,

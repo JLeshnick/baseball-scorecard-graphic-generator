@@ -479,8 +479,42 @@ export default function App() {
     }
   };
 
-  const handleBatterClick = () => {
-    setRosterModalOpen(true);
+  const handleBatterClick = (batterCtx) => {
+    if (scoringMode === 'live') {
+      setRosterModalOpen(true);
+    } else {
+      // In MLB mode: select/toggle batter performance to inspect all at-bats for full game!
+      setActiveTab('game');
+      setInspectedPitcher(null);
+      setInspectedCell(prev => {
+        const targetKey = `batter-${batterCtx.teamKey}-${batterCtx.batter?.id ?? batterCtx.batterIndex}`;
+        if (prev?.cellKey === targetKey) {
+          return null;
+        }
+        // Extract all plays for this batter across all innings
+        const allPlays = [];
+        if (batterCtx.batter?.plays) {
+          Object.entries(batterCtx.batter.plays).forEach(([inn, play]) => {
+            if (Array.isArray(play)) {
+              play.forEach(p => allPlays.push({ ...p, inning: Number(inn) }));
+            } else if (play) {
+              allPlays.push({ ...play, inning: Number(inn) });
+            }
+          });
+        }
+        return {
+          ...batterCtx,
+          isFullGame: true,
+          inning: null,
+          plays: allPlays,
+          currentPlay: allPlays[0] || null,
+          cellKey: targetKey,
+        };
+      });
+      if (isMobile) {
+        setMobileInspectionOpen(true);
+      }
+    }
   };
 
   const handlePitcherClick = (pitcherCtx) => {
@@ -1054,7 +1088,7 @@ export default function App() {
                     customAwayColor={customAwayColor}
                     customHomeColor={customHomeColor}
                     onCellClick={!exporting ? handleCellClick : null}
-                    onBatterClick={!exporting && scoringMode === 'live' ? handleBatterClick : null}
+                    onBatterClick={!exporting ? handleBatterClick : null}
                     onPitcherClick={!exporting ? handlePitcherClick : null}
                     activeCellKey={!exporting ? (scoringMode === 'live' ? activeCellContext?.cellKey : inspectedCell?.cellKey) : null}
                     activePitcherKey={!exporting ? (inspectedPitcher ? (inspectedPitcher.inning ? `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}-${inspectedPitcher.inning}` : `pitcher-${inspectedPitcher.teamKey}-${inspectedPitcher.pitcher?.id ?? inspectedPitcher.pitcherIndex}`) : null) : null}

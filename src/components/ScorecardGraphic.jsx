@@ -752,81 +752,90 @@ const ScorecardGraphic = ({
                     </td>
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
-                    <td
-                      onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
-                      className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
-                      style={{
-                        verticalAlign: 'middle',
-                        padding: '3px 4px 3px 6px',
-                        borderRight: `1.5px solid ${t.borderStrong}`,
-                        overflow: 'visible',
-                        maxWidth: `${NAME_COL_W - 22}px`,
-                        cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
-                      }}
-                      title={!isExporting && onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'visible' }}>
-                        {/* Starter */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            width: '16px', height: '16px', borderRadius: '50%',
-                            backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
-                            color: accentText,
-                            fontSize: '7px', fontWeight: 800,
-                            fontFamily: t.fontMono,
-                            flexShrink: 0,
-                          }}>
-                            {b.jerseyNumber}
-                          </span>
-                          <span style={{
-                            fontSize: batterFontSize, fontWeight: 700,
-                            letterSpacing: letterSpacing, textTransform: 'uppercase',
-                            fontFamily: t.fontHeader,
-                            color: t.textPrimary,
-                            whiteSpace: 'nowrap',
+                    {(() => {
+                      const thisBatterKey = `batter-${isHome ? 'home' : 'away'}-${b.id ?? bIdx}`;
+                      const isBatterActive = activeCellKey === thisBatterKey;
+                      return (
+                        <td
+                          onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                          className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
+                          style={{
+                            verticalAlign: 'middle',
+                            padding: '3px 4px 3px 6px',
+                            borderRight: `1.5px solid ${t.borderStrong}`,
                             overflow: 'visible',
-                            paddingRight: '6px',
-                            display: 'inline-block',
-                            lineHeight: 1.1,
-                          }}>
-                            {renderHandwrittenText(b.name, 'batter_' + b.id)}
-                          </span>
-                        </div>
+                            maxWidth: `${NAME_COL_W - 22}px`,
+                            cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
+                            backgroundColor: isBatterActive ? (isDarkTheme ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.16)') : undefined,
+                            boxShadow: isBatterActive ? 'inset 0 0 0 1.5px #3b82f6' : undefined,
+                            transition: 'all 0.12s ease',
+                          }}
+                          title={!isExporting && onBatterClick ? `Inspect #${b.jerseyNumber} ${b.name} Full Game Visuals` : undefined}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'visible' }}>
+                            {/* Starter */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: '16px', height: '16px', borderRadius: '50%',
+                                backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
+                                color: accentText,
+                                fontSize: '7px', fontWeight: 800,
+                                fontFamily: t.fontMono,
+                                flexShrink: 0,
+                              }}>
+                                {b.jerseyNumber}
+                              </span>
+                              <span style={{
+                                fontSize: batterFontSize, fontWeight: 700,
+                                letterSpacing: letterSpacing, textTransform: 'uppercase',
+                                fontFamily: t.fontHeader,
+                                color: t.textPrimary,
+                                whiteSpace: 'nowrap',
+                                overflow: 'visible',
+                                paddingRight: '6px',
+                                display: 'inline-block',
+                                lineHeight: 1.1,
+                              }}>
+                                {renderHandwrittenText(b.name, 'batter_' + b.id)}
+                              </span>
+                            </div>
 
-                        {/* Substitutes in this slot */}
-                        {b.substitutes && b.substitutes.map((sub, sIdx) => (
-                          <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px', opacity: 0.9 }}>
-                            <span style={{
-                              fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono,
-                              color: accentColor,
-                            }}>
-                              {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
-                            </span>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: '13px', height: '13px', borderRadius: '50%',
-                              backgroundColor: t.borderLight,
-                              color: t.textPrimary,
-                              fontSize: '6.5px', fontWeight: 800,
-                              fontFamily: t.fontMono,
-                              flexShrink: 0,
-                            }}>
-                              {sub.jerseyNumber || '—'}
-                            </span>
-                            <span style={{
-                              fontSize: '9px', fontWeight: 700,
-                              fontFamily: t.fontHeader,
-                              color: t.textPrimary,
-                              letterSpacing: '0.01em',
-                              textTransform: 'uppercase',
-                            }}>
-                              {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
-                            </span>
+                            {/* Substitutes in this slot */}
+                            {b.substitutes && b.substitutes.map((sub, sIdx) => (
+                              <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px', opacity: 0.9 }}>
+                                <span style={{
+                                  fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono,
+                                  color: accentColor,
+                                }}>
+                                  {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
+                                </span>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  width: '13px', height: '13px', borderRadius: '50%',
+                                  backgroundColor: t.borderLight,
+                                  color: t.textPrimary,
+                                  fontSize: '6.5px', fontWeight: 800,
+                                  fontFamily: t.fontMono,
+                                  flexShrink: 0,
+                                }}>
+                                  {sub.jerseyNumber || '—'}
+                                </span>
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 700,
+                                  fontFamily: t.fontHeader,
+                                  color: t.textPrimary,
+                                  letterSpacing: '0.01em',
+                                  textTransform: 'uppercase',
+                                }}>
+                                  {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </td>
+                        </td>
+                      );
+                    })()}
 
                     {/* Inning cells */}
                     {innings.map(n => {
