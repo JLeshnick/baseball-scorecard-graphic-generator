@@ -575,7 +575,7 @@ const ScorecardGraphic = ({
       : teamData.pitchers;
 
     const POS_COL_W = 20;
-    const NAME_COL_W = 148;
+    const NAME_COL_W = 126;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
     const INNING_COL_W = 48;
 
@@ -986,7 +986,7 @@ const ScorecardGraphic = ({
                         onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
                         className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
                         style={{
-                          padding: '3px 6px',
+                          padding: '3px 5px',
                           borderRight: `1.5px solid ${t.borderStrong}`,
                           verticalAlign: 'middle',
                           cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
@@ -1034,7 +1034,7 @@ const ScorecardGraphic = ({
                           <div style={{
                             fontFamily: t.fontMono, fontSize: '7.5px', fontWeight: 700,
                             color: t.textMuted, whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: '3px', opacity: 0.95, flexWrap: 'nowrap',
+                            display: 'flex', alignItems: 'center', gap: '2px', opacity: 0.95, flexWrap: 'nowrap',
                           }}>
                             <span><strong style={{ color: t.textPrimary, fontWeight: 900 }}>{isBlankMode ? '—' : (p.ip || '—')}</strong> IP</span>
                             <span style={{ opacity: 0.35 }}>•</span>
