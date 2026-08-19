@@ -26,17 +26,19 @@ feat: add pitch highlight filters, pitcher visualizer, hover polish, and compact
   - When inspecting a pitcher's inning or full outing, RHB/LHB batter boxes now render with neutral dashed outlines without favoring one side of the plate over another (since pitchers face both left- and right-handed batters throughout an inning).
   - Single-cell at-bat inspection continues to highlight the active batter's box.
 
-- **Pitch & Hit Breakdown Summaries & In-Canvas Floating Overlays (`src/components/Sidebar.jsx`, `src/components/AtBatInspectionModal.jsx`, `src/components/PitcherInspectionModal.jsx`):**
-  - Integrated abbreviated **Balls & Strikes** (`{totalPitches}P · {strikes}S {balls}B`) and **Hits & Fouls** (`{battedBalls}B · {hits}H {fouls}F`) directly into:
-    - Mode selector tab buttons: `Pitches (24P · 16S 8B)` and `Hit/Foul Spray (3B · 2H 1F)`.
-    - Main container title headers (`[INN 1] #17 Shohei Ohtani · 18P · 12S 6B`).
-  - **Embedded In-Canvas Floating Tooltips & Legends (Zero Layout Shift)**:
-    - Relocated pitch & hit hover metrics (`#3 98.4 MPH 4-Seam Fastball (Called Strike)`) into a floating frosted tooltip inside the top-left of the canvas, preventing any vertical DOM bouncing or layout jumps when moving over pitch pills.
-    - Embedded color keys (`● Strike  ● Ball  ● Foul` / `● Hit  ● Foul  ● Out`) in the bottom-right corner of the canvas.
-    - Removed redundant intermediate headers and count keys.
-  - **Refactored Container Header & Metadata Rows**:
-    - Removed redundant `"HOME/AWAY PITCHER"` pill, `"Pitcher:"` row, `"Scope:"` row, and full-game `"Pitching Line:"` row so the visualizer focuses exclusively on the inspected inning/at-bat.
-    - Dedicated rows for **Strike Rate / Command** (`67% (12 Strikes / 6 Balls)`) and **Batted Balls Allowed** (`3 In Play (2H · 1F)`).
+- **Full-Game Batter Performance Inspection & Lineup Click Support (`src/App.jsx`, `src/components/ScorecardGraphic.jsx`, `src/components/Sidebar.jsx`, `src/components/AtBatInspectionModal.jsx`):**
+  - Clicking any batter's name in the scorecard lineup now opens their **Full-Game Performance Inspection**:
+    - Aggregates all pitches and batted balls across every plate appearance in the entire game into a unified Strike Zone & Field Spray chart.
+    - Added Scope buttons (`All (4 PA)`, `① Inn 1 · 1B`, `② Inn 3 · HR`, etc.) allowing seamless switching between their combined game summary and individual at-bats.
+    - Shows `[FULL GAME]` header badge with full game pitch breakdown (`16P · 10S 6B`) and total batted ball counts.
+    - Highlights the selected batter row in the lineup card (`activeCellKey === 'batter-{teamKey}-{id}'`) with interactive blue focus outline.
+
+- **Expanded Visualizer Vertical Canvas Height (No Overlap with Top Tooltip)**:
+  - Increased strike zone and hit visualizer canvas heights across all components:
+    - **Desktop Sidebar**: Increased from 135px/145px to **175px**.
+    - **Mobile At-Bat Sheet**: Increased from 175px/185px to **230px**.
+    - **Mobile Pitcher Sheet**: Increased from 240px to **260px**.
+  - Provides generous vertical breathing room so high pitches at the top of the strike zone never collide with the floating hover tooltip.
 
 - **Single Pitch & Batted Ball Hover Isolation & On-Top Stacking:**
   - Dynamic SVG sorting ensures hovered items render last in SVG document order (always on top).
