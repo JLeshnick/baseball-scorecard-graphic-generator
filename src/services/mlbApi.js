@@ -882,6 +882,77 @@ export function processMLBData(data, gamePkOverride) {
       };
     }
 
+    // Extract pitch-by-pitch data and coordinates for active at-bat
+    const targetPlay = currentPlay || (plays && plays.length > 0 ? plays[plays.length - 1] : null);
+    const pitches = [];
+
+    if (targetPlay?.playEvents) {
+      let pNum = 1;
+      targetPlay.playEvents.forEach((evt) => {
+        if (evt.isPitch) {
+          const callCode = evt.details?.call?.code || '';
+          const isStrike = evt.details?.isStrike || ['S', 'C', 'F', 'O', 'W', 'X', 'D'].includes(callCode);
+          const isBall = evt.details?.isBall || ['B', '*B', 'I', 'P', 'V'].includes(callCode);
+          const isFoul = callCode === 'F' || (evt.details?.description || '').toLowerCase().includes('foul');
+          const isInPlay = callCode === 'X' || callCode === 'D' || (evt.details?.description || '').toLowerCase().includes('in play');
+
+          const pX = evt.pitchData?.coordinates?.pX ?? null;
+          const pZ = evt.pitchData?.coordinates?.pZ ?? null;
+          const szTop = evt.pitchData?.strikeZoneTop ?? targetPlay?.matchup?.batter?.strikeZoneTop ?? 3.4;
+          const szBot = evt.pitchData?.strikeZoneBottom ?? targetPlay?.matchup?.batter?.strikeZoneBottom ?? 1.5;
+          const speed = evt.pitchData?.startSpeed ? Math.round(evt.pitchData.startSpeed * 10) / 10 : null;
+          const pitchType = evt.details?.type?.code || evt.details?.type?.description || 'P';
+          const callDesc = evt.details?.call?.description || evt.details?.description || (isStrike ? 'Strike' : 'Ball');
+
+          let normX = 50;
+          let normY = 50;
+          let hasCoords = false;
+
+          if (typeof pX === 'number' && typeof pZ === 'number') {
+            hasCoords = true;
+            normX = Math.min(92, Math.max(8, 50 + pX * 32));
+            const zoneHeight = (szTop - szBot) || 1.9;
+            const midZ = (szTop + szBot) / 2;
+            normY = Math.min(92, Math.max(8, 50 - ((pZ - midZ) / zoneHeight) * 28));
+          } else if (typeof evt.pitchData?.coordinates?.x === 'number' && typeof evt.pitchData?.coordinates?.y === 'number') {
+            hasCoords = true;
+            normX = Math.min(92, Math.max(8, (evt.pitchData.coordinates.x / 250) * 100));
+            normY = Math.min(92, Math.max(8, (evt.pitchData.coordinates.y / 250) * 100));
+          }
+
+          let resultType = 'ball';
+          let color = '#10b981'; // Green for ball
+          if (isInPlay) {
+            resultType = 'in_play';
+            color = '#3b82f6'; // Blue for in play
+          } else if (isFoul) {
+            resultType = 'foul';
+            color = '#f59e0b'; // Amber for foul
+          } else if (isStrike) {
+            resultType = 'strike';
+            color = '#ef4444'; // Red for strike
+          }
+
+          pitches.push({
+            pitchNumber: evt.pitchNumber || pNum++,
+            speed,
+            pitchType,
+            callDesc,
+            callCode,
+            isStrike,
+            isBall,
+            resultType,
+            color,
+            hasCoords,
+            normX: Math.round(normX * 10) / 10,
+            normY: Math.round(normY * 10) / 10,
+            pX,
+            pZ,
+          });
+        }
+      });
+    }
+
     liveGameState = {
       balls: currentPlay?.count?.balls ?? linescore?.balls ?? 0,
       strikes: currentPlay?.count?.strikes ?? linescore?.strikes ?? 0,
@@ -890,11 +961,12 @@ export function processMLBData(data, gamePkOverride) {
       inningHalf: isTop ? 'Top' : 'Bottom',
       inningOrdinal: linescore?.currentInningOrdinal || `${inn}${inn === 1 ? 'st' : inn === 2 ? 'nd' : inn === 3 ? 'rd' : 'th'}`,
       inningState: linescore?.inningState || (isTop ? 'Top' : 'Bottom'),
-      batterName: currentPlay?.matchup?.batter?.fullName || '',
-      pitcherName: currentPlay?.matchup?.pitcher?.fullName || '',
+      batterName: currentPlay?.matchup?.batter?.fullName || targetPlay?.matchup?.batter?.fullName || '',
+      pitcherName: currentPlay?.matchup?.pitcher?.fullName || targetPlay?.matchup?.pitcher?.fullName || '',
       onFirst: Boolean(linescore?.offense?.first || currentPlay?.matchup?.postOnFirst),
       onSecond: Boolean(linescore?.offense?.second || currentPlay?.matchup?.postOnSecond),
       onThird: Boolean(linescore?.offense?.third || currentPlay?.matchup?.postOnThird),
+      pitches,
     };
   }
 
