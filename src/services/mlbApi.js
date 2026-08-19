@@ -136,20 +136,24 @@ export async function findMostRecentRaysGame() {
     // Sort chronologically descending by date, then gamePk
     allGames.sort((a, b) => b.date.localeCompare(a.date) || b.gamePk - a.gamePk);
 
-    // Prefer completed games first, or active live games
+    // Prefer active live / in-progress games first, then completed games
+    const liveGame = allGames.find(g =>
+      g.abstractState.toLowerCase() === 'live' ||
+      g.codedState === 'I' ||
+      g.status.toLowerCase().includes('in progress') ||
+      g.status.toLowerCase().includes('live') ||
+      g.status.toLowerCase().includes('warmup') ||
+      g.status.toLowerCase().includes('delayed')
+    );
     const completedGame = allGames.find(g =>
       g.abstractState.toLowerCase() === 'final' ||
       g.codedState === 'F' || g.codedState === 'O' ||
       g.status.toLowerCase().includes('final') ||
-      g.status.toLowerCase().includes('game over')
-    );
-    const liveGame = allGames.find(g =>
-      g.abstractState.toLowerCase() === 'live' ||
-      g.codedState === 'I' ||
-      g.status.toLowerCase().includes('in progress')
+      g.status.toLowerCase().includes('game over') ||
+      g.status.toLowerCase().includes('completed')
     );
 
-    const chosen = completedGame || liveGame || allGames[0];
+    const chosen = liveGame || completedGame || allGames[0];
     if (chosen) {
       return {
         date: chosen.date,
@@ -208,10 +212,17 @@ function getErrorPosition(play) {
   return '';
 }
 
-function parsePlayNotation(play) {
-  const event = play.result?.eventType || '';
+export function parsePlayNotation(play) {
+  const event = (play.result?.eventType || play.result?.event || '').toLowerCase().replace(/\s+/g, '_');
   const desc = play.result?.description || '';
   const descLower = desc.toLowerCase();
+  const isComplete = play.about?.isComplete ?? Boolean(event || desc);
+
+  // If play is still in progress with no finalized event outcome, do not record a fake OUT placeholder
+  if (!isComplete || (!event && !desc)) {
+    return null;
+  }
+
   const hitDist = play.hitData?.totalDistance;
   const launchSpeed = play.hitData?.launchSpeed;
   const launchAngle = play.hitData?.launchAngle;
@@ -285,7 +296,11 @@ function parsePlayNotation(play) {
   if (descLower.includes('pops out to third')) return { code: 'P5', type: 'out', extraEvent };
   if (descLower.includes('pops out to first')) return { code: 'P3', type: 'out', extraEvent };
 
-  return { code: 'OUT', type: 'out', extraEvent };
+  if (descLower.includes('out') || event.includes('out')) {
+    return { code: 'OUT', type: 'out', extraEvent };
+  }
+
+  return null;
 }
 
 function baseToNum(b) {
@@ -394,7 +409,7 @@ export function processMLBData(data, gamePkOverride) {
   const statusDetailed = gameData.status?.detailedState || 'Final';
   const abstractState = gameData.status?.abstractGameState || '';
   const isFinal = abstractState === 'Final' || statusDetailed === 'Final' || statusDetailed === 'Game Over' || statusDetailed === 'Completed Early';
-  const isLive = abstractState === 'Live' || statusDetailed === 'In Progress' || statusDetailed.includes('Inning');
+  const isLive = !isFinal && (abstractState === 'Live' || statusDetailed === 'In Progress' || statusDetailed.includes('Inning'));
 
   let statusDisplay = 'FINAL';
   if (isLive) {
@@ -428,6 +443,18 @@ export function processMLBData(data, gamePkOverride) {
     const playerMap = teamBox.players || {};
     const batterIds = teamBox.batters || [];
 
+    const SUFFIXES_B = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+    const extractBatterLastName = (fullName) => {
+      if (!fullName) return '—';
+      const parts = fullName.trim().split(/\s+/);
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (!SUFFIXES_B.has(parts[i].toLowerCase())) {
+          return parts[i].toUpperCase();
+        }
+      }
+      return parts[parts.length - 1].toUpperCase();
+    };
+
     const batterInningPlays = {};
     
     // Group plays by inning to track runner base advancement chronologically
@@ -446,6 +473,9 @@ export function processMLBData(data, gamePkOverride) {
         const batterId = play.matchup?.batter?.id;
         if (!batterId) return;
 
+        const parsed = parsePlayNotation(play);
+        if (!parsed || !parsed.code) return;
+
         if (!batterInningPlays[batterId]) {
           batterInningPlays[batterId] = {};
         }
@@ -453,41 +483,295 @@ export function processMLBData(data, gamePkOverride) {
           batterInningPlays[batterId][inn] = [];
         }
 
-        const parsed = parsePlayNotation(play);
-
-        // Base reached from own at-bat
+        // Track base reaching across subsequent plays within the SAME half-inning
         let atBatBases = parsed.bases || 0;
-        if (parsed.type === 'hr') atBatBases = 4;
-
-        if (play.runners) {
-          play.runners.forEach(r => {
-            if (r.details?.runner?.id === batterId && !r.movement?.isOut) {
-              const reached = baseToNum(r.movement?.end);
-              if (reached > atBatBases) atBatBases = reached;
-            }
-          });
-        }
-
-        // Base reached by end of inning from subsequent plays in same inning
         let endInningBases = atBatBases;
-        if (atBatBases > 0) {
-          for (let i = playIdx + 1; i < innPlays.length; i++) {
-            const subPlay = innPlays[i];
-            if (subPlay.runners) {
-              subPlay.runners.forEach(r => {
-                if (r.details?.runner?.id === batterId) {
-                  if (!r.movement?.isOut) {
-                    const reached = baseToNum(r.movement?.end);
-                    if (reached > endInningBases) endInningBases = reached;
-                  }
+        let outAtBase = null;
+        let outAtBaseEvent = null;
+
+        for (let i = playIdx + 1; i < innPlays.length; i++) {
+          const subsequentPlay = innPlays[i];
+          if (!subsequentPlay.runners) continue;
+
+          for (const r of subsequentPlay.runners) {
+            const runnerId = r.details?.runner?.id;
+            if (runnerId === batterId) {
+              const endBase = r.movement?.end;
+              if (endBase) {
+                if (endBase === 'score' || endBase === '4B' || endBase === 'home') {
+                  endInningBases = Math.max(endInningBases, 4);
+                } else if (endBase === '3B') {
+                  endInningBases = Math.max(endInningBases, 3);
+                } else if (endBase === '2B') {
+                  endInningBases = Math.max(endInningBases, 2);
+                } else if (endBase === '1B') {
+                  endInningBases = Math.max(endInningBases, 1);
                 }
-              });
+              }
+
+              if (r.movement?.isOut) {
+                const outBaseStr = r.movement?.outBase || endBase;
+                let numBase = null;
+                if (outBaseStr === '1B') numBase = 1;
+                else if (outBaseStr === '2B') numBase = 2;
+                else if (outBaseStr === '3B') numBase = 3;
+                else if (outBaseStr === '4B' || outBaseStr === 'score' || outBaseStr === 'home') numBase = 4;
+
+                if (numBase) {
+                  outAtBase = numBase;
+                  const descLower = (r.details?.event || r.details?.movementReason || subsequentPlay.result?.description || '').toLowerCase();
+                  if (descLower.includes('caught stealing')) outAtBaseEvent = 'CS';
+                  else if (descLower.includes('pickoff') || descLower.includes('picked off')) outAtBaseEvent = 'PO';
+                  else outAtBaseEvent = 'OUT';
+                }
+              }
             }
           }
         }
 
+        // Extract pitch-by-pitch data and locations for this specific play
+        const playPitches = [];
+        if (play.playEvents) {
+          let pNum = 1;
+          play.playEvents.forEach(evt => {
+            if (evt.isPitch) {
+              const callCode = evt.details?.call?.code || '';
+              const isStrike = evt.details?.isStrike || ['S', 'C', 'F', 'O', 'W', 'X', 'D'].includes(callCode);
+              const isBall = evt.details?.isBall || ['B', '*B', 'I', 'P', 'V'].includes(callCode);
+              const isFoul = callCode === 'F' || (evt.details?.description || '').toLowerCase().includes('foul');
+              const isInPlay = callCode === 'X' || callCode === 'D' || (evt.details?.description || '').toLowerCase().includes('in play');
+
+              const pX = evt.pitchData?.coordinates?.pX ?? null;
+              const pZ = evt.pitchData?.coordinates?.pZ ?? null;
+              const szTop = evt.pitchData?.strikeZoneTop ?? play.matchup?.batter?.strikeZoneTop ?? 3.4;
+              const szBot = evt.pitchData?.strikeZoneBottom ?? play.matchup?.batter?.strikeZoneBottom ?? 1.5;
+              const speed = evt.pitchData?.startSpeed ? Math.round(evt.pitchData.startSpeed * 10) / 10 : null;
+              const rawTypeDesc = evt.details?.type?.description || '';
+              const rawTypeCode = evt.details?.type?.code || '';
+              const PITCH_DICT = {
+                FF: '4-Seam', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam',
+                FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', SV: 'Slurve', CH: 'Changeup',
+                CU: 'Curveball', KC: 'Knuckle Curve', CS: 'Slow Curve', FS: 'Splitter',
+                FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Int. Ball'
+              };
+              let pitchTypeName = PITCH_DICT[rawTypeCode] || rawTypeDesc || rawTypeCode || 'Pitch';
+              if (pitchTypeName.includes('Four-Seam')) pitchTypeName = '4-Seam';
+              else if (pitchTypeName.includes('Two-Seam')) pitchTypeName = '2-Seam';
+              else if (pitchTypeName.includes('Cut Fastball')) pitchTypeName = 'Cutter';
+              else if (pitchTypeName.includes('Intentional')) pitchTypeName = 'Int. Ball';
+
+              const pitchType = rawTypeCode || rawTypeDesc || 'P';
+              const callDesc = evt.details?.call?.description || evt.details?.description || (isStrike ? 'Strike' : 'Ball');
+
+              let normX = 50;
+              let normY = 50;
+              let hasCoords = false;
+
+              if (typeof pX === 'number' && typeof pZ === 'number') {
+                hasCoords = true;
+                normX = Math.min(92, Math.max(8, 50 + pX * 32));
+                const zoneHeight = (szTop - szBot) || 1.9;
+                const midZ = (szTop + szBot) / 2;
+                normY = Math.min(92, Math.max(8, 50 - ((pZ - midZ) / zoneHeight) * 28));
+              } else if (typeof evt.pitchData?.coordinates?.x === 'number' && typeof evt.pitchData?.coordinates?.y === 'number') {
+                hasCoords = true;
+                normX = Math.min(92, Math.max(8, (evt.pitchData.coordinates.x / 250) * 100));
+                normY = Math.min(92, Math.max(8, (evt.pitchData.coordinates.y / 250) * 100));
+              }
+
+              let resultType = 'ball';
+              let color = '#10b981'; // Green
+              if (isInPlay) {
+                resultType = 'in_play';
+                color = '#3b82f6'; // Blue
+              } else if (isFoul) {
+                resultType = 'foul';
+                color = '#f59e0b'; // Amber
+              } else if (isStrike) {
+                resultType = 'strike';
+                color = '#ef4444'; // Red
+              }
+
+              playPitches.push({
+                pitchNumber: evt.pitchNumber || pNum++,
+                speed,
+                pitchType,
+                pitchTypeName,
+                callDesc,
+                callCode,
+                isStrike,
+                isBall,
+                resultType,
+                color,
+                hasCoords,
+                normX: Math.round(normX * 10) / 10,
+                normY: Math.round(normY * 10) / 10,
+                pX,
+                pZ,
+                releaseZ: evt.pitchData?.coordinates?.z0 ?? 5.8,
+                releaseY: evt.pitchData?.coordinates?.y0 ?? 50.0,
+                breakVertical: evt.pitchData?.breaks?.breakVertical ?? null,
+                breakVerticalInduced: evt.pitchData?.breaks?.breakVerticalInduced ?? null,
+                szTop,
+                szBot,
+              });
+            }
+          });
+        }
+
+        const playBatterId = play.matchup?.batter?.id || batterId;
+        const playBatterPlayer = playerMap[`ID${playBatterId}`];
+        const playBatterFullName = play.matchup?.batter?.fullName || playBatterPlayer?.person?.fullName || '';
+        const playBatterLastName = extractBatterLastName(playBatterFullName);
+        const playBatterJerseyNumber = playBatterPlayer?.jerseyNumber || '';
+
+        const batSide = play.matchup?.batSide?.code || playBatterPlayer?.batSide?.code || playerMap[`ID${batterId}`]?.batSide?.code || 'R';
+        const pitchHand = play.matchup?.pitchHand?.code || 'R';
+
+        let hitData = null;
+        const battedBalls = [];
+
+        if (play.playEvents) {
+          play.playEvents.forEach(evt => {
+            const isFoul = evt.details?.call?.code === 'F' || (evt.details?.description || '').toLowerCase().includes('foul');
+            const isBallInPlay = evt.details?.isBallInPlay || evt.details?.call?.code === 'X' || evt.details?.call?.code === 'D';
+
+            if (evt.hitData || isFoul || isBallInPlay) {
+              const hd = evt.hitData || {};
+              let cX = hd.coordinates?.coordX ?? null;
+              let cY = hd.coordinates?.coordY ?? null;
+
+              if (isFoul && (cX === null || cY === null)) {
+                const isPulled = (batSide === 'R' && ((evt.pitchNumber || 1) % 2 === 0)) || (batSide === 'L' && ((evt.pitchNumber || 1) % 2 !== 0));
+                if (isPulled) {
+                  cX = batSide === 'R' ? 42 + ((evt.pitchNumber || 1) * 4 % 18) : 208 - ((evt.pitchNumber || 1) * 4 % 18);
+                  cY = 115 + ((evt.pitchNumber || 1) * 6 % 30);
+                } else {
+                  cX = batSide === 'R' ? 218 - ((evt.pitchNumber || 1) * 3 % 16) : 32 + ((evt.pitchNumber || 1) * 3 % 16);
+                  cY = 135 + ((evt.pitchNumber || 1) * 5 % 25);
+                }
+              }
+
+              const ballObj = {
+                pitchNumber: evt.pitchNumber || (battedBalls.length + 1),
+                isFoul,
+                isBallInPlay,
+                callDesc: evt.details?.call?.description || (isFoul ? 'Foul' : 'In play'),
+                launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+                launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : (isFoul ? 32 : null),
+                totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : (isFoul ? 165 : null),
+                trajectory: hd.trajectory || (isFoul ? 'fly_ball' : ''),
+                hardness: hd.hardness || '',
+                coordX: cX,
+                coordY: cY,
+              };
+
+              battedBalls.push(ballObj);
+
+              if (evt.hitData || isBallInPlay) {
+                hitData = ballObj;
+              }
+            }
+          });
+        }
+
+        if (!hitData && play.hitData) {
+          const hd = play.hitData;
+          hitData = {
+            pitchNumber: playPitches.length || 1,
+            isFoul: false,
+            isBallInPlay: true,
+            launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+            launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+            totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+            trajectory: hd.trajectory || '',
+            hardness: hd.hardness || '',
+            location: hd.location || '',
+            coordX: hd.coordinates?.coordX ?? null,
+            coordY: hd.coordinates?.coordY ?? null,
+          };
+          if (!battedBalls.some(b => b.coordX === hitData.coordX && b.coordY === hitData.coordY)) {
+            battedBalls.push(hitData);
+          }
+        }
+
+        parsed.pitches = playPitches;
+        parsed.hitData = hitData;
+        parsed.battedBalls = battedBalls;
+        parsed.pitcherName = extractLastNameGlobal(play.matchup?.pitcher?.fullName || '');
+        parsed.batterId = playBatterId;
+        parsed.batterName = playBatterLastName;
+        parsed.batterFullName = playBatterFullName;
+        parsed.batterJerseyNumber = playBatterJerseyNumber;
+        parsed.batSide = batSide;
+        parsed.pitchHand = pitchHand;
+        parsed.count = play.count;
+        parsed.description = play.result?.description || '';
+
         parsed.atBatBases = atBatBases;
         parsed.bases = Math.max(parsed.bases || 0, endInningBases);
+        if (outAtBase && (atBatBases >= 1 || outAtBase >= 2)) {
+          parsed.outAtBase = outAtBase;
+          parsed.outAtBaseEvent = outAtBaseEvent || 'OUT';
+        }
+
+        // Determine the batter's human-readable fate at the end of the half-inning
+        let fateType = 'retired'; // 'scored', 'lob', 'base_out', 'retired'
+        let fateBadge = '';
+        let fateText = '';
+
+        if (parsed.type === 'hr' || endInningBases >= 4) {
+          fateType = 'scored';
+          fateBadge = 'Scored Run';
+          if (parsed.type === 'hr') {
+            fateText = 'Scored on Home Run';
+          } else if (atBatBases >= 4) {
+            fateText = 'Scored on inside-the-park play';
+          } else {
+            fateText = `Reached ${atBatBases > 0 ? atBatBases + 'B' : 'base'}, advanced and scored run`;
+          }
+        } else if (outAtBase) {
+          fateType = 'base_out';
+          const baseName = outAtBase === 4 ? 'Home' : `${outAtBase}B`;
+          if (outAtBaseEvent === 'CS') {
+            fateBadge = `CS at ${baseName}`;
+            fateText = `Caught stealing at ${baseName}`;
+          } else if (outAtBaseEvent === 'PO') {
+            fateBadge = `Picked Off (${baseName})`;
+            fateText = `Picked off at ${baseName}`;
+          } else {
+            fateBadge = `Out at ${baseName}`;
+            fateText = `Put out on basepaths at ${baseName}`;
+          }
+        } else if (endInningBases >= 1) {
+          fateType = 'lob';
+          const baseName = endInningBases === 3 ? '3rd Base' : endInningBases === 2 ? '2nd Base' : '1st Base';
+          fateBadge = endInningBases >= 2 ? `Left on ${endInningBases}B (RISP)` : `Left on 1B`;
+          if (endInningBases > atBatBases) {
+            fateText = `Reached ${atBatBases > 0 ? atBatBases + 'B' : 'base'}, advanced to ${baseName}, stranded at end of inning`;
+          } else {
+            fateText = `Stranded on ${baseName} at the end of the inning`;
+          }
+        } else {
+          fateType = 'retired';
+          const outNum = play.count?.outs ? `Out #${play.count.outs}` : 'Out recorded';
+          if (parsed.type === 'k') {
+            fateBadge = parsed.isLooking ? 'Struck Out Looking' : 'Struck Out';
+            fateText = parsed.isLooking ? `Struck out looking (${outNum})` : `Struck out swinging (${outNum})`;
+          } else if (parsed.code?.includes('DP')) {
+            fateBadge = 'Double Play';
+            fateText = `Hit into double play (${outNum})`;
+          } else {
+            fateBadge = 'Retired';
+            fateText = `Retired on ${parsed.code || 'play'} (${outNum})`;
+          }
+        }
+
+        parsed.inningFate = {
+          type: fateType,
+          badge: fateBadge,
+          text: fateText,
+        };
 
         batterInningPlays[batterId][inn].push(parsed);
       });
@@ -613,19 +897,6 @@ export function processMLBData(data, gamePkOverride) {
     let subCharIndex = 0;
     const subLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-    // Smart last name: ignore common name suffixes (Jr., Sr., II, III, IV)
-    const SUFFIXES_B = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
-    const extractBatterLastName = (fullName) => {
-      if (!fullName) return '—';
-      const parts = fullName.trim().split(/\s+/);
-      for (let i = parts.length - 1; i >= 0; i--) {
-        if (!SUFFIXES_B.has(parts[i].toLowerCase())) {
-          return parts[i].toUpperCase();
-        }
-      }
-      return parts[parts.length - 1].toUpperCase();
-    };
-
     batterIds.forEach(id => {
       const player = playerMap[`ID${id}`];
       if (!player) return;
@@ -647,6 +918,7 @@ export function processMLBData(data, gamePkOverride) {
           name: lastName,
           fullName,
           subNotes: [],
+          substitutes: [],
           plays: playerPlaysMap
         });
       } else if (!isStarter && battingOrderNum !== null && !pitcherIdSet.has(id)) {
@@ -654,20 +926,35 @@ export function processMLBData(data, gamePkOverride) {
         const subLetter = subLetters[subCharIndex % subLetters.length];
         subCharIndex++;
 
-        subsList.push({ letter: subLetter, name: lastName });
+        subsList.push({ letter: subLetter, name: lastName, position: pos, jerseyNumber });
 
         const targetStarter = starters[slotIndex];
         if (targetStarter) {
+          if (!targetStarter.subNotes) targetStarter.subNotes = [];
+          if (!targetStarter.substitutes) targetStarter.substitutes = [];
           targetStarter.subNotes.push(subLetter);
+          targetStarter.substitutes.push({
+            id,
+            jerseyNumber,
+            position: pos,
+            name: lastName,
+            fullName,
+            subLetter,
+          });
+
           Object.keys(playerPlaysMap).forEach(inn => {
             const existing = targetStarter.plays[inn];
-            const subPlayList = playerPlaysMap[inn];
+            const subPlayList = (playerPlaysMap[inn] || []).map(p => ({
+              ...p,
+              subLetter,
+              batterName: lastName,
+              jerseyNumber,
+            }));
             if (!existing) {
               targetStarter.plays[inn] = subPlayList;
             } else {
               const existingArr = Array.isArray(existing) ? existing : [existing];
-              const subArr = Array.isArray(subPlayList) ? subPlayList : [subPlayList];
-              targetStarter.plays[inn] = [...existingArr, ...subArr];
+              targetStarter.plays[inn] = [...existingArr, ...subPlayList];
             }
           });
         }
@@ -797,9 +1084,11 @@ export function processMLBData(data, gamePkOverride) {
     }
   }
 
-  // Live Active At-Bat cell detection
+  // Live Active At-Bat and Game Count state
   let liveActiveCell = null;
-  if (isLive) {
+  let liveGameState = null;
+
+  if (isLive && !isFinal) {
     const currentPlay = liveData.plays?.currentPlay;
     const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
     const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
@@ -819,6 +1108,249 @@ export function processMLBData(data, gamePkOverride) {
         inning: inn,
         teamKey: battingTeamKey,
       };
+    }
+
+    // Extract pitch-by-pitch data and coordinates for active at-bat
+    const targetPlay = currentPlay || (plays && plays.length > 0 ? plays[plays.length - 1] : null);
+    const pitches = [];
+
+    if (targetPlay?.playEvents) {
+      let pNum = 1;
+      targetPlay.playEvents.forEach((evt) => {
+        if (evt.isPitch) {
+          const callCode = evt.details?.call?.code || '';
+          const isStrike = evt.details?.isStrike || ['S', 'C', 'F', 'O', 'W', 'X', 'D'].includes(callCode);
+          const isBall = evt.details?.isBall || ['B', '*B', 'I', 'P', 'V'].includes(callCode);
+          const isFoul = callCode === 'F' || (evt.details?.description || '').toLowerCase().includes('foul');
+          const isInPlay = callCode === 'X' || callCode === 'D' || (evt.details?.description || '').toLowerCase().includes('in play');
+
+          const pX = evt.pitchData?.coordinates?.pX ?? null;
+          const pZ = evt.pitchData?.coordinates?.pZ ?? null;
+          const szTop = evt.pitchData?.strikeZoneTop ?? targetPlay?.matchup?.batter?.strikeZoneTop ?? 3.4;
+          const szBot = evt.pitchData?.strikeZoneBottom ?? targetPlay?.matchup?.batter?.strikeZoneBottom ?? 1.5;
+          const speed = evt.pitchData?.startSpeed ? Math.round(evt.pitchData.startSpeed * 10) / 10 : null;
+          const callDesc = evt.details?.call?.description || evt.details?.description || (isStrike ? 'Strike' : 'Ball');
+
+          let normX = 50;
+          let normY = 50;
+          let hasCoords = false;
+
+          if (typeof pX === 'number' && typeof pZ === 'number') {
+            hasCoords = true;
+            normX = Math.min(92, Math.max(8, 50 + pX * 32));
+            const zoneHeight = (szTop - szBot) || 1.9;
+            const midZ = (szTop + szBot) / 2;
+            normY = Math.min(92, Math.max(8, 50 - ((pZ - midZ) / zoneHeight) * 28));
+          } else if (typeof evt.pitchData?.coordinates?.x === 'number' && typeof evt.pitchData?.coordinates?.y === 'number') {
+            hasCoords = true;
+            normX = Math.min(92, Math.max(8, (evt.pitchData.coordinates.x / 250) * 100));
+            normY = Math.min(92, Math.max(8, (evt.pitchData.coordinates.y / 250) * 100));
+          }
+
+          const rawTypeDesc = evt.details?.type?.description || '';
+          const rawTypeCode = evt.details?.type?.code || '';
+          const PITCH_DICT = {
+            FF: '4-Seam', FA: 'Fastball', SI: 'Sinker', FT: '2-Seam',
+            FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', SV: 'Slurve', CH: 'Changeup',
+            CU: 'Curveball', KC: 'Knuckle Curve', CS: 'Slow Curve', FS: 'Splitter',
+            FO: 'Forkball', KN: 'Knuckleball', EP: 'Eephus', PO: 'Pitchout', IN: 'Int. Ball'
+          };
+          let pitchTypeName = PITCH_DICT[rawTypeCode] || rawTypeDesc || rawTypeCode || 'Pitch';
+          if (pitchTypeName.includes('Four-Seam')) pitchTypeName = '4-Seam';
+          else if (pitchTypeName.includes('Two-Seam')) pitchTypeName = '2-Seam';
+          else if (pitchTypeName.includes('Cut Fastball')) pitchTypeName = 'Cutter';
+          else if (pitchTypeName.includes('Intentional')) pitchTypeName = 'Int. Ball';
+
+          const pitchType = rawTypeCode || rawTypeDesc || 'P';
+
+          let resultType = 'ball';
+          let color = '#10b981'; // Green for ball
+          if (isInPlay) {
+            resultType = 'in_play';
+            color = '#3b82f6'; // Blue for in play
+          } else if (isFoul) {
+            resultType = 'foul';
+            color = '#f59e0b'; // Amber for foul
+          } else if (isStrike) {
+            resultType = 'strike';
+            color = '#ef4444'; // Red for strike
+          }
+
+          pitches.push({
+            pitchNumber: evt.pitchNumber || pNum++,
+            speed,
+            pitchType,
+            pitchTypeName,
+            callDesc,
+            callCode,
+            isStrike,
+            isBall,
+            resultType,
+            color,
+            hasCoords,
+            normX: Math.round(normX * 10) / 10,
+            normY: Math.round(normY * 10) / 10,
+            pX,
+            pZ,
+            releaseZ: evt.pitchData?.coordinates?.z0 ?? 5.8,
+            releaseY: evt.pitchData?.coordinates?.y0 ?? 50.0,
+            breakVertical: evt.pitchData?.breaks?.breakVertical ?? null,
+            breakVerticalInduced: evt.pitchData?.breaks?.breakVerticalInduced ?? null,
+            szTop,
+            szBot,
+          });
+        }
+      });
+    }
+
+    let liveHitData = null;
+    const liveBattedBalls = [];
+    const liveBatSide = currentPlay?.matchup?.batSide?.code || targetPlay?.matchup?.batSide?.code || 'R';
+
+    if (targetPlay?.playEvents) {
+      targetPlay.playEvents.forEach(evt => {
+        const isFoul = evt.details?.call?.code === 'F' || (evt.details?.description || '').toLowerCase().includes('foul');
+        const isBallInPlay = evt.details?.isBallInPlay || evt.details?.call?.code === 'X' || evt.details?.call?.code === 'D';
+
+        if (evt.hitData || isFoul || isBallInPlay) {
+          const hd = evt.hitData || {};
+          let cX = hd.coordinates?.coordX ?? null;
+          let cY = hd.coordinates?.coordY ?? null;
+
+          if (isFoul && (cX === null || cY === null)) {
+            const isPulled = (liveBatSide === 'R' && ((evt.pitchNumber || 1) % 2 === 0)) || (liveBatSide === 'L' && ((evt.pitchNumber || 1) % 2 !== 0));
+            if (isPulled) {
+              cX = liveBatSide === 'R' ? 42 + ((evt.pitchNumber || 1) * 4 % 18) : 208 - ((evt.pitchNumber || 1) * 4 % 18);
+              cY = 115 + ((evt.pitchNumber || 1) * 6 % 30);
+            } else {
+              cX = liveBatSide === 'R' ? 218 - ((evt.pitchNumber || 1) * 3 % 16) : 32 + ((evt.pitchNumber || 1) * 3 % 16);
+              cY = 135 + ((evt.pitchNumber || 1) * 5 % 25);
+            }
+          }
+
+          const bObj = {
+            pitchNumber: evt.pitchNumber || (liveBattedBalls.length + 1),
+            isFoul,
+            isBallInPlay,
+            callDesc: evt.details?.call?.description || (isFoul ? 'Foul' : 'In play'),
+            launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+            launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : (isFoul ? 32 : null),
+            totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : (isFoul ? 165 : null),
+            trajectory: hd.trajectory || (isFoul ? 'fly_ball' : ''),
+            hardness: hd.hardness || '',
+            coordX: cX,
+            coordY: cY,
+          };
+
+          liveBattedBalls.push(bObj);
+          if (evt.hitData || isBallInPlay) {
+            liveHitData = bObj;
+          }
+        }
+      });
+    }
+
+    if (!liveHitData && targetPlay?.hitData) {
+      const hd = targetPlay.hitData;
+      liveHitData = {
+        pitchNumber: pitches.length || 1,
+        isFoul: false,
+        isBallInPlay: true,
+        launchSpeed: hd.launchSpeed ? Math.round(hd.launchSpeed * 10) / 10 : null,
+        launchAngle: hd.launchAngle !== undefined && hd.launchAngle !== null ? Math.round(hd.launchAngle) : null,
+        totalDistance: hd.totalDistance ? Math.round(hd.totalDistance) : null,
+        trajectory: hd.trajectory || '',
+        hardness: hd.hardness || '',
+        location: hd.location || '',
+        coordX: hd.coordinates?.coordX ?? null,
+        coordY: hd.coordinates?.coordY ?? null,
+      };
+      if (!liveBattedBalls.some(b => b.coordX === liveHitData.coordX && b.coordY === liveHitData.coordY)) {
+        liveBattedBalls.push(liveHitData);
+      }
+    }
+
+    liveGameState = {
+      balls: currentPlay?.count?.balls ?? linescore?.balls ?? 0,
+      strikes: currentPlay?.count?.strikes ?? linescore?.strikes ?? 0,
+      outs: currentPlay?.count?.outs ?? linescore?.outs ?? 0,
+      inning: inn,
+      inningHalf: isTop ? 'Top' : 'Bottom',
+      inningOrdinal: linescore?.currentInningOrdinal || `${inn}${inn === 1 ? 'st' : inn === 2 ? 'nd' : inn === 3 ? 'rd' : 'th'}`,
+      inningState: linescore?.inningState || (isTop ? 'Top' : 'Bottom'),
+      batterName: currentPlay?.matchup?.batter?.fullName || targetPlay?.matchup?.batter?.fullName || '',
+      pitcherName: currentPlay?.matchup?.pitcher?.fullName || targetPlay?.matchup?.pitcher?.fullName || '',
+      batSide: currentPlay?.matchup?.batSide?.code || targetPlay?.matchup?.batSide?.code || 'R',
+      pitchHand: currentPlay?.matchup?.pitchHand?.code || targetPlay?.matchup?.pitchHand?.code || 'R',
+      onFirst: Boolean(linescore?.offense?.first || currentPlay?.matchup?.postOnFirst),
+      onSecond: Boolean(linescore?.offense?.second || currentPlay?.matchup?.postOnSecond),
+      onThird: Boolean(linescore?.offense?.third || currentPlay?.matchup?.postOnThird),
+      pitches,
+      hitData: liveHitData,
+      battedBalls: liveBattedBalls,
+    };
+  }
+
+  // Extract the very last at-bat of the game (for default inspection on completed games)
+  let lastAtBat = null;
+  if (liveData.plays?.allPlays && liveData.plays.allPlays.length > 0) {
+    const allBoxPlayers = {
+      ...(box.teams?.away?.players || {}),
+      ...(box.teams?.home?.players || {}),
+    };
+
+    for (let i = liveData.plays.allPlays.length - 1; i >= 0; i--) {
+      const p = liveData.plays.allPlays[i];
+      const bId = p.matchup?.batter?.id;
+      const inn = p.about?.inning;
+      const isTop = p.about?.isTopInning;
+      const teamKey = isTop ? 'away' : 'home';
+      const teamData = isTop ? awayData : homeData;
+      const teamName = isTop ? awayTeam.name : homeTeam.name;
+
+      if (bId && inn) {
+        let batterObj = null;
+        let bIdx = 0;
+        if (teamData?.batters) {
+          bIdx = teamData.batters.findIndex(b => String(b.id) === String(bId));
+          if (bIdx >= 0) {
+            batterObj = teamData.batters[bIdx];
+          } else {
+            teamData.batters.forEach((b, idx) => {
+              if (b.substitutes) {
+                const sub = b.substitutes.find(s => String(s.id) === String(bId));
+                if (sub) {
+                  batterObj = sub;
+                  bIdx = idx;
+                }
+              }
+            });
+          }
+        }
+        if (!batterObj) {
+          batterObj = {
+            id: bId,
+            name: extractLastNameGlobal(p.matchup?.batter?.fullName || ''),
+            fullName: p.matchup?.batter?.fullName || '',
+            jerseyNumber: allBoxPlayers[`ID${bId}`]?.jerseyNumber || '—',
+            batSide: p.matchup?.batSide?.code || 'R',
+          };
+        }
+
+        const rawPlays = batterObj?.plays?.[inn] || [];
+        const currentPlay = Array.isArray(rawPlays) ? (rawPlays.length > 0 ? rawPlays[rawPlays.length - 1] : null) : rawPlays;
+
+        lastAtBat = {
+          teamKey,
+          teamName,
+          batterIndex: Math.max(0, bIdx),
+          batter: batterObj,
+          inning: inn,
+          currentPlay,
+          cellKey: `${bId}_${inn}`,
+        };
+        break;
+      }
     }
   }
 
@@ -845,6 +1377,8 @@ export function processMLBData(data, gamePkOverride) {
       isLive,
       statusDetailed,
       liveActiveCell,
+      liveGameState,
+      lastAtBat,
     },
     awayData,
     homeData

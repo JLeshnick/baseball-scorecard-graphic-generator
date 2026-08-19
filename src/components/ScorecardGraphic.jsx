@@ -1,4 +1,6 @@
 import React from 'react';
+import { X } from 'lucide-react';
+import { getScorecardTheme } from '../utils/themeProvider';
 
 /**
  * ScorecardGraphic Component — Premium Graphic Art Print Edition
@@ -6,7 +8,7 @@ import React from 'react';
  * per-inning linescore, pitching stats table, SVG diamond base paths, and
  * a rich multi-theme system.
  */
-export default function ScorecardGraphic({
+const ScorecardGraphic = ({
   data,
   theme = 'team-light',
   fontStyle = 'modern',
@@ -38,7 +40,10 @@ export default function ScorecardGraphic({
   onPitcherClick = null,
   activeCellKey = null,
   isInteractive = false,
-}) {
+  isExporting = false,
+  isAdvancedMode = false,
+  isMobile = false,
+}) => {
   if (!data) return null;
 
   const { gameInfo, awayData, homeData } = data;
@@ -51,332 +56,25 @@ export default function ScorecardGraphic({
     (_, i) => i + 1
   );
 
+  // When in Simplified Mode, suppress dense technical overlays (Statcast tables, momentum charts, pitch ball/strike counters)
+  const effectiveShowPitchBreakdown = isAdvancedMode && showPitchBreakdown;
+  const effectiveShowStatcast = isAdvancedMode && showStatcast;
+  const effectiveShowMomentum = isAdvancedMode && showMomentum;
+  const effectiveShowMvp = isAdvancedMode && showMvp;
+  const effectiveShowExtraEvents = isAdvancedMode && showExtraEvents;
+  const effectiveShowEraserMarks = isAdvancedMode && showEraserMarks;
+
   // ─── Theme System ────────────────────────────────────────────────────────────
-  const getTheme = () => {
-    const away = gameInfo.awayTeam;
-    const home = gameInfo.homeTeam;
-
-    const base = {
-      paperTexture: true,
-      outerFrame: '#c8bfa8',
-      fontHeader: "'Oswald', sans-serif",
-      fontMono: "'JetBrains Mono', monospace",
-      fontSans: "'Inter', sans-serif",
-      fontDisplay: "'Bebas Neue', sans-serif",
-    };
-
-    let themeObj = {};
-
-    switch (theme) {
-      case 'chalkboard':
-        themeObj = {
-          ...base,
-          bg: '#1c140e',
-          paperBg: '#101c18',
-          outerFrame: '#2c1e15',
-          textPrimary: '#f4f8f5',
-          textSecondary: '#a5d6a7',
-          textMuted: '#81c784',
-          borderStrong: 'rgba(255, 255, 255, 0.4)',
-          borderLight: 'rgba(255, 255, 255, 0.15)',
-          tableHeaderBg: 'rgba(255, 255, 255, 0.07)',
-          tableRowAlt: 'rgba(255, 255, 255, 0.025)',
-          lineScoreBg: 'rgba(255, 255, 255, 0.06)',
-          lineScoreAlt: 'rgba(255, 255, 255, 0.03)',
-          pitchingBg: 'rgba(255, 255, 255, 0.05)',
-          awayColor: customAwayColor || '#fff59d',
-          awaySecondary: customAwaySecondary || '#80d8ff',
-          awayText: '#101c18',
-          homeColor: customHomeColor || '#80d8ff',
-          homeSecondary: customHomeSecondary || '#fff59d',
-          homeText: '#101c18',
-          scoreTextColor: '#f4f8f5',
-          vsTextColor: '#a5d6a7',
-          cellDiamondStroke: 'rgba(255, 255, 255, 0.45)',
-          hitLineColor: customAwayColor || '#fff59d',
-          homeHitLineColor: customHomeColor || '#80d8ff',
-          isChalkboard: true,
-        };
-        break;
-
-      case 'retro70s':
-        themeObj = {
-          ...base,
-          bg: '#e8dec8',
-          paperBg: '#f6f0dd',
-          outerFrame: '#3d2314',
-          textPrimary: '#3d2314',
-          textSecondary: '#6e4020',
-          textMuted: '#9e6d42',
-          borderStrong: '#d94c26',
-          borderLight: '#e59b24',
-          tableHeaderBg: 'rgba(217, 76, 38, 0.12)',
-          tableRowAlt: 'rgba(229, 155, 36, 0.08)',
-          lineScoreBg: 'rgba(217, 76, 38, 0.1)',
-          lineScoreAlt: 'rgba(229, 155, 36, 0.06)',
-          pitchingBg: 'rgba(217, 76, 38, 0.08)',
-          awayColor: customAwayColor || '#c84b2c',
-          awaySecondary: customAwaySecondary || '#d89623',
-          awayText: '#ffffff',
-          homeColor: customHomeColor || '#3d2314',
-          homeSecondary: customHomeSecondary || '#d89623',
-          homeText: '#f6f0dd',
-          scoreTextColor: '#3d2314',
-          vsTextColor: '#c84b2c',
-          cellDiamondStroke: '#d89623',
-          hitLineColor: customAwayColor || '#c84b2c',
-          homeHitLineColor: customHomeColor || '#3d2314',
-          isRetro70s: true,
-        };
-        break;
-
-      case 'blueprint':
-        themeObj = {
-          ...base,
-          bg: '#07162c',
-          paperBg: '#081c38',
-          outerFrame: '#184275',
-          textPrimary: '#f0f8ff',
-          textSecondary: '#90caf9',
-          textMuted: '#64b5f6',
-          borderStrong: '#00e5ff',
-          borderLight: '#1565c0',
-          tableHeaderBg: 'rgba(0, 229, 255, 0.15)',
-          tableRowAlt: 'rgba(255, 255, 255, 0.03)',
-          lineScoreBg: 'rgba(0, 229, 255, 0.12)',
-          lineScoreAlt: 'rgba(255, 255, 255, 0.04)',
-          pitchingBg: 'rgba(0, 229, 255, 0.1)',
-          awayColor: customAwayColor || '#00e5ff',
-          awaySecondary: customAwaySecondary || '#64ffda',
-          awayText: '#04101e',
-          homeColor: customHomeColor || '#ff4081',
-          homeSecondary: customHomeSecondary || '#ff80ab',
-          homeText: '#ffffff',
-          scoreTextColor: '#f0f8ff',
-          vsTextColor: '#00e5ff',
-          cellDiamondStroke: '#42a5f5',
-          hitLineColor: customAwayColor || '#00e5ff',
-          homeHitLineColor: customHomeColor || '#ff4081',
-          isBlueprint: true,
-        };
-        break;
-
-      case 'team-dark':
-        themeObj = {
-          ...base,
-          bg: '#111622',
-          paperBg: '#131c2e',
-          outerFrame: '#1e2a40',
-          textPrimary: '#f1f5f9',
-          textSecondary: '#94a3b8',
-          textMuted: '#64748b',
-          borderStrong: '#2d3f5e',
-          borderLight: '#1e2d47',
-          tableHeaderBg: '#0d1627',
-          tableRowAlt: 'rgba(255,255,255,0.025)',
-          lineScoreBg: '#0a1221',
-          lineScoreAlt: 'rgba(255,255,255,0.04)',
-          pitchingBg: '#0d1627',
-          awayColor: customAwayColor || away.color,
-          awaySecondary: customAwaySecondary || away.secondary,
-          awayText: away.textColor || '#fff',
-          homeColor: customHomeColor || home.color,
-          homeSecondary: customHomeSecondary || home.secondary,
-          homeText: home.textColor || '#fff',
-          scoreTextColor: '#f1f5f9',
-          vsTextColor: '#475569',
-          cellDiamondStroke: '#2d4a7a',
-          hitLineColor: customAwaySecondary || away.secondary,
-          homeHitLineColor: customHomeSecondary || home.secondary,
-        };
-        break;
-
-      case 'vintage':
-        themeObj = {
-          ...base,
-          bg: '#e8dfc8',
-          paperBg: '#f5eed8',
-          outerFrame: '#c8b89a',
-          textPrimary: '#2c1a0e',
-          textSecondary: '#6b4c30',
-          textMuted: '#9c7a58',
-          borderStrong: '#b89a70',
-          borderLight: '#d4c4a0',
-          tableHeaderBg: 'rgba(180,150,100,0.15)',
-          tableRowAlt: 'rgba(180,150,100,0.07)',
-          lineScoreBg: 'rgba(180,150,100,0.12)',
-          lineScoreAlt: 'rgba(180,150,100,0.07)',
-          pitchingBg: 'rgba(180,150,100,0.1)',
-          awayColor: customAwayColor || '#3a2010',
-          awaySecondary: customAwaySecondary || '#c8922a',
-          awayText: '#f5eed8',
-          homeColor: customHomeColor || '#7a0c1e',
-          homeSecondary: customHomeSecondary || '#c8922a',
-          homeText: '#f5eed8',
-          scoreTextColor: '#2c1a0e',
-          vsTextColor: '#b89a70',
-          cellDiamondStroke: '#c8b089',
-          hitLineColor: customAwaySecondary || '#c8922a',
-          homeHitLineColor: customHomeColor || '#7a0c1e',
-          paperTexture: true,
-        };
-        break;
-
-      case 'monochrome':
-        themeObj = {
-          ...base,
-          bg: '#e8e8e8',
-          paperBg: '#f9f9f7',
-          outerFrame: '#c0c0c0',
-          textPrimary: '#111111',
-          textSecondary: '#444444',
-          textMuted: '#888888',
-          borderStrong: '#aaaaaa',
-          borderLight: '#dddddd',
-          tableHeaderBg: '#f0f0ee',
-          tableRowAlt: 'rgba(0,0,0,0.025)',
-          lineScoreBg: '#ececea',
-          lineScoreAlt: 'rgba(0,0,0,0.03)',
-          pitchingBg: '#f2f2f0',
-          awayColor: customAwayColor || '#111111',
-          awaySecondary: customAwaySecondary || '#555555',
-          awayText: '#ffffff',
-          homeColor: customHomeColor || '#333333',
-          homeSecondary: customHomeSecondary || '#888888',
-          homeText: '#ffffff',
-          scoreTextColor: '#111111',
-          vsTextColor: '#999999',
-          cellDiamondStroke: '#cccccc',
-          hitLineColor: customAwayColor || '#222222',
-          homeHitLineColor: customHomeColor || '#444444',
-        };
-        break;
-
-      case 'graffiti':
-        themeObj = {
-          ...base,
-          bg: '#0c0d12',
-          paperBg: '#14151f',
-          outerFrame: '#ff0055',
-          textPrimary: '#f8fafc',
-          textSecondary: '#cbd5e1',
-          textMuted: '#94a3b8',
-          borderStrong: '#ff0055',
-          borderLight: '#262838',
-          tableHeaderBg: 'rgba(255,0,85,0.14)',
-          tableRowAlt: 'rgba(255,255,255,0.03)',
-          lineScoreBg: 'rgba(0,240,255,0.12)',
-          lineScoreAlt: 'rgba(255,255,255,0.03)',
-          pitchingBg: 'rgba(255,0,85,0.1)',
-          awayColor: customAwayColor || '#ff0055',
-          awaySecondary: customAwaySecondary || '#00f0ff',
-          awayText: '#ffffff',
-          homeColor: customHomeColor || '#00f0ff',
-          homeSecondary: customHomeSecondary || '#ff0055',
-          homeText: '#000000',
-          scoreTextColor: '#f8fafc',
-          vsTextColor: '#ff0055',
-          cellDiamondStroke: '#00f0ff',
-          hitLineColor: customAwayColor || '#ff0055',
-          homeHitLineColor: customHomeColor || '#00f0ff',
-        };
-        break;
-
-      case 'handwritten':
-        themeObj = {
-          ...base,
-          bg: '#eadecc',
-          paperBg: '#f7f3e9',
-          outerFrame: '#b8a88a',
-          textPrimary: '#1e293b',
-          textSecondary: '#475569',
-          textMuted: '#64748b',
-          borderStrong: '#2563eb',
-          borderLight: '#cbd5e1',
-          tableHeaderBg: 'rgba(37,99,235,0.06)',
-          tableRowAlt: 'rgba(37,99,235,0.03)',
-          lineScoreBg: 'rgba(37,99,235,0.05)',
-          lineScoreAlt: 'rgba(37,99,235,0.02)',
-          pitchingBg: 'rgba(37,99,235,0.04)',
-          awayColor: customAwayColor || '#1d4ed8',
-          awaySecondary: customAwaySecondary || '#b91c1c',
-          awayText: '#ffffff',
-          homeColor: customHomeColor || '#b91c1c',
-          homeSecondary: customHomeSecondary || '#1d4ed8',
-          homeText: '#ffffff',
-          scoreTextColor: '#1e293b',
-          vsTextColor: '#2563eb',
-          cellDiamondStroke: '#93c5fd',
-          hitLineColor: customAwayColor || '#1d4ed8',
-          homeHitLineColor: customHomeColor || '#b91c1c',
-        };
-        break;
-
-      case 'team-light':
-      default:
-        themeObj = {
-          ...base,
-          bg: '#ddd8cc',
-          paperBg: '#f8f5ec',
-          outerFrame: '#c8bfa8',
-          textPrimary: '#1a1209',
-          textSecondary: '#5a4a35',
-          textMuted: '#9a8a75',
-          borderStrong: '#c0b499',
-          borderLight: '#e0d8c4',
-          tableHeaderBg: 'rgba(0,0,0,0.04)',
-          tableRowAlt: 'rgba(0,0,0,0.02)',
-          lineScoreBg: 'rgba(0,0,0,0.04)',
-          lineScoreAlt: 'rgba(0,0,0,0.025)',
-          pitchingBg: 'rgba(0,0,0,0.03)',
-          awayColor: customAwayColor || away.color,
-          awaySecondary: customAwaySecondary || away.secondary,
-          awayText: away.textColor || '#fff',
-          homeColor: customHomeColor || home.color,
-          homeSecondary: customHomeSecondary || home.secondary,
-          homeText: home.textColor || '#fff',
-          scoreTextColor: '#1a1209',
-          vsTextColor: '#c0b499',
-          cellDiamondStroke: '#c8bfa8',
-          hitLineColor: customAwayColor || away.color,
-          homeHitLineColor: customHomeColor || home.color,
-        };
-        break;
-    }
-
-    // Font overrides for theme feel
-    if (theme === 'chalkboard') {
-      themeObj.fontHeader = "'Caveat', cursive";
-      themeObj.fontMono = "'Caveat', cursive";
-      themeObj.fontSans = "'Caveat', cursive";
-      themeObj.fontDisplay = "'Caveat', cursive";
-      themeObj.isHandwritten = true;
-    } else if (theme === 'retro70s') {
-      themeObj.fontHeader = "'Bebas Neue', sans-serif";
-      themeObj.fontDisplay = "'Oswald', sans-serif";
-    }
-
-    // Apply modular Font Style overrides
-    const effectiveFontStyle = (theme === 'graffiti' || theme === 'handwritten') ? theme : fontStyle;
-
-    if (effectiveFontStyle === 'handwritten') {
-      themeObj.fontHeader = "'Caveat', cursive";
-      themeObj.fontMono = "'Caveat', cursive";
-      themeObj.fontSans = "'Caveat', cursive";
-      themeObj.fontDisplay = "'Caveat', cursive";
-      themeObj.isHandwritten = true;
-    } else if (effectiveFontStyle === 'graffiti') {
-      themeObj.fontHeader = "'Permanent Marker', cursive";
-      themeObj.fontMono = "'Permanent Marker', cursive";
-      themeObj.fontSans = "'Permanent Marker', cursive";
-      themeObj.fontDisplay = "'Permanent Marker', cursive";
-      themeObj.isGraffiti = true;
-    }
-
-    return themeObj;
-  };
-
-  const t = getTheme();
+  const t = getScorecardTheme({
+    theme,
+    fontStyle,
+    gameInfo,
+    customAwayColor,
+    customAwaySecondary,
+    customHomeColor,
+    customHomeSecondary,
+  });
+  const isDark = Boolean(t.isDark || (typeof theme === 'string' && theme.includes('dark')) || theme === 'chalkboard' || theme === 'midnight' || theme === 'blueprint');
 
   /**
    * Refined Handwritten Text Renderer:
@@ -515,11 +213,16 @@ export default function ScorecardGraphic({
 
   // ─── Play Cell Renderer ───────────────────────────────────────────────────────
   const renderSinglePlayCell = (play, isHome = false, cellKey = '') => {
+    const isMulti = cellKey.includes('_multi_');
+    const diamondSize = isMulti ? '23' : '30';
+    const badgeFontSize = isMulti ? '5px' : '6.5px';
+    const badgePad = isMulti ? '0.5px 2px' : '1px 3px';
+
     if (!play || !play.code || isBlankMode) {
       return (
         <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {renderEraserOverlay(cellKey)}
-          <svg viewBox="0 0 40 40" width="28" height="28" style={{ display: 'block', margin: 'auto', opacity: 0.25, position: 'relative', zIndex: 1 }}>
+          <svg viewBox="0 0 40 40" width={isMulti ? '20' : '28'} height={isMulti ? '20' : '28'} style={{ display: 'block', margin: 'auto', opacity: 0.25, position: 'relative', zIndex: 1 }}>
             <polygon
               points="20,35 35,20 20,5 5,20"
               fill="none"
@@ -536,15 +239,49 @@ export default function ScorecardGraphic({
     const pillBg = isHome ? t.homeColor : t.awayColor;
     const pillText = isHome ? t.homeText : t.awayText;
 
-    const extraEventBadge = showExtraEvents && extraEvent ? (
+    const extraEventBadge = effectiveShowExtraEvents && extraEvent ? (
       <span style={{
-        position: 'absolute', top: '2px', left: '2px',
-        fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
-        lineHeight: 1, padding: '1px 3px', borderRadius: '2px',
+        position: 'absolute', top: '1px', left: isMulti ? '9px' : '2px',
+        fontSize: badgeFontSize, fontWeight: 900, fontFamily: t.fontMono,
+        lineHeight: 1, padding: badgePad, borderRadius: '2px',
         backgroundColor: isHome ? t.homeSecondary : t.awaySecondary,
         color: '#000000', zIndex: 3, boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
       }}>
         {extraEvent}
+      </span>
+    ) : null;
+
+    const subLetterBadge = play.subLetter ? (
+      <span style={{
+        position: 'absolute', top: '1px', left: (effectiveShowExtraEvents && extraEvent) ? (isMulti ? '18px' : '20px') : (isMulti ? '9px' : '2px'),
+        fontSize: badgeFontSize, fontWeight: 900, fontFamily: t.fontMono,
+        lineHeight: 1,
+        color: isHome ? t.homeColor : t.awayColor,
+        zIndex: 3,
+      }}>
+        {play.subLetter}.
+      </span>
+    ) : null;
+
+    const baseOutBadge = play.outAtBase ? (
+      <span
+        style={{
+          position: 'absolute',
+          top: '1px',
+          right: '1.5px',
+          fontSize: badgeFontSize,
+          fontWeight: 900,
+          fontFamily: t.fontMono,
+          lineHeight: 1,
+          padding: badgePad,
+          borderRadius: '2px',
+          backgroundColor: '#ef4444',
+          color: '#ffffff',
+          zIndex: 3,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
+        }}
+      >
+        {play.outAtBaseEvent === 'CS' ? 'CS' : play.outAtBaseEvent === 'PO' ? 'PO' : 'X'} {play.outAtBase === 4 ? 'HP' : `${play.outAtBase}B`}
       </span>
     ) : null;
 
@@ -571,11 +308,15 @@ export default function ScorecardGraphic({
       const b3Solid = isHR || (showEndInningBases && endInningReach >= 3 && 3 > atBatReach);
       const b4Solid = isHR || (showEndInningBases && endInningReach >= 4 && 4 > atBatReach);
 
+      const outAtBase = play.outAtBase;
+
       return (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
           {renderEraserOverlay(cellKey)}
           {extraEventBadge}
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
+          {subLetterBadge}
+          {baseOutBadge}
+          <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ display: 'block', overflow: 'visible', position: 'relative', zIndex: 1 }}>
             <polygon
               points="20,37 37,20 20,3 3,20"
               fill={isHR ? hitColor : 'none'}
@@ -594,16 +335,39 @@ export default function ScorecardGraphic({
 
             {b4Solid && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.4" strokeLinecap="round" />}
             {b4Dash && <line x1="3" y1="20" x2="20" y2="37" stroke={hitColor} strokeWidth="2.0" strokeLinecap="round" strokeDasharray="1.4 3.6" />}
+
+            {/* Out on Basepaths Cross Marks */}
+            {outAtBase === 1 && (
+              <text x="37" y="24" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="900">X</text>
+            )}
+            {outAtBase === 2 && (
+              <>
+                <line x1="37" y1="20" x2="28.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="28.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
+              </>
+            )}
+            {outAtBase === 3 && (
+              <>
+                <line x1="20" y1="3" x2="11.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="11.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
+              </>
+            )}
+            {outAtBase === 4 && (
+              <>
+                <line x1="3" y1="20" x2="11.5" y2="28.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
+                <text x="11.5" y="31" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
+              </>
+            )}
           </svg>
           <span style={{
             position: 'absolute',
-            bottom: '2px',
-            right: '2px',
-            fontSize: '7.5px',
+            bottom: '1.5px',
+            right: '1.5px',
+            fontSize: isMulti ? '6.5px' : '7.5px',
             fontWeight: 900,
             fontFamily: t.fontMono,
             lineHeight: 1,
-            padding: '1.5px 3px',
+            padding: isMulti ? '1px 2px' : '1.5px 3px',
             borderRadius: '2px',
             backgroundColor: pillBg,
             color: pillText,
@@ -626,13 +390,15 @@ export default function ScorecardGraphic({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
           {renderEraserOverlay(cellKey)}
           {extraEventBadge}
-          <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
+          {subLetterBadge}
+          {baseOutBadge}
+          <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
             <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
           </svg>
           <span style={{
             fontFamily: t.fontHeader,
             fontWeight: 700,
-            fontSize: '17px',
+            fontSize: isMulti ? '14px' : '17px',
             color: t.textPrimary,
             display: 'inline-block',
             transform: isLooking ? 'scaleX(-1)' : 'none',
@@ -651,13 +417,15 @@ export default function ScorecardGraphic({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', position: 'relative' }}>
         {renderEraserOverlay(cellKey)}
         {extraEventBadge}
-        <svg viewBox="0 0 40 40" width="30" height="30" style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
+        {subLetterBadge}
+        {baseOutBadge}
+        <svg viewBox="0 0 40 40" width={diamondSize} height={diamondSize} style={{ position: 'absolute', display: 'block', opacity: 0.22, zIndex: 1 }}>
           <polygon points="20,37 37,20 20,3 3,20" fill="none" stroke={t.cellDiamondStroke} strokeWidth="1.2" />
         </svg>
         <span style={{
           fontFamily: t.fontMono,
           fontWeight: 700,
-          fontSize: type === 'error' ? '9px' : '8.5px',
+          fontSize: isMulti ? '7.5px' : (type === 'error' ? '9px' : '8.5px'),
           color: t.textSecondary,
           position: 'relative',
           zIndex: 2,
@@ -682,17 +450,29 @@ export default function ScorecardGraphic({
       // Multiple plate appearances in the same inning (batting through the order)
       return (
         <div style={{
-          display: 'flex', width: '100%', height: '100%',
-          alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden'
+          display: 'flex', width: '100%', height: '100%', minHeight: '38px',
+          alignItems: 'center', justifyContent: 'space-around', overflow: 'hidden',
+          position: 'relative',
         }}>
           {playOrArray.map((p, idx) => (
             <div
               key={idx}
               style={{
                 flex: 1, height: '100%', minWidth: 0,
-                borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderLight}` : 'none'
+                borderRight: idx < playOrArray.length - 1 ? `1px dashed ${t.borderStrong}` : 'none',
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
+              {/* Sequence number badge */}
+              <span style={{
+                position: 'absolute', top: '1px', left: '1.5px',
+                fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
+                color: isHome ? t.homeColor : t.awayColor,
+                opacity: 0.9, zIndex: 4, pointerEvents: 'none',
+              }}>
+                {idx === 0 ? '①' : idx === 1 ? '②' : '③'}
+              </span>
               {renderSinglePlayCell(p, isHome, `${cellKey}_multi_${idx}`)}
             </div>
           ))}
@@ -797,7 +577,7 @@ export default function ScorecardGraphic({
     const POS_COL_W = 32;
     const NAME_COL_W = 126;
     const PLAYER_COL_W = POS_COL_W + NAME_COL_W;
-    const INNING_COL_W = 42;
+    const INNING_COL_W = 48;
 
     return (
       <div style={{ marginBottom: '12px' }}>
@@ -943,68 +723,121 @@ export default function ScorecardGraphic({
                       padding: '2px 1px',
                       borderRight: `1px solid ${t.borderLight}`,
                       backgroundColor: t.tableRowAlt,
+                      verticalAlign: 'middle',
                     }}>
-                      <span style={{
-                        display: 'inline-block',
-                        fontFamily: t.fontMono,
-                        fontWeight: 800,
-                        fontSize: '9px',
-                        color: accentColor,
-                        letterSpacing: '0.02em',
-                      }}>
-                        {b.position}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          fontFamily: t.fontMono,
+                          fontWeight: 800,
+                          fontSize: '9px',
+                          color: accentColor,
+                          letterSpacing: '0.02em',
+                        }}>
+                          {b.position}
+                        </span>
+                        {b.substitutes && b.substitutes.map((sub, sIdx) => (
+                          <span key={sIdx} style={{
+                            display: 'inline-block',
+                            fontFamily: t.fontMono,
+                            fontWeight: 800,
+                            fontSize: '7.5px',
+                            color: t.textMuted,
+                            opacity: 0.9,
+                          }}>
+                            {sub.position || 'PH'}
+                          </span>
+                        ))}
+                      </div>
                     </td>
 
                     {/* Batter Name (Safely contained without spilling out into grid) */}
                     <td
-                      onClick={onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
-                      className={onBatterClick ? 'interactive-roster-cell' : ''}
+                      onClick={!isExporting && onBatterClick ? () => onBatterClick({ teamKey: isHome ? 'home' : 'away', batterIndex: bIdx, batter: b, teamName: teamInfo.name }) : undefined}
+                      className={!isExporting && onBatterClick ? 'interactive-roster-cell' : ''}
                       style={{
                         verticalAlign: 'middle',
                         padding: '3px 4px 3px 6px',
                         borderRight: `1.5px solid ${t.borderStrong}`,
                         overflow: 'visible',
                         maxWidth: `${NAME_COL_W - 22}px`,
-                        cursor: onBatterClick ? 'pointer' : 'default',
+                        cursor: !isExporting && onBatterClick ? 'pointer' : 'default',
                       }}
-                      title={onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
+                      title={!isExporting && onBatterClick ? `Edit #${b.jerseyNumber} ${b.name}` : undefined}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: '16px', height: '16px', borderRadius: '50%',
-                          backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
-                          color: accentText,
-                          fontSize: '7px', fontWeight: 800,
-                          fontFamily: t.fontMono,
-                          flexShrink: 0,
-                        }}>
-                          {b.jerseyNumber}
-                        </span>
-                        <span style={{
-                          fontSize: batterFontSize, fontWeight: 700,
-                          letterSpacing: letterSpacing, textTransform: 'uppercase',
-                          fontFamily: t.fontHeader,
-                          color: t.textPrimary,
-                          whiteSpace: 'nowrap',
-                          overflow: 'visible',
-                          paddingRight: '6px',
-                          display: 'inline-block',
-                          lineHeight: 1.1,
-                        }}>
-                          {renderHandwrittenText(b.name, 'batter_' + b.id)}
-                        </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'visible' }}>
+                        {/* Starter */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'visible' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            backgroundColor: b.jerseyNumber && b.jerseyNumber.trim() ? accentColor : 'transparent',
+                            color: accentText,
+                            fontSize: '7px', fontWeight: 800,
+                            fontFamily: t.fontMono,
+                            flexShrink: 0,
+                          }}>
+                            {b.jerseyNumber}
+                          </span>
+                          <span style={{
+                            fontSize: batterFontSize, fontWeight: 700,
+                            letterSpacing: letterSpacing, textTransform: 'uppercase',
+                            fontFamily: t.fontHeader,
+                            color: t.textPrimary,
+                            whiteSpace: 'nowrap',
+                            overflow: 'visible',
+                            paddingRight: '6px',
+                            display: 'inline-block',
+                            lineHeight: 1.1,
+                          }}>
+                            {renderHandwrittenText(b.name, 'batter_' + b.id)}
+                          </span>
+                        </div>
+
+                        {/* Substitutes in this slot */}
+                        {b.substitutes && b.substitutes.map((sub, sIdx) => (
+                          <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '4px', opacity: 0.9 }}>
+                            <span style={{
+                              fontSize: '7.5px', fontWeight: 800, fontFamily: t.fontMono,
+                              color: accentColor,
+                            }}>
+                              {sub.subLetter ? `${sub.subLetter}.` : 'sub.'}
+                            </span>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: '13px', height: '13px', borderRadius: '50%',
+                              backgroundColor: t.borderLight,
+                              color: t.textPrimary,
+                              fontSize: '6.5px', fontWeight: 800,
+                              fontFamily: t.fontMono,
+                              flexShrink: 0,
+                            }}>
+                              {sub.jerseyNumber || '—'}
+                            </span>
+                            <span style={{
+                              fontSize: '9px', fontWeight: 700,
+                              fontFamily: t.fontHeader,
+                              color: t.textPrimary,
+                              letterSpacing: '0.01em',
+                              textTransform: 'uppercase',
+                            }}>
+                              {renderHandwrittenText(sub.name, 'sub_' + sIdx + '_' + sub.name)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </td>
 
                     {/* Inning cells */}
                     {innings.map(n => {
                       const play = isBlankMode ? null : b.plays?.[n];
+                      const currentPlayObj = Array.isArray(play) ? play[0] : play;
+                      const currentPlayPitches = currentPlayObj?.pitches || [];
+                      const batSide = currentPlayObj?.batSide || b.batSide || 'R';
                       const cellKey = `${b.id}_${n}`;
-                      const isSelected = activeCellKey === cellKey;
-                      const hasInteractiveClick = Boolean(onCellClick);
-                      const isLiveActiveCell = Boolean(
+                      const isSelected = !isExporting && activeCellKey === cellKey;
+                      const hasInteractiveClick = !isExporting && Boolean(onCellClick);
+                      const isLiveActiveCell = !isExporting && Boolean(
                         gameInfo?.isLive &&
                         gameInfo?.liveActiveCell &&
                         String(gameInfo.liveActiveCell.batterId) === String(b.id) &&
@@ -1013,21 +846,28 @@ export default function ScorecardGraphic({
                       );
 
                       let cellClassName = '';
-                      if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
-                      else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+                      if (!isExporting) {
+                        if (isLiveActiveCell) cellClassName = 'live-active-atbat-cell';
+                        else if (hasInteractiveClick) cellClassName = 'interactive-diamond-cell';
+                      }
 
                       return (
                         <td
                           key={n}
-                          onClick={hasInteractiveClick ? () => onCellClick({
-                            teamKey: isHome ? 'home' : 'away',
-                            teamName: teamInfo.name,
-                            batterIndex: bIdx,
-                            batter: b,
-                            inning: n,
-                            currentPlay: play,
-                            cellKey,
-                          }) : undefined}
+                          onClick={hasInteractiveClick ? (e) => {
+                            e.stopPropagation();
+                            const playArray = Array.isArray(play) ? play : (play ? [play] : []);
+                            onCellClick({
+                              teamKey: isHome ? 'home' : 'away',
+                              teamName: teamInfo.name,
+                              batterIndex: bIdx,
+                              batter: b,
+                              inning: n,
+                              currentPlay: currentPlayObj,
+                              plays: playArray,
+                              cellKey,
+                            });
+                          } : undefined}
                           className={cellClassName}
                           style={{
                             textAlign: 'center', verticalAlign: 'middle',
@@ -1042,28 +882,139 @@ export default function ScorecardGraphic({
                             cursor: hasInteractiveClick ? 'pointer' : 'default',
                             boxShadow: isSelected ? 'inset 0 0 0 2px #3b82f6' : (isLiveActiveCell ? 'inset 0 0 0 2px #ef4444' : 'none'),
                           }}
-                          title={
-                            isLiveActiveCell
-                              ? `🔴 Active At-Bat: #${b.jerseyNumber} ${b.name}`
-                              : hasInteractiveClick
-                              ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})`
-                              : undefined
-                          }
                         >
                           {renderPlayCell(play, isHome, cellKey)}
-                          {isLiveActiveCell && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '2px',
-                              right: '2px',
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              backgroundColor: '#ef4444',
-                              boxShadow: '0 0 8px #ef4444',
-                              animation: 'liveDotPulse 1.2s ease-in-out infinite',
-                              pointerEvents: 'none',
-                            }} />
+
+                          {/* Selected At-Bat Floating Pitch Popover on Graphic (Mobile Only: on Desktop the Sidebar displays the full pitch visualizer without covering cells) */}
+                          {isSelected && isMobile && !isExporting && currentPlayObj && currentPlayPitches.length > 0 && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 120,
+                                minWidth: '150px',
+                                maxWidth: '180px',
+                                padding: '6px 8px',
+                                backgroundColor: isDark ? '#18181b' : '#ffffff',
+                                border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
+                                borderRadius: '7px',
+                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.35), 0 8px 10px -6px rgba(0,0,0,0.35)',
+                                marginTop: '4px',
+                                pointerEvents: 'auto',
+                                textAlign: 'left',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '8.5px', fontWeight: 800, color: isDark ? '#f4f4f5' : '#0f172a' }}>
+                                    {currentPlayObj.code} ({currentPlayPitches.length}P)
+                                  </span>
+                                  <span style={{
+                                    fontSize: '7.5px', fontWeight: 800, padding: '1px 3px', borderRadius: '3px',
+                                    backgroundColor: batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: batSide === 'L' ? '#3b82f6' : '#ef4444',
+                                  }}>
+                                    {batSide === 'L' ? 'LHB' : 'RHB'}
+                                  </span>
+                                </div>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCellClick({
+                                      teamKey: isHome ? 'home' : 'away',
+                                      teamName: teamInfo.name,
+                                      batterIndex: bIdx,
+                                      batter: b,
+                                      inning: n,
+                                      currentPlay: currentPlayObj,
+                                      cellKey,
+                                    });
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '16px', height: '16px',
+                                    borderRadius: '50%',
+                                    border: `1px solid ${isDark ? '#3f3f46' : '#cbd5e1'}`,
+                                    backgroundColor: isDark ? '#27272a' : '#f1f5f9',
+                                    color: isDark ? '#a1a1aa' : '#64748b',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                  }}
+                                >
+                                  <X style={{ width: '10px', height: '10px' }} />
+                                </button>
+                              </div>
+                              {currentPlayObj.pitcherName && (
+                                <div style={{ fontSize: '7.5px', color: isDark ? '#a1a1aa' : '#64748b', marginBottom: '3px' }}>
+                                  vs {currentPlayObj.pitcherName}
+                                </div>
+                              )}
+
+                              {/* Mini Strike Zone with Batter Boxes */}
+                              <div style={{
+                                width: '100%', height: '80px',
+                                backgroundColor: isDark ? '#09090b' : '#f8fafc',
+                                borderRadius: '4px',
+                                border: `1px solid ${isDark ? '#27272a' : '#e2e8f0'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                marginBottom: '4px',
+                              }}>
+                                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                                  {/* Left Batter Box (RHB: catcher's left) */}
+                                  <rect
+                                    x="7" y="14" width="15" height="58" rx="2"
+                                    fill={batSide === 'R' ? 'rgba(239, 68, 68, 0.15)' : 'none'}
+                                    stroke={batSide === 'R' ? '#ef4444' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                    strokeWidth={batSide === 'R' ? 1.2 : 0.6}
+                                    strokeDasharray={batSide === 'R' ? 'none' : '1.5 1.5'}
+                                  />
+                                  <text x="14.5" y="45" textAnchor="middle" fill={batSide === 'R' ? '#ef4444' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="800">RHB</text>
+
+                                  {/* Right Batter Box (LHB: catcher's right) */}
+                                  <rect
+                                    x="78" y="14" width="15" height="58" rx="2"
+                                    fill={batSide === 'L' ? 'rgba(59, 130, 246, 0.15)' : 'none'}
+                                    stroke={batSide === 'L' ? '#3b82f6' : (isDark ? '#3f3f46' : '#d4d4d8')}
+                                    strokeWidth={batSide === 'L' ? 1.2 : 0.6}
+                                    strokeDasharray={batSide === 'L' ? 'none' : '1.5 1.5'}
+                                  />
+                                  <text x="85.5" y="45" textAnchor="middle" fill={batSide === 'L' ? '#3b82f6' : (isDark ? '#52525b' : '#9ca3af')} fontSize="5.5" fontWeight="800">LHB</text>
+
+                                  {/* Strike Zone Box */}
+                                  <rect x="26" y="14" width="48" height="58" fill="none" stroke={isDark ? '#52525b' : '#94a3b8'} strokeWidth="1.5" rx="2" />
+                                  <line x1="42" y1="14" x2="42" y2="72" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                  <line x1="58" y1="14" x2="58" y2="72" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                  <line x1="26" y1="33.3" x2="74" y2="33.3" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                  <line x1="26" y1="52.6" x2="74" y2="52.6" stroke={isDark ? '#3f3f46' : '#cbd5e1'} strokeWidth="0.8" strokeDasharray="1.5 2" />
+                                  <polygon points="26,82 74,82 74,87 50,96 26,87" fill={isDark ? '#27272a' : '#cbd5e1'} stroke={isDark ? '#3f3f46' : '#94a3b8'} strokeWidth="0.8" />
+                                  
+                                  {/* Plotted Pitches */}
+                                  {currentPlayPitches.map((p, pIdx) => (
+                                    <g key={pIdx}>
+                                      <circle cx={p.normX} cy={Math.min(70, Math.max(16, p.normY - 4))} r="5.5" fill={p.color} stroke="#ffffff" strokeWidth="1.2" />
+                                      <text x={p.normX} y={Math.min(70, Math.max(16, p.normY - 4)) + 2.5} textAnchor="middle" fill="#ffffff" fontSize="6.5" fontWeight="900">{p.pitchNumber}</text>
+                                    </g>
+                                  ))}
+                                </svg>
+                              </div>
+
+                              {/* Mini Pitch Chips */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', maxHeight: '40px', overflowY: 'auto' }}>
+                                {currentPlayPitches.map((p, pIdx) => (
+                                  <span key={pIdx} style={{
+                                    fontSize: '7.5px', fontWeight: 700, padding: '1px 3px', borderRadius: '3px',
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+                                    color: p.color,
+                                  }}>
+                                    #{p.pitchNumber} {p.speed ? `${p.speed} ` : ''}{p.pitchType}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </td>
                       );
@@ -1165,15 +1116,15 @@ export default function ScorecardGraphic({
                       )}
                       {/* Name & Core Pitching Stats including Total Pitch Count */}
                       <td
-                        onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
-                        className={onPitcherClick ? 'interactive-roster-cell' : ''}
+                        onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, teamName: teamInfo.name }) : undefined}
+                        className={!isExporting && onPitcherClick ? 'interactive-roster-cell' : ''}
                         style={{
                           padding: '3px 6px',
                           borderRight: `1.5px solid ${t.borderStrong}`,
                           verticalAlign: 'middle',
-                          cursor: onPitcherClick ? 'pointer' : 'default',
+                          cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
                         }}
-                        title={onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
+                        title={!isExporting && onPitcherClick ? `Edit Pitcher #${p.number} ${p.name}` : undefined}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -1227,7 +1178,7 @@ export default function ScorecardGraphic({
 
                       {/* Inning Pitch Breakdown Cells with Uppercase S / B and Clear Spacing */}
                       {innings.map(n => {
-                        if (!showPitchBreakdown) {
+                        if (!effectiveShowPitchBreakdown) {
                           return (
                             <td key={n} style={{ borderLeft: `1px solid ${t.borderLight}` }} />
                           );
@@ -1239,15 +1190,15 @@ export default function ScorecardGraphic({
                         return (
                           <td
                             key={n}
-                            onClick={onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
-                            className={onPitcherClick ? 'interactive-diamond-cell' : ''}
+                            onClick={!isExporting && onPitcherClick ? () => onPitcherClick({ teamKey: isHome ? 'home' : 'away', pitcher: p, pitcherIndex: pIdx, inning: n, teamName: teamInfo.name }) : undefined}
+                            className={!isExporting && onPitcherClick ? 'interactive-diamond-cell' : ''}
                             style={{
                               textAlign: 'center', padding: '2px 1px',
                               borderLeft: `1px solid ${t.borderLight}`,
                               verticalAlign: 'middle',
-                              cursor: onPitcherClick ? 'pointer' : 'default',
+                              cursor: !isExporting && onPitcherClick ? 'pointer' : 'default',
                             }}
-                            title={onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
+                            title={!isExporting && onPitcherClick ? `Edit Inn ${n} Pitches for #${p.number} ${p.name}` : undefined}
                           >
                             {cnt > 0 && !isBlankMode ? (
                               <div style={{ lineHeight: 1 }}>
@@ -1271,6 +1222,44 @@ export default function ScorecardGraphic({
                     </tr>
                   );
                 })}
+
+                {/* Interactive Add Pitcher button in manual mode */}
+                {!isExporting && isInteractive && onPitcherClick && (
+                  <tr className="interactive-add-pitcher-row no-export" data-interactive-only="true" style={{ backgroundColor: t.tableRowAlt, borderTop: `1px dashed ${t.borderLight}` }}>
+                    <td
+                      colSpan={innings.length + 1}
+                      onClick={() => onPitcherClick({
+                        teamKey: isHome ? 'home' : 'away',
+                        pitcher: { name: 'RELIEVER', number: '99', ip: '0.0', hits: 0, runs: 0, earnedRuns: 0, walks: 0, strikeouts: [], pitchesByInning: {} },
+                        pitcherIndex: -1,
+                        teamName: teamInfo.name,
+                        isNew: true,
+                      })}
+                      className="interactive-roster-cell"
+                      style={{
+                        padding: '3px 8px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      title={`Add a new relief pitcher for ${teamInfo.name}`}
+                    >
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '9px',
+                        fontWeight: 800,
+                        fontFamily: t.fontMono,
+                        color: accentColor,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}>
+                        <span>+ ADD RELIEVER / PITCHER</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
                 {/* Total Pitch Count Summary Row */}
                 <tr style={{ backgroundColor: t.tableHeaderBg, borderTop: `1.5px solid ${t.borderStrong}` }}>
                   <td style={{
@@ -1563,7 +1552,7 @@ export default function ScorecardGraphic({
               color: t.textSecondary,
               textAlign: 'right',
             }}>
-              {customSubtitle !== undefined ? customSubtitle : `${gameInfo.venue} · ${gameInfo.headline}`}
+              {customSubtitle !== undefined ? customSubtitle : [gameInfo.venue, gameInfo.headline].filter(Boolean).join(' · ')}
             </span>
           </div>
 
@@ -1655,7 +1644,7 @@ export default function ScorecardGraphic({
           )}
 
           {/* Statcast HR & Hit Metrics Card */}
-          {showStatcast && (
+          {effectiveShowStatcast && (
             <div style={{
               marginTop: '10px',
               padding: '10px 14px',
@@ -1754,7 +1743,7 @@ export default function ScorecardGraphic({
           )}
 
           {/* Inning-by-Inning Score & Lead Progression Grid */}
-          {showMomentum && gameInfo.gameMomentum && gameInfo.gameMomentum.length > 0 && (
+          {effectiveShowMomentum && gameInfo.gameMomentum && gameInfo.gameMomentum.length > 0 && (
             <div style={{
               marginTop: '10px',
               padding: '10px 14px',
@@ -1907,4 +1896,6 @@ export default function ScorecardGraphic({
       `}</style>
     </div>
   );
-}
+};
+
+export default React.memo(ScorecardGraphic);

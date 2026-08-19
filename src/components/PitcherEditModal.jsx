@@ -337,37 +337,65 @@ export default function PitcherEditModal({
           backgroundColor: isDark ? '#111113' : '#faf9f6',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           gap: '8px',
         }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '8px 14px', borderRadius: '6px',
-              border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-              backgroundColor: isDark ? '#27272a' : '#ffffff',
-              color: isDark ? '#d4d4d8' : '#374151',
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            Cancel
-          </button>
+          <div>
+            {pitcherIndex > 0 && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Delete reliever ${name || 'Pitcher'} #${number}?`)) {
+                    onSavePitcher({
+                      teamKey,
+                      pitcherIndex,
+                      isDelete: true,
+                    });
+                    onClose();
+                  }
+                }}
+                style={{
+                  padding: '8px 12px', borderRadius: '6px',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Delete Reliever
+              </button>
+            )}
+          </div>
 
-          <button
-            onClick={handleSave}
-            style={{
-              padding: '8px 18px', borderRadius: '6px',
-              border: 'none',
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
-              fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
-            }}
-          >
-            <Check style={{ width: '14px', height: '14px' }} />
-            Save Pitcher Stats
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 14px', borderRadius: '6px',
+                border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                backgroundColor: isDark ? '#27272a' : '#ffffff',
+                color: isDark ? '#d4d4d8' : '#374151',
+                fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleSave}
+              style={{
+                padding: '8px 18px', borderRadius: '6px',
+                border: 'none',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+              }}
+            >
+              <Check style={{ width: '14px', height: '14px' }} />
+              {pitcherIndex === -1 ? 'Add Pitcher' : 'Save Pitcher Stats'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

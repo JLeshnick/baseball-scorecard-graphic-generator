@@ -66,6 +66,9 @@ const QUICK_ERRORS = [
   { code: 'E9', label: 'Right Field Error (E9)', type: 'error', bases: 1, outs: 0 },
 ];
 
+import { useAppStore } from '../store/useAppStore';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
 export default function PlayEntryModal({
   isOpen,
   onClose,
@@ -75,6 +78,9 @@ export default function PlayEntryModal({
   isDark = false,
 }) {
   if (!isOpen || !cellContext) return null;
+
+  const isAdvancedMode = useAppStore(s => s.isAdvancedMode);
+  const [showAdvancedSection, setShowAdvancedSection] = useState(false);
 
   const { teamKey, batter, inning, currentPlay, teamName } = cellContext;
 
@@ -90,6 +96,8 @@ export default function PlayEntryModal({
   const [hitDistance, setHitDistance] = useState('');
   const [exitVelo, setExitVelo] = useState('');
   const [activeCategory, setActiveCategory] = useState('hits'); // 'hits', 'outs', 'k', 'walks', 'dp', 'errors'
+  const [outAtBase, setOutAtBase] = useState(0);
+  const [outAtBaseEvent, setOutAtBaseEvent] = useState('OUT');
 
   // Initialize state from existing play
   useEffect(() => {
@@ -105,6 +113,8 @@ export default function PlayEntryModal({
       setPitchCount(currentPlay.pitchCount !== undefined ? String(currentPlay.pitchCount) : '');
       setHitDistance(currentPlay.statcast?.totalDistance ? String(Math.round(currentPlay.statcast.totalDistance)) : '');
       setExitVelo(currentPlay.statcast?.launchSpeed ? String(currentPlay.statcast.launchSpeed) : '');
+      setOutAtBase(currentPlay.outAtBase || 0);
+      setOutAtBaseEvent(currentPlay.outAtBaseEvent || 'OUT');
     } else {
       setCode('');
       setPlayType('out');
@@ -117,6 +127,8 @@ export default function PlayEntryModal({
       setPitchCount('');
       setHitDistance('');
       setExitVelo('');
+      setOutAtBase(0);
+      setOutAtBaseEvent('OUT');
     }
   }, [currentPlay, cellContext]);
 
@@ -221,6 +233,8 @@ export default function PlayEntryModal({
       outsRecorded: outsRecorded,
       scoredRun: endInningBases === 4 || playType === 'hr',
       pitchCount: isNaN(pitchesNum) ? undefined : pitchesNum,
+      outAtBase: outAtBase > 0 ? outAtBase : undefined,
+      outAtBaseEvent: outAtBase > 0 ? outAtBaseEvent : undefined,
       statcast: (distNum || veloNum) ? {
         totalDistance: distNum || undefined,
         launchSpeed: veloNum || undefined,
@@ -594,6 +608,7 @@ export default function PlayEntryModal({
                   {[0, 1, 2, 3].map(num => (
                     <button
                       key={num}
+                      type="button"
                       onClick={() => setOutsRecorded(num)}
                       style={{
                         flex: 1, padding: '4px 0', fontSize: '11px', fontWeight: 700, borderRadius: '4px',
@@ -603,6 +618,39 @@ export default function PlayEntryModal({
                       }}
                     >
                       {num} {num === 1 ? 'Out' : 'Outs'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Runner Out on Basepaths */}
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
+                  RUNNER OUT ON BASEPATH
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '3px' }}>
+                  {[
+                    { val: 0, label: 'None' },
+                    { val: 1, label: 'At 1B' },
+                    { val: 2, label: 'At 2B' },
+                    { val: 3, label: 'At 3B' },
+                    { val: 4, label: 'At Home' },
+                  ].map(item => (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => {
+                        setOutAtBase(item.val);
+                        if (item.val > 0 && outsRecorded === 0) setOutsRecorded(1);
+                      }}
+                      style={{
+                        padding: '4px 0', fontSize: '10px', fontWeight: 700, borderRadius: '4px',
+                        border: 'none', cursor: 'pointer',
+                        backgroundColor: outAtBase === item.val ? (item.val === 0 ? (isDark ? '#3f3f46' : '#d1d5db') : '#ef4444') : (isDark ? '#27272a' : '#e5e7eb'),
+                        color: outAtBase === item.val ? '#ffffff' : (isDark ? '#d4d4d8' : '#374151'),
+                      }}
+                    >
+                      {item.label}
                     </button>
                   ))}
                 </div>
@@ -675,74 +723,88 @@ export default function PlayEntryModal({
             </div>
           </div>
 
-          {/* Optional Statcast / Pitches row */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '8px',
-            padding: '8px 10px',
-            backgroundColor: isDark ? '#141417' : '#f9f9f8',
-            borderRadius: '6px',
-            border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
-          }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                PITCH COUNT
-              </label>
-              <input
-                type="number"
-                value={pitchCount}
-                onChange={(e) => setPitchCount(e.target.value)}
-                placeholder="e.g. 5"
-                style={{
-                  width: '100%', padding: '4px 6px', fontSize: '11px',
-                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                  backgroundColor: isDark ? '#09090b' : '#ffffff',
-                  color: isDark ? '#f4f4f5' : '#18181b',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
+          {/* Optional Statcast & Pitch Count Drawer */}
+          <button
+            type="button"
+            onClick={() => setShowAdvancedSection(prev => !prev)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+              padding: '6px 10px', borderRadius: '6px',
+              border: `1px dashed ${isDark ? '#3f3f46' : '#d1d5db'}`,
+              backgroundColor: 'transparent',
+              color: isDark ? '#a1a1aa' : '#78716c',
+              fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
+              width: '100%',
+            }}
+          >
+            {showAdvancedSection ? <ChevronUp style={{ width: '13px', height: '13px' }} /> : <ChevronDown style={{ width: '13px', height: '13px' }} />}
+            <span>{showAdvancedSection ? 'Hide Advanced Statcast & Pitch Inputs' : '+ Advanced Play Options (Pitch Count, Statcast Dist/Velo)'}</span>
+          </button>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                HR DISTANCE (FT)
-              </label>
-              <input
-                type="number"
-                value={hitDistance}
-                onChange={(e) => setHitDistance(e.target.value)}
-                placeholder="e.g. 415"
-                style={{
-                  width: '100%', padding: '4px 6px', fontSize: '11px',
-                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                  backgroundColor: isDark ? '#09090b' : '#ffffff',
-                  color: isDark ? '#f4f4f5' : '#18181b',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
+          {(showAdvancedSection || pitchCount || hitDistance || exitVelo) && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px',
+              paddingTop: '8px', borderTop: `1px solid ${isDark ? '#27272a' : '#f0ede6'}`,
+            }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
+                  PITCH COUNT
+                </label>
+                <input
+                  type="number"
+                  value={pitchCount}
+                  onChange={(e) => setPitchCount(e.target.value)}
+                  placeholder="e.g. 5"
+                  style={{
+                    width: '100%', padding: '4px 6px', fontSize: '11px',
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff',
+                    color: isDark ? '#f4f4f5' : '#18181b',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
-                EXIT VELO (MPH)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={exitVelo}
-                onChange={(e) => setExitVelo(e.target.value)}
-                placeholder="e.g. 104.5"
-                style={{
-                  width: '100%', padding: '4px 6px', fontSize: '11px',
-                  borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
-                  backgroundColor: isDark ? '#09090b' : '#ffffff',
-                  color: isDark ? '#f4f4f5' : '#18181b',
-                  boxSizing: 'border-box',
-                }}
-              />
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
+                  HR DISTANCE (FT)
+                </label>
+                <input
+                  type="number"
+                  value={hitDistance}
+                  onChange={(e) => setHitDistance(e.target.value)}
+                  placeholder="e.g. 415"
+                  style={{
+                    width: '100%', padding: '4px 6px', fontSize: '11px',
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff',
+                    color: isDark ? '#f4f4f5' : '#18181b',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: 600, color: isDark ? '#a1a1aa' : '#78716c', marginBottom: '2px' }}>
+                  EXIT VELO (MPH)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={exitVelo}
+                  onChange={(e) => setExitVelo(e.target.value)}
+                  placeholder="e.g. 104.5"
+                  style={{
+                    width: '100%', padding: '4px 6px', fontSize: '11px',
+                    borderRadius: '4px', border: `1px solid ${isDark ? '#3f3f46' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#09090b' : '#ffffff',
+                    color: isDark ? '#f4f4f5' : '#18181b',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer Actions */}
