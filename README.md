@@ -2,7 +2,7 @@
 
 A comprehensive, live MLB scoring studio and print-quality baseball scorecard generator. Score games live in real-time with an interactive digital scorebook, track active MLB games with pitch-by-pitch strike zone visualizers, multi-angle trajectory arcs, and Statcast metrics, or generate retro and modern framable scorecard posters for any game in MLB history.
 
-**Live App:** [jleshnick.github.io/baseball-scorecard-graphic-generator](https://jleshnick.github.io/baseball-scorecard-graphic-generator/)
+**Live App:** [https://jleshnick.github.io/baseball-scorecard-studio](https://jleshnick.github.io/baseball-scorecard-studio/)
 
 ---
 
