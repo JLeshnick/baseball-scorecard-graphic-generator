@@ -26,17 +26,17 @@ feat: add pitch highlight filters, pitcher visualizer, hover polish, and compact
   - When inspecting a pitcher's inning or full outing, RHB/LHB batter boxes now render with neutral dashed outlines without favoring one side of the plate over another (since pitchers face both left- and right-handed batters throughout an inning).
   - Single-cell at-bat inspection continues to highlight the active batter's box.
 
-- **Pitch & Hit Breakdown Summaries & In-Canvas Floating Legends (`src/components/Sidebar.jsx`, `src/components/AtBatInspectionModal.jsx`, `src/components/PitcherInspectionModal.jsx`):**
+- **Pitch & Hit Breakdown Summaries & In-Canvas Floating Overlays (`src/components/Sidebar.jsx`, `src/components/AtBatInspectionModal.jsx`, `src/components/PitcherInspectionModal.jsx`):**
   - Integrated abbreviated **Balls & Strikes** (`{totalPitches}P · {strikes}S {balls}B`) and **Hits & Fouls** (`{battedBalls}B · {hits}H {fouls}F`) directly into:
     - Mode selector tab buttons: `Pitches (24P · 16S 8B)` and `Hit/Foul Spray (3B · 2H 1F)`.
     - Main container title headers (`[INN 1] #17 Shohei Ohtani · 18P · 12S 6B`).
-  - **Embedded In-Canvas Floating Legends**:
-    - Relocated the balls, strikes, fouls, and hit/out color keys into a sleek, semi-transparent floating legend directly inside the canvas itself (`● Strike`, `● Ball`, `● Foul` / `● Hit`, `● Foul`, `● Out`).
-    - Removed redundant intermediate text headers (`"Strike Zone (22P · 11S 10B)"` and count keys) to maximize visual real estate and eliminate clutter.
-    - Hover bars dynamically appear only when hovering over a specific pitch or batted ball.
+  - **Embedded In-Canvas Floating Tooltips & Legends (Zero Layout Shift)**:
+    - Relocated pitch & hit hover metrics (`#3 98.4 MPH 4-Seam Fastball (Called Strike)`) into a floating frosted tooltip inside the top-left of the canvas, preventing any vertical DOM bouncing or layout jumps when moving over pitch pills.
+    - Embedded color keys (`● Strike  ● Ball  ● Foul` / `● Hit  ● Foul  ● Out`) in the bottom-right corner of the canvas.
+    - Removed redundant intermediate headers and count keys.
   - **Refactored Container Header & Metadata Rows**:
-    - Removed redundant `"HOME/AWAY PITCHER"` pill, `"Pitcher:"` row, and `"Scope:"` row.
-    - Added dedicated rows for **Strike Rate / Command** (`67% (12 Strikes / 6 Balls)`), **Batted Balls Allowed** (`3 In Play (2H · 1F)`), and **Pitching Line** (`6.0 IP · 8 K · 1 BB · 2 ER`).
+    - Removed redundant `"HOME/AWAY PITCHER"` pill, `"Pitcher:"` row, `"Scope:"` row, and full-game `"Pitching Line:"` row so the visualizer focuses exclusively on the inspected inning/at-bat.
+    - Dedicated rows for **Strike Rate / Command** (`67% (12 Strikes / 6 Balls)`) and **Batted Balls Allowed** (`3 In Play (2H · 1F)`).
 
 - **Single Pitch & Batted Ball Hover Isolation & On-Top Stacking:**
   - Dynamic SVG sorting ensures hovered items render last in SVG document order (always on top).
