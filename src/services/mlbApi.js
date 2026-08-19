@@ -856,9 +856,11 @@ export function processMLBData(data, gamePkOverride) {
     }
   }
 
-  // Live Active At-Bat cell detection
+  // Live Active At-Bat and Game Count state
   let liveActiveCell = null;
-  if (isLive) {
+  let liveGameState = null;
+
+  if (isLive || (linescore && (linescore.balls !== undefined || linescore.outs !== undefined))) {
     const currentPlay = liveData.plays?.currentPlay;
     const inn = currentPlay?.about?.inning || linescore?.currentInning || 1;
     const isTop = currentPlay?.about?.isTopInning ?? (linescore?.inningHalf === 'Top');
@@ -879,6 +881,21 @@ export function processMLBData(data, gamePkOverride) {
         teamKey: battingTeamKey,
       };
     }
+
+    liveGameState = {
+      balls: currentPlay?.count?.balls ?? linescore?.balls ?? 0,
+      strikes: currentPlay?.count?.strikes ?? linescore?.strikes ?? 0,
+      outs: currentPlay?.count?.outs ?? linescore?.outs ?? 0,
+      inning: inn,
+      inningHalf: isTop ? 'Top' : 'Bottom',
+      inningOrdinal: linescore?.currentInningOrdinal || `${inn}${inn === 1 ? 'st' : inn === 2 ? 'nd' : inn === 3 ? 'rd' : 'th'}`,
+      inningState: linescore?.inningState || (isTop ? 'Top' : 'Bottom'),
+      batterName: currentPlay?.matchup?.batter?.fullName || '',
+      pitcherName: currentPlay?.matchup?.pitcher?.fullName || '',
+      onFirst: Boolean(linescore?.offense?.first || currentPlay?.matchup?.postOnFirst),
+      onSecond: Boolean(linescore?.offense?.second || currentPlay?.matchup?.postOnSecond),
+      onThird: Boolean(linescore?.offense?.third || currentPlay?.matchup?.postOnThird),
+    };
   }
 
   return {
@@ -904,6 +921,7 @@ export function processMLBData(data, gamePkOverride) {
       isLive,
       statusDetailed,
       liveActiveCell,
+      liveGameState,
     },
     awayData,
     homeData

@@ -79,6 +79,7 @@ export default function App() {
   const setCustomFooter = useAppStore(s => s.setCustomFooter);
   const customNotes = useAppStore(s => s.customNotes);
   const setCustomNotes = useAppStore(s => s.setCustomNotes);
+  const isAdvancedMode = useAppStore(s => s.isAdvancedMode);
   const resetDisplayOptions = useAppStore(s => s.resetDisplayOptions);
 
   const isDark = appTheme === 'dark';
@@ -632,8 +633,8 @@ export default function App() {
   };
 
   const tabStyle = (id) => ({
-    padding: isMobile ? '10px 12px' : '7px 14px',
-    fontSize: isMobile ? '12px' : '11px',
+    padding: isMobile ? '10px 6px' : '8px 6px',
+    fontSize: isMobile ? '11.5px' : '11px',
     fontWeight: 600,
     fontFamily: "'Inter', sans-serif",
     cursor: 'pointer',
@@ -642,9 +643,9 @@ export default function App() {
     color: activeTab === id ? c.textHead : c.textMuted,
     borderBottom: `2px solid ${activeTab === id ? c.btnPrimary : 'transparent'}`,
     transition: 'all 0.15s ease',
-    letterSpacing: '0.02em',
+    letterSpacing: '0.01em',
     whiteSpace: 'nowrap',
-    flex: isMobile ? 1 : 'none',
+    flex: 1,
     textAlign: 'center',
   });
 
@@ -1053,6 +1054,7 @@ export default function App() {
                     activeCellKey={!exporting && scoringMode === 'live' ? activeCellContext?.cellKey : null}
                     isInteractive={!exporting && scoringMode === 'live'}
                     isExporting={exporting}
+                    isAdvancedMode={isAdvancedMode}
                   />
                 </div>
               </div>

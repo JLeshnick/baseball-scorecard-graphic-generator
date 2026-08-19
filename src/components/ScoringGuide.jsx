@@ -44,7 +44,7 @@ const GUIDE_SECTIONS = [
   {
     category: 'Basepath Outs & Advancement',
     items: [
-      { code: '✕ 2B / 3B / HP', name: 'Thrown Out on Basepaths', desc: 'Red ✕ mark on basepath where out occurred', badgeColor: '#ef4444' },
+      { code: 'X 2B / 3B / HP', name: 'Thrown Out on Basepaths', desc: 'Red X mark on basepath where out occurred', badgeColor: '#ef4444' },
       { code: 'CS', name: 'Caught Stealing', desc: 'Runner tagged out attempting steal', badgeColor: '#ef4444' },
       { code: 'PO', name: 'Pickoff', desc: 'Pitcher/Catcher caught runner off base', badgeColor: '#ef4444' },
       { code: 'SB', name: 'Stolen Base', desc: 'Extra event badge in top-left', badgeColor: '#10b981' },
@@ -117,7 +117,6 @@ export default function ScoringGuide({
   } : {
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
     width: '100%',
   };
 
@@ -133,6 +132,8 @@ export default function ScoringGuide({
     flexDirection: 'column',
     overflow: 'hidden',
   } : null;
+
+  const isEmbedded = !isModal && !isPinned;
 
   const content = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -223,7 +224,7 @@ export default function ScoringGuide({
       </div>
 
       {/* Guide Content List */}
-      <div style={{ padding: '12px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ padding: isEmbedded ? '8px 0 0 0' : '12px', overflowY: isEmbedded ? 'visible' : 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {filteredSections.map((sec, sIdx) => (
           <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{

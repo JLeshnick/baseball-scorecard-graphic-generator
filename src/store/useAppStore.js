@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 
 export const useAppStore = create((set) => ({
+  // ─── Mode & View ───────────────────────────────────────────────
+  isAdvancedMode: false,
+  setIsAdvancedMode: (isAdvancedMode) => set({ isAdvancedMode }),
+  toggleAdvancedMode: () => set((state) => ({ isAdvancedMode: !state.isAdvancedMode })),
+
   // ─── Theme & Layout ─────────────────────────────────────────────
   appTheme: 'light',
   setAppTheme: (appTheme) => set({ appTheme }),

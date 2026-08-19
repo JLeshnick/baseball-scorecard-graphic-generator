@@ -40,6 +40,7 @@ const ScorecardGraphic = ({
   activeCellKey = null,
   isInteractive = false,
   isExporting = false,
+  isAdvancedMode = false,
 }) => {
   if (!data) return null;
 
@@ -52,6 +53,14 @@ const ScorecardGraphic = ({
     { length: Math.max(9, gameInfo.totalInnings || 9) },
     (_, i) => i + 1
   );
+
+  // When in Simplified Mode, suppress dense technical overlays (Statcast tables, momentum charts, pitch ball/strike counters)
+  const effectiveShowPitchBreakdown = isAdvancedMode && showPitchBreakdown;
+  const effectiveShowStatcast = isAdvancedMode && showStatcast;
+  const effectiveShowMomentum = isAdvancedMode && showMomentum;
+  const effectiveShowMvp = isAdvancedMode && showMvp;
+  const effectiveShowExtraEvents = isAdvancedMode && showExtraEvents;
+  const effectiveShowEraserMarks = isAdvancedMode && showEraserMarks;
 
   // ─── Theme System ────────────────────────────────────────────────────────────
   const t = getScorecardTheme({
@@ -222,7 +231,7 @@ const ScorecardGraphic = ({
     const pillBg = isHome ? t.homeColor : t.awayColor;
     const pillText = isHome ? t.homeText : t.awayText;
 
-    const extraEventBadge = showExtraEvents && extraEvent ? (
+    const extraEventBadge = effectiveShowExtraEvents && extraEvent ? (
       <span style={{
         position: 'absolute', top: '2px', left: '2px',
         fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
@@ -236,7 +245,7 @@ const ScorecardGraphic = ({
 
     const subLetterBadge = play.subLetter ? (
       <span style={{
-        position: 'absolute', top: '2px', left: (showExtraEvents && extraEvent) ? '20px' : '2px',
+        position: 'absolute', top: '2px', left: (effectiveShowExtraEvents && extraEvent) ? '20px' : '2px',
         fontSize: '6.5px', fontWeight: 900, fontFamily: t.fontMono,
         lineHeight: 1,
         color: isHome ? t.homeColor : t.awayColor,
@@ -265,7 +274,7 @@ const ScorecardGraphic = ({
         }}
         title={`Out on basepaths: ${play.outAtBaseEvent || 'OUT'} at ${play.outAtBase === 4 ? 'HOME' : play.outAtBase + 'B'}`}
       >
-        {play.outAtBaseEvent === 'CS' ? 'CS' : play.outAtBaseEvent === 'PO' ? 'PO' : '✕'} {play.outAtBase === 4 ? 'HP' : `${play.outAtBase}B`}
+        {play.outAtBaseEvent === 'CS' ? 'CS' : play.outAtBaseEvent === 'PO' ? 'PO' : 'X'} {play.outAtBase === 4 ? 'HP' : `${play.outAtBase}B`}
       </span>
     ) : null;
 
@@ -322,24 +331,24 @@ const ScorecardGraphic = ({
 
             {/* Out on Basepaths Cross Marks */}
             {outAtBase === 1 && (
-              <text x="37" y="24" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="900">✕</text>
+              <text x="37" y="24" textAnchor="middle" fill="#ef4444" fontSize="8" fontWeight="900">X</text>
             )}
             {outAtBase === 2 && (
               <>
                 <line x1="37" y1="20" x2="28.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
-                <text x="28.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+                <text x="28.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
               </>
             )}
             {outAtBase === 3 && (
               <>
                 <line x1="20" y1="3" x2="11.5" y2="11.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
-                <text x="11.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+                <text x="11.5" y="14" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
               </>
             )}
             {outAtBase === 4 && (
               <>
                 <line x1="3" y1="20" x2="11.5" y2="28.5" stroke="#ef4444" strokeWidth="2.0" strokeDasharray="2 2" strokeLinecap="round" />
-                <text x="11.5" y="31" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">✕</text>
+                <text x="11.5" y="31" textAnchor="middle" fill="#ef4444" fontSize="7.5" fontWeight="900">X</text>
               </>
             )}
           </svg>
@@ -871,7 +880,7 @@ const ScorecardGraphic = ({
                           }}
                           title={
                             isLiveActiveCell
-                              ? `🔴 Active At-Bat: #${b.jerseyNumber} ${b.name}`
+                              ? `Active At-Bat: #${b.jerseyNumber} ${b.name}`
                               : hasInteractiveClick
                               ? `Click to Score #${b.jerseyNumber} ${b.name} (Inn ${n})`
                               : undefined
@@ -1040,7 +1049,7 @@ const ScorecardGraphic = ({
 
                       {/* Inning Pitch Breakdown Cells with Uppercase S / B and Clear Spacing */}
                       {innings.map(n => {
-                        if (!showPitchBreakdown) {
+                        if (!effectiveShowPitchBreakdown) {
                           return (
                             <td key={n} style={{ borderLeft: `1px solid ${t.borderLight}` }} />
                           );
@@ -1506,7 +1515,7 @@ const ScorecardGraphic = ({
           )}
 
           {/* Statcast HR & Hit Metrics Card */}
-          {showStatcast && (
+          {effectiveShowStatcast && (
             <div style={{
               marginTop: '10px',
               padding: '10px 14px',
@@ -1605,7 +1614,7 @@ const ScorecardGraphic = ({
           )}
 
           {/* Inning-by-Inning Score & Lead Progression Grid */}
-          {showMomentum && gameInfo.gameMomentum && gameInfo.gameMomentum.length > 0 && (
+          {effectiveShowMomentum && gameInfo.gameMomentum && gameInfo.gameMomentum.length > 0 && (
             <div style={{
               marginTop: '10px',
               padding: '10px 14px',

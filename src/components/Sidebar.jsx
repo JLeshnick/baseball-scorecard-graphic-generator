@@ -103,6 +103,10 @@ export default function Sidebar({
   const setShowDecisions = useAppStore(s => s.setShowDecisions);
   const showEnvironmentBox = useAppStore(s => s.showEnvironmentBox);
   const setShowEnvironmentBox = useAppStore(s => s.setShowEnvironmentBox);
+  const showHRDistances = useAppStore(s => s.showHRDistances);
+  const setShowHRDistances = useAppStore(s => s.setShowHRDistances);
+  const eraserSeed = useAppStore(s => s.eraserSeed);
+  const setEraserSeed = useAppStore(s => s.setEraserSeed);
 
   const customHeadline = useAppStore(s => s.customHeadline);
   const setCustomHeadline = useAppStore(s => s.setCustomHeadline);
@@ -117,7 +121,10 @@ export default function Sidebar({
 
   return (
     <aside style={{
-      width: isMobile ? '100%' : '280px',
+      width: isMobile ? '100%' : '330px',
+      minWidth: isMobile ? '100%' : '330px',
+      maxWidth: isMobile ? '100%' : '330px',
+      flex: isMobile ? '1 1 auto' : '0 0 330px',
       height: '100%',
       maxHeight: '100%',
       flexShrink: 0,
@@ -127,6 +134,7 @@ export default function Sidebar({
       flexDirection: 'column',
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',
+      boxSizing: 'border-box',
     }}>
 
       {/* Tab Nav */}
@@ -135,6 +143,8 @@ export default function Sidebar({
         borderBottom: `1px solid ${c.border}`,
         padding: '0 4px',
         gap: '0',
+        flexShrink: 0,
+        backgroundColor: c.bgSidebar,
       }}>
         {[
           { id: 'game', label: 'Game' },
@@ -360,8 +370,10 @@ export default function Sidebar({
                                     <span style={{
                                       fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700,
                                       color: g.isLive ? '#ef4444' : c.textMuted,
+                                      display: 'inline-flex', alignItems: 'center', gap: '4px',
                                     }}>
-                                      {g.isLive ? `🔴 ${g.inningText || 'Live'}` : (g.inningText || g.status || 'Final')}
+                                      {g.isLive && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />}
+                                      {g.isLive ? (g.inningText || 'Live') : (g.inningText || g.status || 'Final')}
                                     </span>
                                   </div>
                                   <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
@@ -377,9 +389,10 @@ export default function Sidebar({
                                   <div style={{ marginBottom: '8px' }}>
                                     <div style={{
                                       fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
-                                      color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px',
+                                      color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '5px',
                                     }}>
-                                      <span>🔴 Live & In Progress ({liveGames.length})</span>
+                                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
+                                      <span>Live & In Progress ({liveGames.length})</span>
                                     </div>
                                     {liveGames.map(renderGameItem)}
                                   </div>
@@ -417,119 +430,228 @@ export default function Sidebar({
                   </div>
                 </div>
 
-                {/* Live Data Refresh Bar & Timestamp */}
-                {selectedGamePk && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '7px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: scorecardData?.gameInfo?.isLive ? (isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.06)') : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
-                    border: `1px solid ${scorecardData?.gameInfo?.isLive ? 'rgba(239, 68, 68, 0.3)' : c.border}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {scorecardData?.gameInfo?.isLive ? (
-                        <span style={{
-                          display: 'inline-block', width: '7px', height: '7px',
-                          borderRadius: '50%', backgroundColor: '#ef4444',
-                          boxShadow: '0 0 6px #ef4444',
-                          animation: 'liveDotPulse 1.2s ease-in-out infinite',
-                        }} />
-                      ) : (
-                        <span style={{
-                          display: 'inline-block', width: '6px', height: '6px',
-                          borderRadius: '50%', backgroundColor: c.textMuted,
-                        }} />
-                      )}
-                      <span style={{ fontSize: '10.5px', fontWeight: 600, color: scorecardData?.gameInfo?.isLive ? '#ef4444' : c.textMuted }}>
-                        {lastRefreshedTime ? `Updated ${lastRefreshedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Live'}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        loadGameData(selectedGamePk);
-                        setToastMessage('Refreshed latest MLB game data!');
-                        setTimeout(() => setToastMessage(''), 2500);
-                      }}
-                      disabled={loading}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        padding: '4px 9px', borderRadius: '4px', border: `1px solid ${c.border}`,
-                        backgroundColor: c.bgCard, color: c.textHead,
-                        fontSize: '11px', fontWeight: 600, cursor: loading ? 'default' : 'pointer',
-                        opacity: loading ? 0.6 : 1,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <RefreshCw style={{ width: '11px', height: '11px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-                      <span>Refresh</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Game summary badge */}
+                {/* Unified Game Card: Status, Refresh, Score, Live Balls/Strikes/Outs, Bases, Matchup, Share */}
                 {scorecardData && !loading && (
                   <div style={{
                     padding: '12px',
                     borderRadius: '8px',
-                    border: `1px solid ${c.border}`,
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    display: 'flex', flexDirection: 'column', gap: '10px',
+                    border: `1px solid ${scorecardData.gameInfo.isLive ? (isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)') : c.border}`,
+                    backgroundColor: isDark ? '#141417' : '#f9f9f8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    boxSizing: 'border-box',
                   }}>
+                    {/* Top Bar: Status indicator & Refresh button */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {scorecardData.gameInfo.isLive ? (
+                          <span style={{
+                            display: 'inline-block', width: '7px', height: '7px',
+                            borderRadius: '50%', backgroundColor: '#ef4444',
+                            boxShadow: '0 0 6px #ef4444',
+                            animation: 'liveDotPulse 1.2s ease-in-out infinite',
+                          }} />
+                        ) : (
+                          <span style={{
+                            display: 'inline-block', width: '6px', height: '6px',
+                            borderRadius: '50%', backgroundColor: c.textMuted,
+                          }} />
+                        )}
+                        <span style={{
+                          fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                          color: scorecardData.gameInfo.isLive ? '#ef4444' : c.textMuted,
+                        }}>
+                          {scorecardData.gameInfo.liveGameState
+                            ? `${scorecardData.gameInfo.liveGameState.inningHalf === 'Top' ? '▲ TOP' : '▼ BOT'} ${scorecardData.gameInfo.liveGameState.inningOrdinal}`
+                            : (scorecardData.gameInfo.statusDisplay || (scorecardData.gameInfo.isFinal ? 'FINAL' : 'SCHEDULED'))}
+                        </span>
+                        {lastRefreshedTime && (
+                          <span style={{ fontSize: '9.5px', color: c.textMuted }}>
+                            · {lastRefreshedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedGamePk && (
+                        <button
+                          onClick={() => {
+                            loadGameData(selectedGamePk);
+                            setToastMessage('Refreshed latest MLB game data!');
+                            setTimeout(() => setToastMessage(''), 2500);
+                          }}
+                          disabled={loading}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            padding: '3px 7px', borderRadius: '4px', border: `1px solid ${c.border}`,
+                            backgroundColor: isDark ? '#27272a' : '#ffffff', color: c.textHead,
+                            fontSize: '10.5px', fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+                            opacity: loading ? 0.6 : 1,
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <RefreshCw style={{ width: '10px', height: '10px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                          <span>Refresh</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Team Scores Row */}
                     <div style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                      gap: '8px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '4px 0',
                     }}>
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: c.textHead, letterSpacing: '0.02em' }}>
                           {scorecardData.gameInfo.awayTeam.abbreviation}
                         </div>
-                        <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                          {`${scorecardData.gameInfo.awayTeam.hits}H • ${scorecardData.gameInfo.awayTeam.errors}E`}
+                        <div style={{ fontSize: '9.5px', color: c.textMuted, marginTop: '1px' }}>
+                          {`${scorecardData.gameInfo.awayTeam.hits ?? 0}H • ${scorecardData.gameInfo.awayTeam.errors ?? 0}E`}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
+
+                      <div style={{ textAlign: 'center', padding: '0 10px' }}>
                         <div style={{
                           fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: '18px', fontWeight: 900,
+                          fontSize: '20px', fontWeight: 900,
                           color: c.textHead, letterSpacing: '-0.02em',
                           lineHeight: 1,
                         }}>
-                          {`${scorecardData.gameInfo.awayTeam.score}–${scorecardData.gameInfo.homeTeam.score}`}
-                        </div>
-                        <div style={{
-                          fontSize: '9px', marginTop: '2px', letterSpacing: '0.06em', fontWeight: 700, textTransform: 'uppercase',
-                          color: scorecardData.gameInfo.isLive ? '#ef4444' : c.textMuted,
-                        }}>
-                          {scorecardData.gameInfo.statusDisplay || 'Final'}
+                          {`${scorecardData.gameInfo.awayTeam.score ?? 0} – ${scorecardData.gameInfo.homeTeam.score ?? 0}`}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: c.textHead, letterSpacing: '0.02em' }}>
+
+                      <div style={{ flex: 1, textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: c.textHead, letterSpacing: '0.02em' }}>
                           {scorecardData.gameInfo.homeTeam.abbreviation}
                         </div>
-                        <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '1px' }}>
-                          {`${scorecardData.gameInfo.homeTeam.hits}H • ${scorecardData.gameInfo.homeTeam.errors}E`}
+                        <div style={{ fontSize: '9.5px', color: c.textMuted, marginTop: '1px' }}>
+                          {`${scorecardData.gameInfo.homeTeam.hits ?? 0}H • ${scorecardData.gameInfo.homeTeam.errors ?? 0}E`}
                         </div>
                       </div>
                     </div>
 
+                    {/* Live Count & Bases (if active/live) */}
+                    {scorecardData.gameInfo.liveGameState && (
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', gap: '8px',
+                        padding: '8px', borderRadius: '6px',
+                        backgroundColor: isDark ? '#09090b' : '#ffffff',
+                        border: `1px solid ${isDark ? '#27272a' : '#e4e0da'}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {/* Count: Balls, Strikes, Outs */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {/* Balls */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>B:</span>
+                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                {scorecardData.gameInfo.liveGameState.balls || 0}
+                              </span>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1, 2, 3].map(dot => (
+                                  <span key={dot} style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    backgroundColor: (scorecardData.gameInfo.liveGameState.balls || 0) >= dot ? '#10b981' : (isDark ? '#27272a' : '#e5e7eb'),
+                                  }} />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Strikes */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>S:</span>
+                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                {scorecardData.gameInfo.liveGameState.strikes || 0}
+                              </span>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1, 2].map(dot => (
+                                  <span key={dot} style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    backgroundColor: (scorecardData.gameInfo.liveGameState.strikes || 0) >= dot ? '#ef4444' : (isDark ? '#27272a' : '#e5e7eb'),
+                                  }} />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Outs */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: 800, color: c.textMuted }}>O:</span>
+                              <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", color: c.textHead }}>
+                                {scorecardData.gameInfo.liveGameState.outs || 0}
+                              </span>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1, 2].map(dot => (
+                                  <span key={dot} style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    backgroundColor: (scorecardData.gameInfo.liveGameState.outs || 0) >= dot ? '#f59e0b' : (isDark ? '#27272a' : '#e5e7eb'),
+                                  }} />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bases Diamond */}
+                          <div style={{ width: '22px', height: '22px', position: 'relative', flexShrink: 0 }}>
+                            {/* 2B */}
+                            <div style={{
+                              position: 'absolute', top: '1px', left: '7.5px', width: '7px', height: '7px',
+                              transform: 'rotate(45deg)',
+                              backgroundColor: scorecardData.gameInfo.liveGameState.onSecond ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                              borderRadius: '1px',
+                            }} />
+                            {/* 3B */}
+                            <div style={{
+                              position: 'absolute', top: '7.5px', left: '1px', width: '7px', height: '7px',
+                              transform: 'rotate(45deg)',
+                              backgroundColor: scorecardData.gameInfo.liveGameState.onThird ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                              borderRadius: '1px',
+                            }} />
+                            {/* 1B */}
+                            <div style={{
+                              position: 'absolute', top: '7.5px', left: '14px', width: '7px', height: '7px',
+                              transform: 'rotate(45deg)',
+                              backgroundColor: scorecardData.gameInfo.liveGameState.onFirst ? '#ef4444' : (isDark ? '#3f3f46' : '#d1d5db'),
+                              borderRadius: '1px',
+                            }} />
+                          </div>
+                        </div>
+
+                        {/* Active Batter vs Pitcher Matchup */}
+                        {(scorecardData.gameInfo.liveGameState.batterName || scorecardData.gameInfo.liveGameState.pitcherName) && (
+                          <div style={{ fontSize: '10px', color: c.textMuted, display: 'flex', flexDirection: 'column', gap: '2px', borderTop: `1px solid ${isDark ? '#1f1f23' : '#f0ede6'}`, paddingTop: '4px' }}>
+                            {scorecardData.gameInfo.liveGameState.batterName && (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>At Bat:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{scorecardData.gameInfo.liveGameState.batterName}</span>
+                              </div>
+                            )}
+                            {scorecardData.gameInfo.liveGameState.pitcherName && (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Pitching:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{scorecardData.gameInfo.liveGameState.pitcherName}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Share scorecard button */}
                     <button
                       onClick={handleCopyShareLink}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        width: '100%', padding: '7px 10px',
+                        width: '100%', padding: '6px 10px',
                         borderRadius: '6px', cursor: 'pointer',
                         border: `1px solid ${c.border}`,
-                        backgroundColor: c.bgInput, color: c.textHead,
-                        fontSize: '11.5px', fontWeight: 600,
+                        backgroundColor: isDark ? '#1f1f23' : '#ffffff', color: c.textHead,
+                        fontSize: '11px', fontWeight: 600,
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <Share2 style={{ width: '13px', height: '13px', color: c.accent }} />
-                      Copy Shareable URL Link
+                      <Share2 style={{ width: '12px', height: '12px', color: c.accent }} />
+                      Share Scorecard Link
                     </button>
                   </div>
                 )}
@@ -757,8 +879,10 @@ export default function Sidebar({
                                           <span style={{
                                             fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700,
                                             color: g.isLive ? '#ef4444' : c.textMuted,
+                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
                                           }}>
-                                            {g.isLive ? `🔴 ${g.inningText || 'Live'}` : (g.inningText || g.status || 'Scheduled')}
+                                            {g.isLive && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />}
+                                            {g.isLive ? (g.inningText || 'Live') : (g.inningText || g.status || 'Scheduled')}
                                           </span>
                                         </div>
                                         <div style={{ fontSize: '10px', color: c.textMuted, marginTop: '2px', wordBreak: 'break-word' }}>
@@ -774,9 +898,10 @@ export default function Sidebar({
                                         <div style={{ marginBottom: '8px' }}>
                                           <div style={{
                                             fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
-                                            color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px',
+                                            color: '#ef4444', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '5px',
                                           }}>
-                                            <span>🔴 Live & In Progress ({liveG.length})</span>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
+                                            <span>Live & In Progress ({liveG.length})</span>
                                           </div>
                                           {liveG.map(renderPrefillItem)}
                                         </div>
@@ -1477,7 +1602,7 @@ export default function Sidebar({
 
         {/* ── GUIDE TAB ──────────────────────────────────────────────── */}
         {activeTab === 'guide' && (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '400px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             <ScoringGuide
               isDark={isDark}
               isPinned={guidePinned}
