@@ -243,14 +243,9 @@ describe('Sidebar Component & Visualizer Tests', () => {
       />
     );
 
-    // Should display Pitcher Header
-    expect(screen.getByText(/AWAY PITCHER/i)).toBeDefined();
+    // Should display Pitcher Header with inning scope
+    expect(screen.getByText(/AWAY PITCHER · INN 1/i)).toBeDefined();
     expect(screen.getAllByText(/Jack Flaherty/i).length).toBeGreaterThan(0);
-
-    // Inning filter pills
-    expect(screen.getByText(/All \(86P\)/i)).toBeDefined();
-    const inn1Pill = screen.getByRole('button', { name: /Inn 1 \(22P\)/i });
-    expect(inn1Pill).toBeDefined();
 
     // Visualizer Mode Buttons
     const hitsTabBtn = screen.getByRole('button', { name: /Hit\/Foul Spray/i });

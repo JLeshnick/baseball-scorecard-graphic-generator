@@ -127,7 +127,6 @@ export default function Sidebar({
   const [selectedBattedBallIndex, setSelectedBattedBallIndex] = useState(null);
   const [hoveredBattedBallIndex, setHoveredBattedBallIndex] = useState(null);
   const [selectedMultiPaIndex, setSelectedMultiPaIndex] = useState(0);
-  const [pitcherInningFilter, setPitcherInningFilter] = useState('all');
 
   const inspectedCellKey = inspectedCell?.cellKey || null;
   useEffect(() => {
@@ -138,11 +137,6 @@ export default function Sidebar({
   }, [inspectedCellKey]);
 
   useEffect(() => {
-    if (inspectedPitcher?.inning) {
-      setPitcherInningFilter(Number(inspectedPitcher.inning));
-    } else {
-      setPitcherInningFilter('all');
-    }
     setSelectedBattedBallIndex(null);
     setHoveredBattedBallIndex(null);
     setHoveredPitchNum(null);
@@ -569,12 +563,10 @@ export default function Sidebar({
                       const isInspectingPitcher = Boolean(inspectedPitcher);
                       const isInspecting = isInspectingCell || isInspectingPitcher;
 
-                      // Pitcher inspection plays
+                      // Pitcher inspection plays (scoped to clicked inning if clicked on inning cell, or all outing if clicked on pitcher header)
+                      const targetPitcherInning = inspectedPitcher?.inning ? Number(inspectedPitcher.inning) : 'all';
                       const pitcherPlays = isInspectingPitcher
-                        ? getPitcherPlays(inspectedPitcher, scorecardData, pitcherInningFilter)
-                        : [];
-                      const pitcherInningsList = isInspectingPitcher
-                        ? Object.entries(inspectedPitcher.pitcher?.pitchesByInning || {}).filter(([_, d]) => (d?.pitches || 0) > 0).map(([inn]) => Number(inn)).sort((a, b) => a - b)
+                        ? getPitcherPlays(inspectedPitcher, scorecardData, targetPitcherInning)
                         : [];
 
                       const inspectedPlaysArray = inspectedCell?.plays?.length
@@ -655,55 +647,18 @@ export default function Sidebar({
                         }}>
                           {/* Top Header: Inspected Pitcher vs Inspected Cell vs Live Count */}
                           {isInspectingPitcher ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{
-                                  fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                  padding: '2px 5px', borderRadius: '4px',
-                                  backgroundColor: inspectedPitcher.teamKey === 'away' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                  color: inspectedPitcher.teamKey === 'away' ? '#3b82f6' : '#ef4444',
-                                }}>
-                                  {`${inspectedPitcher.teamKey === 'away' ? 'AWAY' : 'HOME'} PITCHER`}
-                                </span>
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
-                                  {inspectedPitcher.pitcher?.number ? `#${inspectedPitcher.pitcher.number} ` : ''}{pitcherName}
-                                </span>
-                              </div>
-
-                              {/* Pitcher Inning Pills Selector */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', overflowX: 'auto', padding: '2px 0' }}>
-                                <button
-                                  onClick={() => setPitcherInningFilter('all')}
-                                  style={{
-                                    padding: '2px 6px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 800,
-                                    backgroundColor: pitcherInningFilter === 'all' ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
-                                    color: pitcherInningFilter === 'all' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
-                                    border: `1px solid ${pitcherInningFilter === 'all' ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
-                                    cursor: 'pointer', whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  All ({inspectedPitcher.pitcher?.totalPitches || targetPitches.length}P)
-                                </button>
-                                {pitcherInningsList.map(inn => {
-                                  const pCount = inspectedPitcher.pitcher?.pitchesByInning?.[inn]?.pitches || 0;
-                                  const isSel = pitcherInningFilter === inn;
-                                  return (
-                                    <button
-                                      key={inn}
-                                      onClick={() => setPitcherInningFilter(inn)}
-                                      style={{
-                                        padding: '2px 6px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 800,
-                                        backgroundColor: isSel ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
-                                        color: isSel ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
-                                        border: `1px solid ${isSel ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
-                                        cursor: 'pointer', whiteSpace: 'nowrap',
-                                      }}
-                                    >
-                                      Inn {inn} ({pCount}P)
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{
+                                fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                padding: '2px 5px', borderRadius: '4px',
+                                backgroundColor: inspectedPitcher.teamKey === 'away' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                color: inspectedPitcher.teamKey === 'away' ? '#3b82f6' : '#ef4444',
+                              }}>
+                                {`${inspectedPitcher.teamKey === 'away' ? 'AWAY' : 'HOME'} PITCHER${inspectedPitcher.inning ? ` · INN ${inspectedPitcher.inning}` : ' · ALL'}`}
+                              </span>
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: c.textHead }}>
+                                {inspectedPitcher.pitcher?.number ? `#${inspectedPitcher.pitcher.number} ` : ''}{pitcherName}
+                              </span>
                             </div>
                           ) : isInspectingCell ? (
                             <>
@@ -853,8 +808,8 @@ export default function Sidebar({
                                 <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherName}</span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 700, color: c.textHead }}>Inning:</span>
-                                <span style={{ fontWeight: 600, color: c.textMain }}>{pitcherInningFilter === 'all' ? 'All Outing' : `Inning ${pitcherInningFilter}`}</span>
+                                <span style={{ fontWeight: 700, color: c.textHead }}>Scope:</span>
+                                <span style={{ fontWeight: 600, color: c.textMain }}>{inspectedPitcher?.inning ? `Inning ${inspectedPitcher.inning}` : 'All Outing'}</span>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <span style={{ fontWeight: 700, color: c.textHead }}>Pitches / Hits:</span>

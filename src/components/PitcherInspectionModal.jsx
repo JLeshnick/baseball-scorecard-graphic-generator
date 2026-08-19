@@ -178,7 +178,7 @@ export default function PitcherInspectionModal({
                 {pitcherDisplayName}
               </div>
               <div style={{ fontSize: '11px', color: isDark ? '#a1a1aa' : '#64748b' }}>
-                {teamName || (teamKey === 'home' ? 'Home Pitcher' : 'Away Pitcher')} · {pitcher?.ip || '0.0'} IP · {pitcher?.totalPitches ? `${pitcher.totalPitches} Pitches` : ''} · {ks} K
+                {teamName || (teamKey === 'home' ? 'Home Pitcher' : 'Away Pitcher')} · {selectedInning !== 'all' ? `Inning ${selectedInning}` : 'All Outing'} · {pitcher?.ip || '0.0'} IP · {pitcher?.totalPitches ? `${pitcher.totalPitches} Pitches` : ''} · {ks} K
               </div>
             </div>
           </div>
@@ -200,41 +200,6 @@ export default function PitcherInspectionModal({
 
         {/* Modal Scrollable Body */}
         <div style={{ padding: '12px 16px 24px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Inning Selector Tabs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-            <button
-              onClick={() => setSelectedInning('all')}
-              style={{
-                padding: '5px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                backgroundColor: selectedInning === 'all' ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
-                color: selectedInning === 'all' ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
-                border: `1px solid ${selectedInning === 'all' ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
-                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-              }}
-            >
-              All Outing ({pitcher?.totalPitches || allPitches.length}P)
-            </button>
-            {inningsPitched.map(inn => {
-              const innData = pitcher?.pitchesByInning?.[inn];
-              const pCount = innData?.pitches || 0;
-              const isSelected = selectedInning === inn;
-              return (
-                <button
-                  key={inn}
-                  onClick={() => setSelectedInning(inn)}
-                  style={{
-                    padding: '5px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                    backgroundColor: isSelected ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#f1f5f9'),
-                    color: isSelected ? '#ffffff' : (isDark ? '#a1a1aa' : '#64748b'),
-                    border: `1px solid ${isSelected ? '#2563eb' : (isDark ? '#3f3f46' : '#e2e8f0')}`,
-                    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                  }}
-                >
-                  Inn {inn} ({pCount}P)
-                </button>
-              );
-            })}
-          </div>
 
           {/* Visualizer Mode Tabs (Pitches vs Hit/Foul Spray) */}
           <div style={{
